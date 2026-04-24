@@ -52,24 +52,68 @@ svg{width:min(45vw,420px);height:auto;opacity:0;animation:f 2.5s ease-in forward
 <button class="unmute" id="unmute" type="button">🔊 Tap to unmute</button>
 <script>
 (function(){
-  // Cloudflare quick-tunnel URL. Ephemeral — rotates when cloudflared restarts.
-  var STREAM_URL = 'https://nobody-beaver-replacement-build.trycloudflare.com/program/index.m3u8';
+  // Two candidate stream sources, tried in order. Whichever answers first wins.
+  //
+  //  • TUNNEL: Cloudflare quick-tunnel URL. Ephemeral — rotates on cloudflared
+  //    restart. Works for all remote viewers once DNS propagates.
+  //  • LOCAL:  direct hit on the Mac Mini's MediaMTX. Only resolves when the
+  //    page is opened *on the Mac Mini itself*, but browsers whitelist
+  //    http://localhost and http://127.0.0.1 as secure origins, so mixed-
+  //    content blocking on this HTTPS page does NOT apply to these URLs.
+  //
+  // Net effect: the studio operator can always preview on the Mac Mini even
+  // if the tunnel is down, rotating, or not-yet-resolvable in local DNS.
+  var CANDIDATES = [
+    'https://nobody-beaver-replacement-build.trycloudflare.com/program/index.m3u8',
+    'http://127.0.0.1:8888/program/index.m3u8'
+  ];
 
   var video = document.getElementById('stream');
   var unmuteBtn = document.getElementById('unmute');
 
-  // Prefer native HLS on Safari/iOS/Apple TV — the built-in decoder is more
-  // efficient than MSE + hls.js on these platforms and supports LL-HLS when
-  // served over HTTPS (which Cloudflare Tunnel gives us for free).
-  if (video.canPlayType('application/vnd.apple.mpegurl')) {
-    video.src = STREAM_URL;
-  } else if (window.Hls && Hls.isSupported()) {
-    // Everything else (Chrome, Firefox, Edge, Android) goes through hls.js.
-    // lowLatencyMode enables LL-HLS part loading when the manifest advertises it.
-    var hls = new Hls({ lowLatencyMode: true, liveSyncDurationCount: 3 });
-    hls.loadSource(STREAM_URL);
-    hls.attachMedia(video);
+  // Probe each candidate with a short-timeout GET. HEAD on MediaMTX returns
+  // 404 even for live streams, so we use GET with a Range: bytes=0-0 to
+  // keep the transfer cheap. CORS is handled by `hlsAllowOrigins: ['*']`
+  // in mediamtx.yml, so cross-origin fetch is allowed.
+  function probe(url){
+    var ctl = new AbortController();
+    var t = setTimeout(function(){ ctl.abort(); }, 3000);
+    return fetch(url, {
+      method: 'GET',
+      headers: { Range: 'bytes=0-0' },
+      cache: 'no-store',
+      signal: ctl.signal
+    }).then(function(r){ clearTimeout(t); return r.ok ? url : null; })
+      .catch(function(){ clearTimeout(t); return null; });
   }
+
+  function load(url){
+    // Prefer native HLS on Safari/iOS/Apple TV — the built-in decoder is more
+    // efficient than MSE + hls.js on these platforms and supports LL-HLS
+    // when served over HTTPS.
+    if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = url;
+    } else if (window.Hls && Hls.isSupported()) {
+      // Everything else (Chrome, Firefox, Edge, Android) goes through hls.js.
+      // lowLatencyMode enables LL-HLS part loading when the manifest advertises it.
+      var hls = new Hls({ lowLatencyMode: true, liveSyncDurationCount: 3 });
+      hls.loadSource(url);
+      hls.attachMedia(video);
+    }
+  }
+
+  // Sequentially probe. Promise.any would be faster, but we specifically want
+  // tunnel-first so remote viewers don't accidentally try (and fail to reach)
+  // a localhost URL that would never resolve for them.
+  (async function(){
+    for (var i = 0; i < CANDIDATES.length; i++){
+      var ok = await probe(CANDIDATES[i]);
+      if (ok) { load(ok); return; }
+    }
+    // Every candidate failed — load the primary anyway so the <video>'s own
+    // error surface can show something useful in devtools.
+    load(CANDIDATES[0]);
+  })();
 
   // Autoplay policy: browsers require muted for unprompted play. This button
   // converts a user gesture into the "real" unmute so audio kicks in.
