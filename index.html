@@ -54,17 +54,26 @@ svg{width:min(45vw,420px);height:auto;opacity:0;animation:f 2.5s ease-in forward
 (function(){
   // Two candidate stream sources, tried in order. Whichever answers first wins.
   //
-  //  • TUNNEL: Cloudflare quick-tunnel URL. Ephemeral — rotates on cloudflared
-  //    restart. Works for all remote viewers once DNS propagates.
+  //  • TUNNEL: named Cloudflare Tunnel on a stable hostname — survives
+  //    cloudflared restarts, won't rotate. Backed by Cloudflare Cache Rules
+  //    that bypass cache for the .m3u8 manifest (so LL-HLS stays live) and
+  //    cache .mp4/.m4s segments for 30s at the edge (so N concurrent viewers
+  //    fan out from ~1 origin fetch per segment, not N — this is what kills
+  //    the "pause when a new viewer joins" bug).
+  //
+  //    Currently pointed at live.interdependent.dev (the dummy domain used
+  //    to derisk the Cloudflare setup). Swap to live.interdependent.tv once
+  //    the .tv zone is migrated onto Cloudflare DNS too.
+  //
   //  • LOCAL:  direct hit on the Mac Mini's MediaMTX. Only resolves when the
   //    page is opened *on the Mac Mini itself*, but browsers whitelist
   //    http://localhost and http://127.0.0.1 as secure origins, so mixed-
   //    content blocking on this HTTPS page does NOT apply to these URLs.
   //
   // Net effect: the studio operator can always preview on the Mac Mini even
-  // if the tunnel is down, rotating, or not-yet-resolvable in local DNS.
+  // if the tunnel is down, and every remote viewer gets edge-cached segments.
   var CANDIDATES = [
-    'https://nobody-beaver-replacement-build.trycloudflare.com/program/index.m3u8',
+    'https://live.interdependent.dev/program/index.m3u8',
     'http://127.0.0.1:8888/program/index.m3u8'
   ];
 
