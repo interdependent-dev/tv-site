@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  tv.interdependent.cloudflared.plist — launchd agent for the named tunnel.
+
+  Unlike the quick tunnel (which rotates its hostname on every restart),
+  a named tunnel has a persistent UUID + credentials file. launchd can
+  safely keep it alive forever without URL rotation.
+
+  Install:
+    cp tv.interdependent.cloudflared.plist ~/Library/LaunchAgents/
+    launchctl load  ~/Library/LaunchAgents/tv.interdependent.cloudflared.plist
+
+  Stop:
+    launchctl unload ~/Library/LaunchAgents/tv.interdependent.cloudflared.plist
+
+  Tail logs:
+    tail -f /Users/interdependent/tv/mediamtx/cloudflared.log
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>tv.interdependent.cloudflared</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/homebrew/bin/cloudflared</string>
+    <string>tunnel</string>
+    <string>--config</string>
+    <string>/Users/interdependent/tv/mediamtx/cloudflared-config.yml</string>
+    <string>run</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/interdependent/tv/mediamtx</string>
+
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+
+  <key>StandardOutPath</key>
+  <string>/Users/interdependent/tv/mediamtx/cloudflared.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/interdependent/tv/mediamtx/cloudflared.log</string>
+</dict>
+</plist>

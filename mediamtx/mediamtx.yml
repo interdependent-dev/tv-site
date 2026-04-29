@@ -1,0 +1,147 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# mediamtx.yml — interdependent.tv egress layer
+#
+# Role: accept OBS's program feed via SRT publish, remux it, and fan out to
+# viewers as LL-HLS (primary) or WebRTC/WHEP (secondary, sub-second).
+#
+# Pipeline position (see pipeline_diagram.html):
+#   OBS (studio MacBook) ──SRT publish──▶ THIS SERVER (path: /program)
+#                                              │
+#                                              ├──▶ LL-HLS  :8888/program/index.m3u8
+#                                              └──▶ WebRTC  :8889/program/whep
+#
+# Full default config with every tunable:
+#   https://github.com/bluenviron/mediamtx/blob/v1.17.1/mediamtx.yml
+# Only overrides are listed below; omitted keys fall back to library defaults.
+# ─────────────────────────────────────────────────────────────────────────────
+
+logLevel: info
+logDestinations: [stdout]
+readTimeout: 10s
+writeTimeout: 10s
+
+# ── Protocol enable/disable ──────────────────────────────────────────────────
+# We only want: SRT (ingest from OBS) + HLS (egress) + WebRTC (egress).
+# Everything else stays off to shrink the attack surface and free up ports.
+rtsp: no
+rtmp: no
+hls: yes
+webrtc: yes
+srt: yes
+
+# ── Control API (localhost only) ─────────────────────────────────────────────
+# Used by test.sh and any future dashboard. Never expose publicly — there is
+# no auth on the API itself; access control is IP-based via authInternalUsers.
+api: yes
+apiAddress: 127.0.0.1:9997
+
+# ── Auth ─────────────────────────────────────────────────────────────────────
+# MVP posture: anonymous publish + anonymous read, API restricted to localhost.
+#
+# ⚠️  BEFORE PUTTING THIS ON THE PUBLIC INTERNET:
+#     Replace the first entry with a named publisher + strong password so
+#     random internet actors can't push garbage to /program. Example:
+#
+#     - user: obs
+#       pass: ${MEDIAMTX_PUBLISH_PASSWORD}   # export before starting mediamtx
+#       permissions: [{action: publish, path: program}]
+#
+#     Then OBS streamid becomes: publish:program:obs:<password>
+authInternalUsers:
+  - user: any
+    pass:
+    permissions: [{action: publish}]
+  - user: any
+    pass:
+    permissions: [{action: read}, {action: playback}]
+  - user: any
+    ips: ['127.0.0.1', '::1']
+    permissions: [{action: api}, {action: metrics}, {action: pprof}]
+
+# ── SRT ingest (from OBS) ────────────────────────────────────────────────────
+# OBS config:
+#   Settings → Stream → Service: Custom → Server:
+#     srt://<this-host>:8890?streamid=publish:program&pkt_size=1316&latency=200000
+#
+# Notes:
+#   - Port 8890/udp must be reachable from the OBS machine (LAN is fine).
+#   - latency=200000 (200ms) is a sane default; raise if the OBS link is lossy.
+#   - pkt_size=1316 keeps SRT packets under common MTU after overhead.
+#   (SRT enable flag is set in the protocol toggle block above.)
+srtAddress: :8890
+
+# ── HLS / LL-HLS egress (primary viewer path) ────────────────────────────────
+# Why LL-HLS as the default fan-out:
+#   • Native support in Safari + iOS + Apple TV (no JS polyfill needed).
+#   • hls.js covers Chrome/Firefox/Android.
+#   • Trivially CDN-able later (Cloudflare, Fastly) — it's just m3u8 + fMP4.
+#   • ~2–3s glass-to-glass; good enough for a broadcast.
+#
+# LL-HLS caveat: Safari only enables true low-latency mode over HTTPS.
+# For production, terminate TLS in front of :8888 (Caddy / nginx / Cloudflare).
+hlsAddress: :8888
+hlsEncryption: no                 # TLS terminates upstream
+hlsAllowOrigins: ['*']            # tighten to ['https://interdependent.tv'] in prod
+
+# Switch from standard HLS to LL-HLS. Requires fMP4 segments (auto).
+hlsVariant: lowLatency
+
+# Segment/part tuning — tightened for sub-1.5s glass-to-glass.
+#
+# Latency floor ≈ (liveSyncDurationCount × hlsPartDuration) + segment emit + RTT
+#   with liveSyncDurationCount=2 (set in the site's hls.js config),
+#   hlsPartDuration=100ms, and a ~50ms local RTT, we land near ~1.2s.
+#
+# iOS caveat: Apple enforces part-duration CONSISTENCY. If OBS's keyframe
+# interval drifts (e.g. it's set to "auto" or 0), MediaMTX may emit parts
+# of 98ms and 103ms alternately, which Safari flags as invalid. Pin OBS's
+# keyframe interval to a FIXED 1s (Settings → Output → Streaming).
+hlsSegmentCount: 7                # rolling window; ~7s of buffer
+hlsSegmentDuration: 1s            # target segment length — keep at 1s so OBS's
+                                  # 1s keyframe interval aligns cleanly to
+                                  # segment boundaries (avoids re-keying)
+hlsPartDuration: 100ms            # LL-HLS part length; halved from 200ms to
+                                  # pull live edge closer without triggering
+                                  # the iOS drift warning we saw previously
+
+# Always keep the muxer warm so the first viewer doesn't eat a cold-start 404.
+# Cost: a bit of CPU even with zero viewers. Worth it for a scheduled broadcast.
+hlsAlwaysRemux: yes
+
+# Players (hls.js / native) need the init segment quickly — default 50MB is fine.
+# hlsSegmentMaxSize: 50M
+
+# ── WebRTC / WHEP egress (secondary, sub-second) ─────────────────────────────
+# Why keep it enabled alongside HLS:
+#   • Sub-second latency for the director's monitor / backstage.
+#   • Costs almost nothing to run once NAT is sorted.
+#
+# NAT/firewall requirements for public reach:
+#   • Port-forward UDP 8189 on the router → this machine.
+#   • Set webrtcAdditionalHosts to the router's public IP or hostname,
+#     otherwise ICE candidates point to a non-routable LAN address.
+webrtcAddress: :8889
+webrtcEncryption: no              # TLS terminates upstream
+webrtcAllowOrigins: ['*']         # tighten to ['https://interdependent.tv'] in prod
+webrtcLocalUDPAddress: :8189
+webrtcIPsFromInterfaces: yes
+# webrtcAdditionalHosts: ['tv.example.com']   # ← set to public hostname/IP
+webrtcICEServers2:
+  - url: stun:stun.l.google.com:19302
+
+# ── Paths ────────────────────────────────────────────────────────────────────
+# `program` is the canonical path for OBS output. `source: publisher` means
+# the stream materialises when something publishes to it (our OBS SRT push)
+# and tears down when the publisher disconnects.
+paths:
+  program:
+    source: publisher
+    # Optional: record the broadcast to disk. Uncomment to archive.
+    # record: yes
+    # recordPath: ./recordings/%path/%Y-%m-%d_%H-%M-%S-%f
+    # recordFormat: fmp4
+
+  # Fallback: allow other paths (e.g. per-actor ingress lanes per the diagram)
+  # to be created on the fly without explicit declaration. Remove this block
+  # to make `program` the only accepted path.
+  all_others:

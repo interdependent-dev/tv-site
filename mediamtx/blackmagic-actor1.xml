@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<streaming>
+    <service customizable-url="false">
+        <name>INTERDEPENDENT TV</name>
+        <servers>
+            <server>
+                <name>Mac Mini Studio</name>
+                <url>srt://10.130.80.115:8890?streamid=publish:actor1</url>
+                <srt-extensions>
+                    <stream-id>
+                        <item key="copy" value="0"/>
+                    </stream-id>
+                </srt-extensions>
+            </server>
+        </servers>
+        <profiles default="Streaming High">
+            <profile>
+                <name>Streaming High</name>
+                <config resolution="1080p" fps="30" codec="H264">
+                    <bitrate>6000000</bitrate>
+                    <audio-bitrate>128000</audio-bitrate>
+                </config>
+            </profile>
+            <profile>
+                <name>Streaming Medium</name>
+                <config resolution="720p" fps="30" codec="H264">
+                    <bitrate>3500000</bitrate>
+                    <audio-bitrate>128000</audio-bitrate>
+                </config>
+            </profile>
+        </profiles>
+    </service>
+</streaming>

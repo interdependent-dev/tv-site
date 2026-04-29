@@ -1,0 +1,12 @@
+# Binary + archive (pinned version, fetched by install.sh)
+mediamtx
+mediamtx_*.tar.gz
+
+# Runtime logs
+mediamtx.log
+cloudflared.log
+test-mediamtx.log
+test-ffmpeg.log
+
+# Optional recordings directory (enabled via `record: yes` in mediamtx.yml)
+recordings/

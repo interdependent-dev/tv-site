@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  tv.interdependent.mediamtx.plist — launchd agent for autostart on login.
+
+  Install:
+    cp tv.interdependent.mediamtx.plist ~/Library/LaunchAgents/
+    launchctl load  ~/Library/LaunchAgents/tv.interdependent.mediamtx.plist
+
+  Tail logs:
+    tail -f /Users/interdependent/tv/mediamtx/mediamtx.log
+
+  Stop / uninstall:
+    launchctl unload ~/Library/LaunchAgents/tv.interdependent.mediamtx.plist
+
+  Note: paths are absolute because launchd has no notion of cwd, and this is
+  a LaunchAgent (runs as the user), not a LaunchDaemon (would run as root).
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>tv.interdependent.mediamtx</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/interdependent/tv/mediamtx/mediamtx</string>
+    <string>/Users/interdependent/tv/mediamtx/mediamtx.yml</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/interdependent/tv/mediamtx</string>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <!-- Restart automatically if mediamtx crashes. Don't set ThrottleInterval
+       too low or a config error creates a fork bomb in Console.app. -->
+  <key>KeepAlive</key>
+  <true/>
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+
+  <key>StandardOutPath</key>
+  <string>/Users/interdependent/tv/mediamtx/mediamtx.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/interdependent/tv/mediamtx/mediamtx.log</string>
+</dict>
+</plist>

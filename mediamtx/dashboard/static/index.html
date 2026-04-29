@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>INTERDEPENDENT // MISSION CONTROL</title>
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark"></span>
+    <span class="brand-title">INTERDEPENDENT // MISSION CONTROL</span>
+  </div>
+  <div class="topbar-right">
+    <div class="onair-badge" id="onair-badge"><span class="dot"></span><span id="onair-text">CHECKING</span></div>
+    <div class="clock" id="clock">— : — : —</div>
+  </div>
+</header>
+
+<main class="grid">
+
+  <section class="panel panel-hero">
+    <header class="phead"><h2>STREAM</h2><span class="hint" id="stream-hint">No publisher detected</span></header>
+    <div class="hero-row">
+      <div class="hero-stat"><label>STATUS</label><div class="hero-value" id="hero-status">—</div></div>
+      <div class="hero-stat"><label>UPTIME</label><div class="hero-value" id="hero-uptime">—</div></div>
+      <div class="hero-stat"><label>PUBLISHERS</label><div class="hero-value" id="hero-pub">0</div></div>
+      <div class="hero-stat"><label>VIEWERS</label><div class="hero-value" id="hero-readers">0</div></div>
+      <div class="hero-stat"><label>RX</label><div class="hero-value" id="hero-rx">— Mbps</div></div>
+      <div class="hero-stat"><label>TX</label><div class="hero-value" id="hero-tx">— Mbps</div></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <header class="phead"><h2>HEALTH</h2><span class="hint">Services + reachability</span></header>
+    <ul class="health" id="health-list">
+      <li><span class="dot" id="h-mediamtx"></span><span class="hlabel">MediaMTX</span><span class="hsub" id="h-mediamtx-sub">—</span></li>
+      <li><span class="dot" id="h-cloudflared"></span><span class="hlabel">Cloudflare Tunnel</span><span class="hsub" id="h-cloudflared-sub">—</span></li>
+      <li><span class="dot" id="h-api"></span><span class="hlabel">Control API</span><span class="hsub" id="h-api-sub">127.0.0.1:9997</span></li>
+      <li><span class="dot" id="h-public"></span><span class="hlabel">Public URL</span><span class="hsub" id="h-public-sub">—</span></li>
+      <li><span class="dot" id="h-tls"></span><span class="hlabel">TLS Certificate</span><span class="hsub" id="h-tls-sub">—</span></li>
+    </ul>
+  </section>
+
+  <section class="panel">
+    <header class="phead"><h2>STREAM HEALTH</h2><span class="hint" id="sh-hint">looking back 15 min</span></header>
+    <div class="health-overall" id="sh-overall">
+      <span class="dot"></span>
+      <span id="sh-text">Checking…</span>
+    </div>
+    <ul class="incidents health" id="sh-incidents"><li class="muted">Loading…</li></ul>
+  </section>
+
+  <section class="panel">
+    <header class="phead"><h2>SYSTEM</h2><span class="hint">Mac mini — host</span></header>
+    <dl class="metrics">
+      <dt>HOSTNAME</dt><dd id="s-host">—</dd>
+      <dt>OS / ARCH</dt><dd id="s-os">—</dd>
+      <dt>CPU</dt><dd><span id="s-cpu">—</span><div class="bar"><i id="s-cpu-bar"></i></div></dd>
+      <dt>LOAD</dt><dd id="s-load">—</dd>
+      <dt>MEMORY</dt><dd><span id="s-mem">—</span><div class="bar"><i id="s-mem-bar"></i></div></dd>
+      <dt>DISK</dt><dd><span id="s-disk">—</span><div class="bar"><i id="s-disk-bar"></i></div></dd>
+      <dt>UPTIME</dt><dd id="s-uptime">—</dd>
+    </dl>
+  </section>
+
+  <section class="panel">
+    <header class="phead"><h2>STATS FOR NERDS</h2><span class="hint">Per stream</span></header>
+    <dl class="metrics" id="nerd">
+      <dt>PATH</dt><dd id="n-path">—</dd>
+      <dt>SOURCE</dt><dd id="n-src">—</dd>
+      <dt>READY</dt><dd id="n-ready">—</dd>
+      <dt>READY TIME</dt><dd id="n-rdytime">—</dd>
+      <dt>TRACKS</dt><dd id="n-tracks">—</dd>
+      <dt>BYTES IN</dt><dd id="n-rx">—</dd>
+      <dt>BYTES OUT</dt><dd id="n-tx">—</dd>
+      <dt>BITRATE IN</dt><dd id="n-brin">—</dd>
+      <dt>BITRATE OUT</dt><dd id="n-brout">—</dd>
+      <dt>HLS PART</dt><dd id="n-part">100ms</dd>
+      <dt>HLS SEGMENT</dt><dd id="n-seg">1s</dd>
+      <dt>VARIANT</dt><dd id="n-variant">LL-HLS (fMP4)</dd>
+      <dt>SRT INGEST</dt><dd id="n-srt">—</dd>
+      <dt>HLS MUXERS</dt><dd id="n-hlsmux">—</dd>
+      <dt>WEBRTC SESSIONS</dt><dd id="n-webrtc">—</dd>
+    </dl>
+  </section>
+
+  <section class="panel">
+    <header class="phead"><h2>NETWORK</h2><span class="hint">NICs + reachability</span></header>
+    <dl class="metrics">
+      <dt>LAN IP(S)</dt><dd id="net-lan">—</dd>
+      <dt>PUBLIC IP</dt><dd id="net-public">—</dd>
+      <dt>DEFAULT IFACE</dt><dd id="net-iface">—</dd>
+      <dt>LINK</dt><dd id="net-link">—</dd>
+      <dt>MTU</dt><dd id="net-mtu">—</dd>
+      <dt>DNS LOOKUP</dt><dd id="net-dns">—</dd>
+    </dl>
+    <h3 class="subhead">PINGS</h3>
+    <ul class="pings" id="net-pings"></ul>
+    <h3 class="subhead">PORTS</h3>
+    <ul class="ports" id="net-ports"></ul>
+  </section>
+
+  <section class="panel">
+    <header class="phead"><h2>CLOUDFLARE</h2><span class="hint" id="cf-hint">—</span></header>
+    <dl class="metrics">
+      <dt>PLATFORM</dt><dd id="cf-platform">—</dd>
+      <dt>ZONE</dt><dd id="cf-zone">—</dd>
+      <dt>REQUESTS 24H</dt><dd id="cf-req">—</dd>
+      <dt>BANDWIDTH 24H</dt><dd id="cf-bw">—</dd>
+      <dt>CACHE HIT</dt><dd id="cf-cache">—</dd>
+      <dt>THREATS 24H</dt><dd id="cf-threat">—</dd>
+      <dt>TLS EXPIRES</dt><dd id="cf-tls">—</dd>
+      <dt>TLS ISSUER</dt><dd id="cf-issuer">—</dd>
+    </dl>
+    <h3 class="subhead">INCIDENTS</h3>
+    <ul class="incidents" id="cf-incidents"><li class="muted">No active incidents.</li></ul>
+  </section>
+
+  <section class="panel">
+    <header class="phead"><h2>GITHUB ACTIONS</h2><span class="hint" id="gh-hint">—</span></header>
+    <ul class="runs" id="gh-runs"><li class="muted">Loading…</li></ul>
+  </section>
+
+  <section class="panel panel-wide">
+    <header class="phead"><h2>READERS / CONNECTIONS</h2><span class="hint" id="conn-hint">— sessions</span></header>
+    <table class="conns" id="conns-tbl">
+      <thead><tr><th>PROTO</th><th>PATH</th><th>REMOTE</th><th>STATE</th><th>RX</th><th>TX</th><th>SINCE</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <section class="panel panel-actions">
+    <header class="phead"><h2>QUICK ACTIONS</h2><span class="hint">Plain-English controls</span></header>
+    <div class="actions">
+      <button class="act primary" data-action="open-site">▶  Open Live Site</button>
+      <button class="act" data-action="open-public-stream">↗  Open Public HLS</button>
+      <button class="act" data-action="open-local-hls">↗  Open Local HLS</button>
+      <button class="act warn" data-action="restart-mediamtx">⟳  Restart MediaMTX</button>
+      <button class="act warn" data-action="restart-cloudflared">⟳  Restart Tunnel</button>
+      <button class="act" id="act-copy-obs">⧉  Copy OBS URL</button>
+      <button class="act" id="act-copy-public">⧉  Copy Public URL</button>
+    </div>
+    <div class="snackbar" id="snack"></div>
+  </section>
+
+  <section class="panel panel-full panel-logs">
+    <header class="phead">
+      <h2>LIVE LOGS</h2>
+      <div class="log-toolbar">
+        <label class="chip"><input type="checkbox" data-src="mediamtx" checked> mediamtx</label>
+        <label class="chip"><input type="checkbox" data-src="cloudflared" checked> cloudflared</label>
+        <label class="chip"><input type="checkbox" data-src="dashboard"> dashboard</label>
+        <label class="chip"><input type="checkbox" data-level="ERR" checked> ERR</label>
+        <label class="chip"><input type="checkbox" data-level="WRN" checked> WRN</label>
+        <label class="chip"><input type="checkbox" data-level="INF" checked> INF</label>
+        <label class="chip"><input type="checkbox" data-level="DBG"> DBG</label>
+        <input class="search" id="log-search" placeholder="filter text…">
+        <button id="log-pause">PAUSE</button>
+        <button id="log-clear">CLEAR</button>
+      </div>
+    </header>
+    <div class="log-stream" id="log-stream"></div>
+  </section>
+
+</main>
+
+<footer class="bottom">
+  <span id="footer-build">build · go</span>
+  <span id="footer-conn">connecting…</span>
+</footer>
+
+<script src="/app.js"></script>
+</body>
+</html>

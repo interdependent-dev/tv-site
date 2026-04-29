@@ -1,0 +1,43 @@
+# cloudflared-config.yml — named tunnel config for interdependent-live.
+#
+# This file is a TEMPLATE. After `cloudflared tunnel login` + tunnel create,
+# replace d9026fb9-40e8-4c06-8f10-5a94ada2f73b with the UUID that `cloudflared tunnel list` prints.
+# The setup script in set-up-named-tunnel.sh does this automatically.
+#
+# Ingress rules route incoming requests by hostname:
+#   live.interdependent.tv  → local MediaMTX HLS server :8888
+#   (catch-all)             → 404 (so random probes don't expose your box)
+
+tunnel: d9026fb9-40e8-4c06-8f10-5a94ada2f73b
+credentials-file: /Users/interdependent/.cloudflared/d9026fb9-40e8-4c06-8f10-5a94ada2f73b.json
+
+# Protocol — QUIC is faster than HTTP/2 for the tunnel leg and handles
+# Wi-Fi jitter better. cloudflared negotiates this automatically but we
+# pin it for predictability.
+protocol: quic
+
+# Logs go to cloudflared.log in this directory (same place as the quick
+# tunnel log, for operator muscle memory).
+logfile: /Users/interdependent/tv/mediamtx/cloudflared.log
+loglevel: info
+
+ingress:
+  # Primary: live.interdependent.dev → MediaMTX HLS server on port 8888.
+  # Using .dev (not .tv) while we validate the setup end-to-end on a
+  # throwaway domain before touching the production interdependent.tv zone.
+  # noTLSVerify is fine here because the backend is plain HTTP on localhost;
+  # TLS is terminated at the Cloudflare edge with the cert for live.interdependent.dev.
+  - hostname: live.interdependent.dev
+    service: http://localhost:8888
+    originRequest:
+      # No chunked encoding for HLS segments — they're known-length files.
+      # Disabled compression: HLS segments are already fMP4 (binary); gzip
+      # wastes CPU and slightly delays first-byte.
+      disableChunkedEncoding: true
+      # noHappyEyeballs: prefer IPv4 for localhost; cheaper + deterministic.
+      noHappyEyeballs: true
+
+  # Catch-all 404. Anything not matching the hostname above gets rejected
+  # at cloudflared, never reaching MediaMTX. Prevents accidental exposure
+  # of the API, WebRTC, or SRT ports via the tunnel.
+  - service: http_status:404

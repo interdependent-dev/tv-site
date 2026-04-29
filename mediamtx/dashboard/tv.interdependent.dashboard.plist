@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  tv.interdependent.dashboard.plist — launchd agent for Mission Control.
+
+  Install:
+    cd /Users/interdependent/tv/mediamtx/dashboard
+    go build -o dashboard-bin .
+    cp tv.interdependent.dashboard.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/tv.interdependent.dashboard.plist
+
+  Open:
+    http://localhost:9998
+
+  Tail logs:
+    tail -f /Users/interdependent/tv/mediamtx/dashboard/dashboard.log
+
+  Cloudflare token (optional, enables analytics panel):
+    edit the EnvironmentVariables block below, paste the token, then:
+    launchctl unload ~/Library/LaunchAgents/tv.interdependent.dashboard.plist
+    launchctl load   ~/Library/LaunchAgents/tv.interdependent.dashboard.plist
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>tv.interdependent.dashboard</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/interdependent/tv/mediamtx/dashboard/dashboard-bin</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/interdependent/tv/mediamtx/dashboard</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <key>CF_API_TOKEN</key>
+    <string></string>
+    <key>GH_REPO</key>
+    <string>interdependent-dev/tv-site</string>
+    <key>CF_ZONE_NAME</key>
+    <string>interdependent.dev</string>
+    <key>PUBLIC_HOST</key>
+    <string>live.interdependent.dev</string>
+  </dict>
+
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+
+  <key>StandardOutPath</key>
+  <string>/Users/interdependent/tv/mediamtx/dashboard/dashboard.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/interdependent/tv/mediamtx/dashboard/dashboard.log</string>
+</dict>
+</plist>

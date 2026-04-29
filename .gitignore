@@ -1,0 +1,11 @@
+# macOS
+.DS_Store
+
+# Local Claude Code state (per-machine)
+.claude/
+
+# Personal / WIP notes — review before committing; may contain secrets
+current_POC_stream.md
+
+# Original mediamtx archive — install.sh fetches this; not source
+mediamtx.zip
