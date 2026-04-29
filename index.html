@@ -2,132 +2,316 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000">
 <meta name="description" content="INTERDEPENDENT TV">
 <meta property="og:title" content="INTERDEPENDENT TV">
 <meta property="og:description" content="INTERDEPENDENT TV">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://interdependent.tv">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>INTERDEPENDENT TV</title>
+
+<!-- ── Network hints ───────────────────────────────────────────────
+     Kick off DNS resolution, TLS handshake, AND the HLS manifest
+     fetch before HTML finishes parsing. By the time hls.js asks for
+     the manifest, the response is already in the browser's cache.
+     Saves 1–2 RTTs on cold start (~200–500ms typical).
+-->
+<link rel="dns-prefetch" href="//live.interdependent.dev">
+<link rel="preconnect" href="https://live.interdependent.dev" crossorigin>
+<link rel="preload" href="https://live.interdependent.dev/program/index.m3u8" as="fetch" crossorigin>
+
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCA3NC42IDg5LjQnIGZpbGwtcnVsZT0nZXZlbm9kZCc+PHBhdGggZmlsbD0nIzAwMCcgZD0nTTkuMyAyOGEyOCAyOCAwIDEgMCA1NiAwIDI4IDI4IDAgMSAwLTU2IDBNMjAgNjQuOWE3LjUgNy4zIDAgMSAwIDE1IDAgNy41IDcuMyAwIDEgMC0xNSAwTTIzLjIgNjQuN2E0LjEgNC4xIDAgMSAwIDguMiAwIDQuMSA0LjEgMCAxIDAtOC4yIDBNNDMuOSA2MGE0IDQgMCAxIDAgOCAwIDQgNCAwIDEgMC04IDBNNDUuNSA2MGEyLjQgMi40IDAgMSAwIDQuOCAwIDIuNCAyLjQgMCAxIDAtNC44IDBNMzcuMyA3Mi43YTMuMyAzLjMgMCAxIDAgNi42IDAgMy4zIDMuMyAwIDEgMC02LjYgME0yOS4zIDg1LjRhNCA0IDAgMSAwIDggMCA0IDQgMCAxIDAtOCAwTTAgNTAuN2E2LjcgNi43IDAgMSAwIDEzLjQgMCA2LjcgNi43IDAgMSAwLTEzLjQgME02MS4zIDQ5LjNhNi43IDYuNyAwIDEgMCAxMy4zIDAgNi43IDYuNyAwIDEgMC0xMy4zIDAnLz48L3N2Zz4=">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<!-- hls.js covers Chrome/Firefox/Edge/Android. Safari/iOS use native HLS. -->
+
+<!-- hls.js for browsers without native HLS (Chrome / Firefox / Edge / Android).
+     Synchronous load so window.Hls is defined when the inline init runs. -->
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.15/dist/hls.min.js"></script>
+
 <style>
 *{margin:0;box-sizing:border-box}
-html,body{height:100%;width:100%;overflow:hidden;background:#000}
-#stream{position:fixed;top:0;left:0;width:100vw;height:100vh;object-fit:cover;background:#000}
-.v{position:fixed;top:0;left:0;width:100%;height:100%;background:radial-gradient(ellipse at center,transparent 30%,rgba(0,0,0,.5) 100%);z-index:1;pointer-events:none}
-.logo{position:fixed;bottom:clamp(20px,4vh,40px);right:clamp(20px,4vw,48px);z-index:2;pointer-events:none;display:flex;align-items:center;gap:14px}
-.logo svg{width:min(28vw,180px);height:auto;opacity:0;animation:f 2.5s ease-in forwards .5s;filter:drop-shadow(0 0 20px rgba(255,255,255,.35))}
+html,body{
+  height:100%;width:100%;
+  overflow:hidden;
+  background:#000;color:#fff;
+  font-family:-apple-system,BlinkMacSystemFont,"Inter",system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;
+  -webkit-tap-highlight-color:transparent;
+  user-select:none;-webkit-user-select:none;
+  touch-action:manipulation;
+}
+
+#stream{position:fixed;inset:0;width:100vw;height:100vh;object-fit:cover;background:#000}
+
+.v{position:fixed;inset:0;background:radial-gradient(ellipse at center,transparent 30%,rgba(0,0,0,.5) 100%);z-index:1;pointer-events:none}
+
+/* Whole-screen tap layer — every pixel is a "tap to unmute" target */
+.tap-zone{position:fixed;inset:0;z-index:3;cursor:pointer;background:transparent}
+.tap-zone.gone{pointer-events:none}
+
+/* Watermark — bottom right */
+.logo{position:fixed;bottom:clamp(20px,4vh,40px);right:clamp(20px,4vw,48px);z-index:4;pointer-events:none}
+.logo svg{
+  width:min(28vw,180px);height:auto;
+  opacity:0;animation:f 2.5s ease-in forwards .5s;
+  filter:drop-shadow(0 0 20px rgba(255,255,255,.35));
+}
 @keyframes f{to{opacity:.75}}
-.unmute{position:fixed;bottom:clamp(20px,4vh,40px);left:clamp(20px,4vw,48px);z-index:4;font:500 14px/1 system-ui,-apple-system,sans-serif;color:#fff;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.25);padding:10px 18px;border-radius:24px;cursor:pointer;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:background .2s ease}
-.unmute:hover{background:rgba(0,0,0,.8)}
+
+/* Sound-hint pill — fades in after the warmup, gentle ambient pulse,
+   not aggressive. Sits bottom-left where Twitch / YouTube put their
+   chrome so users instinctively look there. */
+.sound-hint{
+  position:fixed;bottom:clamp(20px,4vh,40px);left:clamp(20px,4vw,48px);z-index:4;
+  display:flex;align-items:center;gap:10px;
+  font:500 14px/1 inherit;color:#fff;
+  background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.25);
+  padding:12px 18px;border-radius:24px;cursor:pointer;
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  opacity:0;
+  animation:hint-in .6s ease forwards 1.6s, hint-pulse 2.4s ease-in-out infinite 2.4s;
+  transition:opacity .4s ease,transform .15s ease;
+  font-family:inherit;
+}
+.sound-hint .icon{font-size:16px}
+.sound-hint:active{transform:scale(.96)}
+.sound-hint.hidden{opacity:0!important;pointer-events:none;animation:none}
+@keyframes hint-in{to{opacity:1}}
+@keyframes hint-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+
+/* Mute toggle — small, persistent once unmuted, allows re-muting */
+.mute-toggle{
+  position:fixed;bottom:clamp(20px,4vh,40px);left:clamp(20px,4vw,48px);z-index:4;
+  width:44px;height:44px;border-radius:50%;
+  background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.25);color:#fff;
+  font-size:18px;cursor:pointer;
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  display:none;align-items:center;justify-content:center;
+  transition:opacity .3s ease,background .2s ease,transform .15s ease;
+  font-family:inherit;
+}
+.mute-toggle.show{display:flex}
+.mute-toggle:hover{background:rgba(0,0,0,.8)}
+.mute-toggle:active{transform:scale(.93)}
+
+/* Warmup overlay — branded fade during cold start. Looks like a CRT
+   warming up: wordmark fades in, audio-spectrum bars pulse, all gone
+   the moment the first real frame plays. */
+.warmup{
+  position:fixed;inset:0;z-index:5;
+  display:flex;align-items:center;justify-content:center;flex-direction:column;
+  background:#000;pointer-events:none;
+  transition:opacity .5s ease;
+}
+.warmup.gone{opacity:0}
+.warmup-mark{display:block;margin-bottom:26px;opacity:0;animation:warmup-in .7s ease forwards .1s}
+.warmup-mark svg{
+  width:min(45vw,260px);height:auto;
+  filter:drop-shadow(0 0 24px rgba(255,255,255,.35));
+}
+.warmup-bars{display:flex;gap:5px;opacity:0;animation:warmup-in .5s ease forwards .35s}
+.warmup-bars span{
+  width:3px;height:14px;background:rgba(255,255,255,.85);
+  animation:warmup-bar 1.1s ease infinite;transform-origin:center;
+}
+.warmup-bars span:nth-child(2){animation-delay:.12s}
+.warmup-bars span:nth-child(3){animation-delay:.24s}
+.warmup-bars span:nth-child(4){animation-delay:.36s}
+.warmup-bars span:nth-child(5){animation-delay:.48s}
+@keyframes warmup-in{to{opacity:1}}
+@keyframes warmup-bar{
+  0%,100%{opacity:.3;transform:scaleY(.5)}
+  50%{opacity:1;transform:scaleY(1.6)}
+}
+
+/* Mobile: bigger tap targets, slightly larger fonts */
+@media (max-width:640px){
+  .sound-hint{font-size:15px;padding:14px 22px;border-radius:28px}
+  .mute-toggle{width:48px;height:48px;font-size:20px}
+}
 </style>
 </head>
 <body>
-<!--
-  Live HLS feed from MediaMTX running on the Mac Mini studio box, exposed
-  to the public internet via a Cloudflare quick tunnel. Quick tunnels give
-  a random ephemeral hostname — if cloudflared restarts, STREAM_URL below
-  changes and the stream will 404 until this file is updated.
 
-  For a permanent hostname, replace STREAM_URL with the named-tunnel
-  endpoint (e.g. https://live.interdependent.tv/program/index.m3u8) once
-  the CNAME is provisioned in Route 53.
+<!--
+  Live HLS feed from MediaMTX on the studio Mac mini, exposed via a
+  named Cloudflare tunnel. Cloudflare cache rules: bypass cache for
+  the .m3u8 manifest (so LL-HLS stays live) but cache .mp4/.m4s
+  segments for ~30s at the edge (so N concurrent viewers fan out from
+  ~1 origin fetch per segment, not N).
 -->
-<video id="stream" autoplay muted playsinline></video>
+<video id="stream" autoplay muted playsinline preload="auto"></video>
 <div class="v"></div>
+
+<!-- Whole-screen tap zone for unmute. Sits above the video, below the
+     watermark + hint pill. Every pixel is a tap target. -->
+<div class="tap-zone" id="tap-zone"></div>
+
+<!-- Watermark -->
 <div class="logo">
 <svg viewBox="-1 -1 394 238" fill-rule="evenodd" role="img" aria-label="INTERDEPENDENT TV"><path fill="#fff" d="M72.4265993,181.599151 C66.4590298,181.599151 61.6302421,176.771465 61.6302421,170.837972 C61.6302421,164.895874 66.4590298,160.07249 72.4265993,160.07249 C78.3985826,160.07249 83.2229564,164.895874 83.2229564,170.837972 C83.2229564,176.771465 78.3985826,181.599151 72.4265993,181.599151 M91.860925,171.461871 C91.860925,160.132729 83.1567482,151.462687 73.0577845,151.462687 C61.6964503,151.462687 52.9966875,160.132729 52.9966875,171.461871 C52.9966875,181.538913 61.6964503,190.208955 73.0577845,190.208955 C83.1567482,190.208955 91.860925,181.538913 91.860925,171.461871M24.7317875,73.9701493 C24.7317875,114.823555 57.9498633,147.940299 99.5404822,147.940299 C139.904437,147.940299 173.122512,114.823555 173.122512,73.9701493 C173.122512,33.1167433 139.904437,0 99.5404822,0 C57.9498633,0 24.7317875,33.1167433 24.7317875,73.9701493 ZM127.194217,164.849451 C123.67483,164.849451 120.831581,162.010133 120.831581,158.511688 C120.831581,155.009017 123.67483,152.169699 127.194217,152.169699 C130.70927,152.169699 133.552519,155.009017 133.552519,158.511688 C133.552519,162.010133 130.70927,164.849451 127.194217,164.849451 M127.194217,147.940299 C121.338684,147.940299 116.592712,152.66827 116.592712,158.511688 C116.592712,164.346655 121.338684,169.074627 127.194217,169.074627 C133.045415,169.074627 137.791387,164.346655 137.791387,158.511688 C137.791387,152.66827 133.045415,147.940299 127.194217,147.940299M107.7622,183.164179 C102.884091,183.164179 98.92715,187.105962 98.92715,191.972361 C98.92715,196.834336 102.884091,200.776119 107.7622,200.776119 C112.640309,200.776119 116.592712,196.834336 116.592712,191.972361 C116.592712,187.105962 112.640309,183.164179 107.7622,183.164179M88.3256373,214.865672 C82.4745768,214.865672 77.728475,219.595655 77.728475,225.432836 C77.728475,231.270017 82.4745768,236 88.3256373,236 C94.1810481,236 98.92715,231.270017 98.92715,225.432836 C98.92715,219.595655 94.1810481,214.865672 88.3256373,214.865672M17.6655625,116.238806 C7.90718362,116.238806 0,124.123696 0,133.852952 C0,143.577797 7.90718362,151.462687 17.6655625,151.462687 C27.4239414,151.462687 35.331125,143.577797 35.331125,133.852952 C35.331125,124.123696 27.4239414,116.238806 17.6655625,116.238806M180.186475,112.716418 C170.433871,112.716418 162.523175,120.601308 162.523175,130.330564 C162.523175,140.055409 170.433871,147.940299 180.186475,147.940299 C189.943604,147.940299 197.8543,140.055409 197.8543,130.330564 C197.8543,120.601308 189.943604,112.716418 180.186475,112.716418M239.894118,45.170986 L282.776959,45.1709859 L282.776959,63.8942535 L239.894118,63.8942535 L239.894118,104.40507 C239.894118,124.823247 240.972673,126.780451 251.145666,126.780451 L253.001174,126.780451 C262.953117,126.780451 264.046554,124.770747 264.046554,106.053746 L264.046554,99.9894648 L284.426299,99.9894648 L284.426299,110.587606 C284.426299,139.540191 277.772511,146.534141 250.527164,146.534141 L247.228483,146.534141 C220.272791,146.534141 214.77252,139.9545 214.77252,106.672 L214.77252,63.8942535 L201.165465,63.8942535 L201.165465,45.1709859 L214.77252,45.170986 L214.77252,19.4104225 L239.894118,19.4104225 ZM318.496605,45.5306504 L341.82905,125.320038 L365.161495,45.5306504 L365.26667,45.1709859 L365.641397,45.1709859 L391,45.170986 L391.693801,45.170986 L391.474322,45.8291572 L358.487522,144.74972 L358.373533,145.091549 L324.459897,145.091549 L324.345908,144.74972 L291.359107,45.8291571 L291.139628,45.1709859 L318.39143,45.1709859 Z"/></svg>
 </div>
-<button class="unmute" id="unmute" type="button">🔊 Tap to unmute</button>
+
+<!-- Sound hint — fades in after warmup -->
+<button class="sound-hint" id="sound-hint" type="button">
+  <span class="icon">🔊</span>
+  <span>Tap for sound</span>
+</button>
+
+<!-- Mute toggle — appears once unmuted, lets viewer re-mute -->
+<button class="mute-toggle" id="mute-toggle" type="button" aria-label="Toggle mute">🔊</button>
+
+<!-- Warmup overlay — first thing visible on cold start -->
+<div class="warmup" id="warmup">
+  <div class="warmup-mark">
+    <svg viewBox="-1 -1 394 238" fill-rule="evenodd" role="img" aria-label="INTERDEPENDENT TV"><path fill="#fff" d="M72.4265993,181.599151 C66.4590298,181.599151 61.6302421,176.771465 61.6302421,170.837972 C61.6302421,164.895874 66.4590298,160.07249 72.4265993,160.07249 C78.3985826,160.07249 83.2229564,164.895874 83.2229564,170.837972 C83.2229564,176.771465 78.3985826,181.599151 72.4265993,181.599151 M91.860925,171.461871 C91.860925,160.132729 83.1567482,151.462687 73.0577845,151.462687 C61.6964503,151.462687 52.9966875,160.132729 52.9966875,171.461871 C52.9966875,181.538913 61.6964503,190.208955 73.0577845,190.208955 C83.1567482,190.208955 91.860925,181.538913 91.860925,171.461871M24.7317875,73.9701493 C24.7317875,114.823555 57.9498633,147.940299 99.5404822,147.940299 C139.904437,147.940299 173.122512,114.823555 173.122512,73.9701493 C173.122512,33.1167433 139.904437,0 99.5404822,0 C57.9498633,0 24.7317875,33.1167433 24.7317875,73.9701493 ZM127.194217,164.849451 C123.67483,164.849451 120.831581,162.010133 120.831581,158.511688 C120.831581,155.009017 123.67483,152.169699 127.194217,152.169699 C130.70927,152.169699 133.552519,155.009017 133.552519,158.511688 C133.552519,162.010133 130.70927,164.849451 127.194217,164.849451 M127.194217,147.940299 C121.338684,147.940299 116.592712,152.66827 116.592712,158.511688 C116.592712,164.346655 121.338684,169.074627 127.194217,169.074627 C133.045415,169.074627 137.791387,164.346655 137.791387,158.511688 C137.791387,152.66827 133.045415,147.940299 127.194217,147.940299M107.7622,183.164179 C102.884091,183.164179 98.92715,187.105962 98.92715,191.972361 C98.92715,196.834336 102.884091,200.776119 107.7622,200.776119 C112.640309,200.776119 116.592712,196.834336 116.592712,191.972361 C116.592712,187.105962 112.640309,183.164179 107.7622,183.164179M88.3256373,214.865672 C82.4745768,214.865672 77.728475,219.595655 77.728475,225.432836 C77.728475,231.270017 82.4745768,236 88.3256373,236 C94.1810481,236 98.92715,231.270017 98.92715,225.432836 C98.92715,219.595655 94.1810481,214.865672 88.3256373,214.865672M17.6655625,116.238806 C7.90718362,116.238806 0,124.123696 0,133.852952 C0,143.577797 7.90718362,151.462687 17.6655625,151.462687 C27.4239414,151.462687 35.331125,143.577797 35.331125,133.852952 C35.331125,124.123696 27.4239414,116.238806 17.6655625,116.238806M180.186475,112.716418 C170.433871,112.716418 162.523175,120.601308 162.523175,130.330564 C162.523175,140.055409 170.433871,147.940299 180.186475,147.940299 C189.943604,147.940299 197.8543,140.055409 197.8543,130.330564 C197.8543,120.601308 189.943604,112.716418 180.186475,112.716418M239.894118,45.170986 L282.776959,45.1709859 L282.776959,63.8942535 L239.894118,63.8942535 L239.894118,104.40507 C239.894118,124.823247 240.972673,126.780451 251.145666,126.780451 L253.001174,126.780451 C262.953117,126.780451 264.046554,124.770747 264.046554,106.053746 L264.046554,99.9894648 L284.426299,99.9894648 L284.426299,110.587606 C284.426299,139.540191 277.772511,146.534141 250.527164,146.534141 L247.228483,146.534141 C220.272791,146.534141 214.77252,139.9545 214.77252,106.672 L214.77252,63.8942535 L201.165465,63.8942535 L201.165465,45.1709859 L214.77252,45.170986 L214.77252,19.4104225 L239.894118,19.4104225 ZM318.496605,45.5306504 L341.82905,125.320038 L365.161495,45.5306504 L365.26667,45.1709859 L365.641397,45.1709859 L391,45.170986 L391.693801,45.170986 L391.474322,45.8291572 L358.487522,144.74972 L358.373533,145.091549 L324.459897,145.091549 L324.345908,144.74972 L291.359107,45.8291571 L291.139628,45.1709859 L318.39143,45.1709859 Z"/></svg>
+  </div>
+  <div class="warmup-bars"><span></span><span></span><span></span><span></span><span></span></div>
+</div>
+
 <script>
 (function(){
-  // Two candidate stream sources, tried in order. Whichever answers first wins.
-  //
-  //  • TUNNEL: named Cloudflare Tunnel on a stable hostname — survives
-  //    cloudflared restarts, won't rotate. Backed by Cloudflare Cache Rules
-  //    that bypass cache for the .m3u8 manifest (so LL-HLS stays live) and
-  //    cache .mp4/.m4s segments for 30s at the edge (so N concurrent viewers
-  //    fan out from ~1 origin fetch per segment, not N — this is what kills
-  //    the "pause when a new viewer joins" bug).
-  //
-  //    Currently pointed at live.interdependent.dev (the dummy domain used
-  //    to derisk the Cloudflare setup). Swap to live.interdependent.tv once
-  //    the .tv zone is migrated onto Cloudflare DNS too.
-  //
-  //  • LOCAL:  direct hit on the Mac Mini's MediaMTX. Only resolves when the
-  //    page is opened *on the Mac Mini itself*, but browsers whitelist
-  //    http://localhost and http://127.0.0.1 as secure origins, so mixed-
-  //    content blocking on this HTTPS page does NOT apply to these URLs.
-  //
-  // Net effect: the studio operator can always preview on the Mac Mini even
-  // if the tunnel is down, and every remote viewer gets edge-cached segments.
-  var CANDIDATES = [
-    'https://live.interdependent.dev/program/index.m3u8',
-    'http://127.0.0.1:8888/program/index.m3u8'
-  ];
+  // Stream sources. Tunnel-first because most viewers are remote;
+  // localhost is for the studio operator previewing on the Mac mini.
+  // Hostname-based selection avoids the probe round-trip the old code
+  // did, saving ~100–300ms on cold start.
+  var TUNNEL_URL = 'https://live.interdependent.dev/program/index.m3u8';
+  var LOCAL_URL  = 'http://127.0.0.1:8888/program/index.m3u8';
 
-  var video = document.getElementById('stream');
-  var unmuteBtn = document.getElementById('unmute');
+  var video      = document.getElementById('stream');
+  var warmup     = document.getElementById('warmup');
+  var tapZone    = document.getElementById('tap-zone');
+  var soundHint  = document.getElementById('sound-hint');
+  var muteToggle = document.getElementById('mute-toggle');
 
-  // Probe each candidate with a short-timeout GET. HEAD on MediaMTX returns
-  // 404 even for live streams, so we use GET with a Range: bytes=0-0 to
-  // keep the transfer cheap. CORS is handled by `hlsAllowOrigins: ['*']`
-  // in mediamtx.yml, so cross-origin fetch is allowed.
-  function probe(url){
-    var ctl = new AbortController();
-    var t = setTimeout(function(){ ctl.abort(); }, 3000);
-    return fetch(url, {
-      method: 'GET',
-      headers: { Range: 'bytes=0-0' },
-      cache: 'no-store',
-      signal: ctl.signal
-    }).then(function(r){ clearTimeout(t); return r.ok ? url : null; })
-      .catch(function(){ clearTimeout(t); return null; });
-  }
+  var isMobile   = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
+  var url = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+    ? LOCAL_URL : TUNNEL_URL;
 
-  function load(url){
-    // Prefer native HLS on Safari/iOS/Apple TV — the built-in decoder is more
-    // efficient than MSE + hls.js on these platforms and supports LL-HLS
-    // when served over HTTPS.
+  // ── Player init ────────────────────────────────────────────────
+  function load(u){
     if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = url;
+      // Native HLS on Safari / iOS / Apple TV — most efficient path,
+      // hardware decode, native LL-HLS support.
+      video.src = u;
     } else if (window.Hls && Hls.isSupported()) {
-      // Everything else (Chrome, Firefox, Edge, Android) goes through hls.js.
-      // lowLatencyMode enables LL-HLS part loading when the manifest advertises it.
-      // liveSyncDurationCount: 2 → stay 2 parts behind live instead of the
-      // default 3. With 100ms parts on MediaMTX, this pulls live latency from
-      // ~2.5s down toward ~1.25s. Reduce to 1 for razor-thin latency at the
-      // cost of rebuffering on any network blip.
-      var hls = new Hls({ lowLatencyMode: true, liveSyncDurationCount: 2 });
-      hls.loadSource(url);
+      var hls = new Hls({
+        lowLatencyMode: true,
+        // 2 parts behind live on desktop (fastest), 3 on mobile (more
+        // forgiving on cellular which has higher RTT variance and
+        // higher rates of preload cancellations).
+        liveSyncDurationCount: isMobile ? 3 : 2,
+        // Start fetching the first fragment immediately while metadata
+        // is still being parsed — shaves ~100ms off cold start.
+        startFragPrefetch: true,
+        // Resilience: cellular hiccups should not black-screen the
+        // player. Defaults are too conservative for live.
+        manifestLoadingMaxRetry: 6, manifestLoadingRetryDelay: 500,
+        fragLoadingMaxRetry: 6,     fragLoadingRetryDelay: 500,
+        levelLoadingMaxRetry: 6,    levelLoadingRetryDelay: 500,
+        backBufferLength: 30
+      });
+      hls.loadSource(u);
       hls.attachMedia(video);
+
+      hls.on(Hls.Events.ERROR, function(_, data){
+        if (!data.fatal) return;
+        if (data.type === Hls.ErrorTypes.NETWORK_ERROR)      hls.startLoad();
+        else if (data.type === Hls.ErrorTypes.MEDIA_ERROR)   hls.recoverMediaError();
+        else                                                 hls.destroy();
+      });
+    }
+  }
+  load(url);
+
+  // ── Warmup → out as soon as we have frames ─────────────────────
+  function dismissWarmup(){
+    if (warmup.classList.contains('gone')) return;
+    warmup.classList.add('gone');
+    setTimeout(function(){ warmup.style.display = 'none'; }, 600);
+  }
+  // Multiple signals; whichever fires first wins.
+  video.addEventListener('playing',    dismissWarmup);
+  video.addEventListener('loadeddata', dismissWarmup);
+  // Hard ceiling: 4s. If the stream genuinely cannot start we still
+  // want to surface the underlying state instead of holding the
+  // warmup forever.
+  setTimeout(dismissWarmup, 4000);
+
+  // ── Sound: tap-anywhere + best-effort auto-unmute for returning visitors
+  //
+  // Browsers will not let JS unmute audio without a user gesture on
+  // the FIRST visit — that policy is rigid and intentional. What we
+  // CAN do is:
+  //   1. Make the unavoidable tap feel deliberate, not buggy
+  //      (whole-screen target, branded warmup before it appears).
+  //   2. Save unmute state to localStorage and silently retry on
+  //      future visits. Once Chrome's Media Engagement Index
+  //      crosses its threshold, autoplay-with-sound is granted
+  //      automatically and the page becomes truly tap-free for
+  //      repeat viewers. Same for iOS PWA mode (added to home
+  //      screen) after first launch.
+  var unmuted = false;
+
+  function reflectUnmuted(){
+    unmuted = true;
+    soundHint.classList.add('hidden');
+    muteToggle.classList.add('show');
+    muteToggle.textContent = '🔊';
+    tapZone.classList.add('gone');
+    try { localStorage.setItem('id-tv-unmute', '1'); } catch (e) {}
+  }
+
+  function tryUnmute(){
+    if (unmuted) return;
+    video.muted = false;
+    var p = video.play();
+    if (p && p.then) {
+      p.then(reflectUnmuted).catch(function(){
+        // Browser still requires a real gesture; revert and keep hint.
+        video.muted = true;
+      });
+    } else {
+      reflectUnmuted();
     }
   }
 
-  // Sequentially probe. Promise.any would be faster, but we specifically want
-  // tunnel-first so remote viewers don't accidentally try (and fail to reach)
-  // a localhost URL that would never resolve for them.
-  (async function(){
-    for (var i = 0; i < CANDIDATES.length; i++){
-      var ok = await probe(CANDIDATES[i]);
-      if (ok) { load(ok); return; }
-    }
-    // Every candidate failed — load the primary anyway so the <video>'s own
-    // error surface can show something useful in devtools.
-    load(CANDIDATES[0]);
-  })();
+  // Whole-screen tap target — much bigger than a tiny button.
+  tapZone.addEventListener('click', tryUnmute);
+  soundHint.addEventListener('click', function(e){ e.stopPropagation(); tryUnmute(); });
 
-  // Autoplay policy: browsers require muted for unprompted play. This button
-  // converts a user gesture into the "real" unmute so audio kicks in.
-  unmuteBtn.addEventListener('click', function(){
-    video.muted = false;
-    video.play().catch(function(){ /* already playing or blocked — either is fine */ });
+  // Once unmuted, the small toggle lets viewers re-mute.
+  muteToggle.addEventListener('click', function(){
+    if (video.muted) {
+      video.muted = false;
+      muteToggle.textContent = '🔊';
+      try { localStorage.setItem('id-tv-unmute', '1'); } catch (e) {}
+    } else {
+      video.muted = true;
+      muteToggle.textContent = '🔇';
+      try { localStorage.removeItem('id-tv-unmute'); } catch (e) {}
+    }
   });
+
+  // Reflect any external mute change (e.g. browser policy granting auto-unmute)
+  video.addEventListener('volumechange', function(){
+    if (!video.muted && !unmuted) reflectUnmuted();
+  });
+
+  // Returning-visitor auto-unmute attempt. Silently no-ops if the
+  // browser's autoplay policy still requires a gesture.
+  try {
+    if (localStorage.getItem('id-tv-unmute') === '1') {
+      var tryOnce = function(){
+        video.removeEventListener('playing', tryOnce);
+        setTimeout(tryUnmute, 80);
+      };
+      video.addEventListener('playing', tryOnce);
+    }
+  } catch (e) {}
 })();
 </script>
 </body>
