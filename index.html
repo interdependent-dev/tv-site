@@ -14,14 +14,16 @@
 <title>INTERDEPENDENT TV</title>
 
 <!-- ── Network hints ───────────────────────────────────────────────
-     Kick off DNS resolution, TLS handshake, AND the HLS manifest
-     fetch before HTML finishes parsing. By the time hls.js asks for
-     the manifest, the response is already in the browser's cache.
-     Saves 1–2 RTTs on cold start (~200–500ms typical).
+     Kick off DNS resolution and the TLS handshake before HTML
+     finishes parsing. By the time hls.js opens its first XHR the
+     connection is already warm. Saves ~1 RTT (~100–300ms) on cold
+     start without the request-signature dedupe issues a `preload`
+     of the manifest itself would introduce — hls.js's XHR doesn't
+     match a `<link rel="preload" as="fetch">` cleanly across
+     browsers, so the preload would be downloaded and discarded.
 -->
 <link rel="dns-prefetch" href="//live.interdependent.dev">
 <link rel="preconnect" href="https://live.interdependent.dev" crossorigin>
-<link rel="preload" href="https://live.interdependent.dev/program/index.m3u8" as="fetch" crossorigin>
 
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCA3NC42IDg5LjQnIGZpbGwtcnVsZT0nZXZlbm9kZCc+PHBhdGggZmlsbD0nIzAwMCcgZD0nTTkuMyAyOGEyOCAyOCAwIDEgMCA1NiAwIDI4IDI4IDAgMSAwLTU2IDBNMjAgNjQuOWE3LjUgNy4zIDAgMSAwIDE1IDAgNy41IDcuMyAwIDEgMC0xNSAwTTIzLjIgNjQuN2E0LjEgNC4xIDAgMSAwIDguMiAwIDQuMSA0LjEgMCAxIDAtOC4yIDBNNDMuOSA2MGE0IDQgMCAxIDAgOCAwIDQgNCAwIDEgMC04IDBNNDUuNSA2MGEyLjQgMi40IDAgMSAwIDQuOCAwIDIuNCAyLjQgMCAxIDAtNC44IDBNMzcuMyA3Mi43YTMuMyAzLjMgMCAxIDAgNi42IDAgMy4zIDMuMyAwIDEgMC02LjYgME0yOS4zIDg1LjRhNCA0IDAgMSAwIDggMCA0IDQgMCAxIDAtOCAwTTAgNTAuN2E2LjcgNi43IDAgMSAwIDEzLjQgMCA2LjcgNi43IDAgMSAwLTEzLjQgME02MS4zIDQ5LjNhNi43IDYuNyAwIDEgMCAxMy4zIDAgNi43IDYuNyAwIDEgMC0xMy4zIDAnLz48L3N2Zz4=">
 <link rel="icon" type="image/png" href="favicon.png">
