@@ -9,6 +9,7 @@
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://interdependent.tv/dual.html">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>INTERDEPENDENT TV — Dual Cam</title>
 
@@ -242,14 +243,19 @@ mux-video{
 <div class="dual" id="dual">
 
   <div class="pane" id="pane1">
+    <!--
+      No playback-id attribute up-front: we attach it from JS only after
+      a manifest pre-check confirms the stream is active. mux-video@0.21
+      has an internal IndexSizeError loop when the manifest returns 412
+      (Mux's "stream is idle" response) — attaching late avoids that bug.
+    -->
     <mux-video
       id="cam1"
-      playback-id="P3juo8srQDibzTGEy7HzTUUmPVR9RvQmTlIqZj8KzOI"
       stream-type="live"
-      autoplay
       muted
       playsinline
-      preload="auto"
+      preload="none"
+      poster=""
       metadata-video-title="INTERDEPENDENT TV — Cam 1"
     ></mux-video>
     <div class="pane-label">CAM 1</div>
@@ -265,12 +271,11 @@ mux-video{
   <div class="pane" id="pane2">
     <mux-video
       id="cam2"
-      playback-id="Gbr8YKpVoCYSlvLRZZuDwWahJECZg8lmVBZ37d00z00qk"
       stream-type="live"
-      autoplay
       muted
       playsinline
-      preload="auto"
+      preload="none"
+      poster=""
       metadata-video-title="INTERDEPENDENT TV — Cam 2"
     ></mux-video>
     <div class="pane-label">CAM 2</div>
@@ -300,37 +305,65 @@ mux-video{
 
 <script>
 (function(){
-  // ── Per-cam state machine ──────────────────────────────────────
-  // States:
-  //   init    — autoplay starting; warmup overlay visible
-  //   live    — receiving frames; warmup gone, pane filled
-  //   dropped — error / stall / ended; pane collapses to 0%, the
-  //             other cam fluidly grows to fill via CSS flex transition
+  // ── Architecture overview ──────────────────────────────────────
   //
-  // mux-video / hls.js does its own internal retry-and-recover. Our state
-  // machine just decides what UI to show. When the underlying player
-  // recovers and fires 'playing', we transition back to live and the
-  // pane re-expands smoothly.
+  // mux-video@0.21 has an internal bug: when the HLS manifest returns
+  // 412 (Mux's "live_stream_inactive" response), its retry loop calls
+  // video.buffered.start(0) without checking length first, throwing
+  // IndexSizeError repeatedly. To dodge that loop, we DO NOT attach a
+  // playback-id attribute to <mux-video> until we've pre-confirmed
+  // the stream is active via a manifest fetch. mux-video with no
+  // playback-id is a no-op, so no retry, no error spam.
+  //
+  // Per-cam state:
+  //   idle     — manifest pre-check returns 412; pane collapsed
+  //   loading  — manifest just turned 200; playback-id attached;
+  //              waiting for first frame
+  //   live     — first frame arrived; pane filled
+  //   dropped  — was live, then waiting/error/ended; pane collapsed
+  //
+  // The polling loop drives idle ↔ loading transitions. mux-video's
+  // own events drive loading → live and live → dropped.
 
+  var POLL_FAST_MS = 1500;     // poll every 1.5s while idle (snappier resume)
+  var POLL_SLOW_MS = 4000;     // poll every 4s once live (lighter)
   var STALL_GRACE_MS = 5000;   // 'waiting' must persist this long before "dropped"
-  var INIT_CEILING_MS = 8000;  // if nothing plays within this, fall back to tap-start
+  var INIT_CEILING_MS = 8000;  // if nothing plays within this, surface tap-start
 
-  function makeCam(camId){
+  function makeCam(camId, playbackId){
     return {
       id: camId,
+      playbackId: playbackId,
       video: document.getElementById(camId),
       pane: document.getElementById(camId === 'cam1' ? 'pane1' : 'pane2'),
       audioBtn: document.getElementById(camId === 'cam1' ? 'audio1' : 'audio2'),
       warmup: document.getElementById(camId === 'cam1' ? 'warmup1' : 'warmup2'),
       label: camId === 'cam1' ? 'Cam 1' : 'Cam 2',
-      state: 'init',
+      state: 'idle',
       stallTimer: null,
+      pollTimer: null,
     };
   }
-  var cams = { cam1: makeCam('cam1'), cam2: makeCam('cam2') };
+
+  var cams = {
+    cam1: makeCam('cam1', 'P3juo8srQDibzTGEy7HzTUUmPVR9RvQmTlIqZj8KzOI'),
+    cam2: makeCam('cam2', 'Gbr8YKpVoCYSlvLRZZuDwWahJECZg8lmVBZ37d00z00qk'),
+  };
   var banner = document.getElementById('reconnect-banner');
   var bannerText = document.getElementById('reconnect-text');
   var tapStart = document.getElementById('tap-start');
+
+  // Safety net: if any IndexSizeError still slips through (race
+  // between pre-check and 412), swallow it silently so the console
+  // doesn't fill up. This is a known mux-video@0.21 issue; if a
+  // newer release fixes it, this becomes a no-op.
+  window.addEventListener('error', function(e){
+    if (e && e.message && e.message.indexOf('IndexSizeError') >= 0) {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    }
+  }, true);
 
   function dismissWarmup(c){
     if (c.warmup.classList.contains('gone')) return;
@@ -338,14 +371,24 @@ mux-video{
     setTimeout(function(){ c.warmup.style.display = 'none'; }, 600);
   }
 
+  function showWarmup(c){
+    c.warmup.style.display = '';
+    c.warmup.classList.remove('gone');
+  }
+
   function setState(camId, newState){
     var c = cams[camId];
     if (c.state === newState) return;
+    var prev = c.state;
     c.state = newState;
+
     if (newState === 'live') {
       c.pane.classList.remove('dropped');
       dismissWarmup(c);
-    } else if (newState === 'dropped') {
+    } else if (newState === 'loading') {
+      c.pane.classList.remove('dropped');
+      showWarmup(c);
+    } else if (newState === 'idle' || newState === 'dropped') {
       c.pane.classList.add('dropped');
     }
     updateBanner();
@@ -353,19 +396,80 @@ mux-video{
 
   function updateBanner(){
     var down = [];
-    if (cams.cam1.state === 'dropped') down.push(cams.cam1.label);
-    if (cams.cam2.state === 'dropped') down.push(cams.cam2.label);
+    Object.keys(cams).forEach(function(k){
+      var s = cams[k].state;
+      if (s === 'idle' || s === 'dropped') down.push(cams[k].label);
+    });
     banner.classList.remove('both');
     if (down.length === 0) {
       banner.classList.remove('show');
     } else if (down.length === 2) {
-      bannerText.textContent = 'Both streams reconnecting…';
+      bannerText.textContent = 'Waiting for streams…';
       banner.classList.add('both');
       banner.classList.add('show');
     } else {
-      bannerText.textContent = down[0] + ' reconnecting…';
+      bannerText.textContent = 'Waiting for ' + down[0] + '…';
       banner.classList.add('show');
     }
+  }
+
+  // ── Manifest pre-check ─────────────────────────────────────────
+  // Mux returns:
+  //   200 + application/x-mpegURL → publisher connected, stream active
+  //   412 + application/json     → "live_stream_inactive" (no publisher)
+  //   404                         → wrong playback-id
+  // We treat anything other than 200 as "not active right now".
+  function checkManifest(playbackId){
+    var url = 'https://stream.mux.com/' + playbackId + '.m3u8';
+    return fetch(url, { method: 'GET', cache: 'no-store' })
+      .then(function(r){ return r.ok; })
+      .catch(function(){ return false; });
+  }
+
+  function attachStream(c){
+    // mux-video observes attribute changes — setting playback-id
+    // here triggers manifest load, ABR ladder discovery, and playback.
+    if (c.video.getAttribute('playback-id') === c.playbackId) return;
+    c.video.setAttribute('playback-id', c.playbackId);
+    c.video.setAttribute('autoplay', '');
+    setState(c.id, 'loading');
+  }
+
+  function detachStream(c){
+    if (!c.video.hasAttribute('playback-id')) return;
+    c.video.removeAttribute('playback-id');
+    c.video.removeAttribute('autoplay');
+    // Force the inner <video> to release its source so it doesn't
+    // keep retrying against the now-stale manifest URL.
+    try { c.video.pause(); } catch (e) {}
+  }
+
+  function scheduleNextPoll(c){
+    var delay = (c.state === 'live') ? POLL_SLOW_MS : POLL_FAST_MS;
+    c.pollTimer = setTimeout(function(){ pollCam(c.id); }, delay);
+  }
+
+  async function pollCam(camId){
+    var c = cams[camId];
+    var active = await checkManifest(c.playbackId);
+
+    var stateIsActive = (c.state === 'live' || c.state === 'loading');
+
+    if (active && !stateIsActive) {
+      // Stream is up but UI is showing dropped/idle — re-attach.
+      // Detach first so mux-video's MutationObserver sees a clean
+      // remove → set cycle and reloads the manifest fresh.
+      if (c.video.hasAttribute('playback-id')) detachStream(c);
+      setTimeout(function(){ attachStream(c); }, 80);
+    } else if (!active && stateIsActive) {
+      // Stream went idle while UI was showing it — detach + collapse pane.
+      detachStream(c);
+      setState(camId, 'dropped');
+    } else if (!active && c.video.hasAttribute('playback-id')) {
+      // Belt-and-suspenders: detached state should never have playback-id.
+      detachStream(c);
+    }
+    scheduleNextPoll(c);
   }
 
   function wireCam(camId){
@@ -376,7 +480,6 @@ mux-video{
       c.stallTimer = null;
       setState(camId, 'live');
     });
-    // 'waiting' = buffering. Don't immediately drop — give grace period.
     c.video.addEventListener('waiting', function(){
       clearTimeout(c.stallTimer);
       c.stallTimer = setTimeout(function(){
@@ -387,29 +490,23 @@ mux-video{
       clearTimeout(c.stallTimer);
       setState(camId, 'dropped');
     });
-    // 'ended' on a live stream means the broadcaster intentionally stopped
-    c.video.addEventListener('ended', function(){
-      setState(camId, 'dropped');
-    });
+    c.video.addEventListener('ended', function(){ setState(camId, 'dropped'); });
 
     // Per-cam audio toggle. Mutually exclusive: unmuting cam1 mutes cam2 and
-    // vice versa — otherwise audio doubles up. Click again to mute (toggle off).
+    // vice versa — otherwise audio doubles up. Click again to mute.
     c.audioBtn.addEventListener('click', function(e){
       e.stopPropagation();
       var wasUnmuted = !c.video.muted;
-      // Mute everyone
       Object.keys(cams).forEach(function(k){
         cams[k].video.muted = true;
         cams[k].audioBtn.textContent = '🔇';
         cams[k].audioBtn.classList.remove('active');
       });
-      // If this cam was muted before, unmute it now (toggle on)
       if (!wasUnmuted) {
         c.video.muted = false;
         c.audioBtn.textContent = '🔊';
         c.audioBtn.classList.add('active');
-        // Also kick play() in case autoplay was blocked
-        c.video.play().catch(function(){});
+        try { c.video.play().catch(function(){}); } catch (err) {}
       }
     });
   }
@@ -417,19 +514,29 @@ mux-video{
   wireCam('cam1');
   wireCam('cam2');
 
-  // If autoplay-muted is blocked entirely (some incognito modes / strict
-  // browser policies), neither cam will reach 'live' on its own. Surface a
-  // tap-to-start overlay after a grace period; clicking it calls play() on
-  // both, which counts as a user gesture and unblocks them.
+  // Initial state: both idle, panes collapsed (well, they start full-width
+  // by CSS default; setState will collapse them on the first 'idle' tick).
+  setState('cam1', 'idle');
+  setState('cam2', 'idle');
+
+  // Kick off polling for both cams. They'll attach playback-id when
+  // their respective Mux Live Stream becomes active.
+  pollCam('cam1');
+  pollCam('cam2');
+
+  // Tap-to-start fallback: only matters once at least one cam is live
+  // but the browser blocked autoplay. Surface after a grace period if
+  // we have an attached stream that isn't playing.
   setTimeout(function(){
-    if (cams.cam1.state === 'init' && cams.cam2.state === 'init') {
-      tapStart.classList.add('show');
-    }
+    var anyLoadingButNotPlaying = Object.keys(cams).some(function(k){
+      return cams[k].state === 'loading';
+    });
+    if (anyLoadingButNotPlaying) tapStart.classList.add('show');
   }, INIT_CEILING_MS);
 
   tapStart.addEventListener('click', function(){
     Object.keys(cams).forEach(function(k){
-      cams[k].video.play().catch(function(){});
+      try { cams[k].video.play().catch(function(){}); } catch (e) {}
     });
     tapStart.classList.remove('show');
     setTimeout(function(){ tapStart.style.display = 'none'; }, 500);
