@@ -325,10 +325,23 @@ mux-video{
   // The polling loop drives idle ↔ loading transitions. mux-video's
   // own events drive loading → live and live → dropped.
 
-  var POLL_FAST_MS = 1500;     // poll every 1.5s while idle (snappier resume)
-  var POLL_SLOW_MS = 4000;     // poll every 4s once live (lighter)
+  // Polling cadence — balanced against an unsuppressable browser-level
+  // limitation: every fetch() that returns 4xx logs "Failed to load
+  // resource" to the DevTools console *before* our .catch() runs. Since
+  // Mux replies 412 to every manifest poll while a live stream is idle,
+  // fast polling = console flood. So we back off:
+  //
+  //   first 30s after idle:  every 5s    (catches a publisher coming online quickly)
+  //   30s — 5min idle:       every 15s
+  //   > 5min idle:           every 60s   (long-tail; tab is probably abandoned)
+  //   while live:            every 20s   (mostly relying on mux-video events for drops)
+  //
+  // When the tab is hidden (Page Visibility API), polling pauses
+  // entirely and resumes on visibility — saves bandwidth + console
+  // logs for backgrounded tabs.
+  var POLL_LIVE_MS = 20000;
   var STALL_GRACE_MS = 5000;   // 'waiting' must persist this long before "dropped"
-  var INIT_CEILING_MS = 8000;  // if nothing plays within this, surface tap-start
+  var INIT_CEILING_MS = 12000; // if nothing plays within this, surface tap-start
 
   function makeCam(camId, playbackId){
     return {
@@ -340,6 +353,7 @@ mux-video{
       warmup: document.getElementById(camId === 'cam1' ? 'warmup1' : 'warmup2'),
       label: camId === 'cam1' ? 'Cam 1' : 'Cam 2',
       state: 'idle',
+      idleSince: Date.now(),  // for backoff calculation
       stallTimer: null,
       pollTimer: null,
     };
@@ -390,6 +404,7 @@ mux-video{
       showWarmup(c);
     } else if (newState === 'idle' || newState === 'dropped') {
       c.pane.classList.add('dropped');
+      c.idleSince = Date.now();  // reset backoff clock on every fresh idle
     }
     updateBanner();
   }
@@ -445,9 +460,34 @@ mux-video{
   }
 
   function scheduleNextPoll(c){
-    var delay = (c.state === 'live') ? POLL_SLOW_MS : POLL_FAST_MS;
+    if (document.hidden) {
+      // Tab is backgrounded — don't burn polls or log spam. Visibility
+      // change handler below will resume polling when tab returns.
+      c.pollTimer = null;
+      return;
+    }
+    var delay;
+    if (c.state === 'live') {
+      delay = POLL_LIVE_MS;
+    } else {
+      // Idle: back off as idle duration grows
+      var idleMs = Date.now() - c.idleSince;
+      if (idleMs < 30000)        delay = 5000;
+      else if (idleMs < 300000)  delay = 15000;
+      else                       delay = 60000;
+    }
     c.pollTimer = setTimeout(function(){ pollCam(c.id); }, delay);
   }
+
+  // Pause polling when tab is hidden, resume on visibility.
+  document.addEventListener('visibilitychange', function(){
+    if (!document.hidden) {
+      Object.keys(cams).forEach(function(k){
+        var c = cams[k];
+        if (!c.pollTimer) pollCam(c.id);
+      });
+    }
+  });
 
   async function pollCam(camId){
     var c = cams[camId];
