@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#000">
+<meta name="description" content="INTERDEPENDENT TV — Dual Cam">
+<meta property="og:title" content="INTERDEPENDENT TV — Dual">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://interdependent.tv/dual.html">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>INTERDEPENDENT TV — Dual Cam</title>
+
+<!-- Network hints to Mux's CDN -->
+<link rel="dns-prefetch" href="//stream.mux.com">
+<link rel="preconnect" href="https://stream.mux.com" crossorigin>
+
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCA3NC42IDg5LjQnIGZpbGwtcnVsZT0nZXZlbm9kZCc+PHBhdGggZmlsbD0nIzAwMCcgZD0nTTkuMyAyOGEyOCAyOCAwIDEgMCA1NiAwIDI4IDI4IDAgMSAwLTU2IDBNMjAgNjQuOWE3LjUgNy4zIDAgMSAwIDE1IDAgNy41IDcuMyAwIDEgMC0xNSAwTTIzLjIgNjQuN2E0LjEgNC4xIDAgMSAwIDguMiAwIDQuMSA0LjEgMCAxIDAtOC4yIDBNNDMuOSA2MGE0IDQgMCAxIDAgOCAwIDQgNCAwIDEgMC04IDBNNDUuNSA2MGEyLjQgMi40IDAgMSAwIDQuOCAwIDIuNCAyLjQgMCAxIDAtNC44IDBNMzcuMyA3Mi43YTMuMyAzLjMgMCAxIDAgNi42IDAgMy4zIDMuMyAwIDEgMC02LjYgME0yOS4zIDg1LjRhNCA0IDAgMSAwIDggMCA0IDQgMCAxIDAtOCAwTTAgNTAuN2E2LjcgNi43IDAgMSAwIDEzLjQgMCA2LjcgNi43IDAgMSAwLTEzLjQgME02MS4zIDQ5LjNhNi43IDYuNyAwIDEgMCAxMy4zIDAgNi43IDYuNyAwIDEgMC0xMy4zIDAnLz48L3N2Zz4=">
+<link rel="icon" type="image/png" href="favicon.png">
+
+<!-- Same mux-video web component as the main page; same hls.js + Mux Data
+     telemetry baked in. Two instances render two independent streams. -->
+<script src="https://cdn.jsdelivr.net/npm/@mux/mux-video@0.21"></script>
+
+<style>
+*{margin:0;box-sizing:border-box}
+html,body{
+  height:100%;width:100%;
+  overflow:hidden;
+  background:#000;color:#fff;
+  font-family:-apple-system,BlinkMacSystemFont,"Inter",system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;
+  -webkit-tap-highlight-color:transparent;
+  user-select:none;-webkit-user-select:none;
+  touch-action:manipulation;
+}
+
+/* Dual-pane container — flex row on wide screens, column on narrow */
+.dual{
+  position:fixed;inset:0;
+  display:flex;
+  flex-direction:row;
+  gap:2px;
+  background:#0a0a0a;
+}
+@media (max-width:900px){
+  .dual{flex-direction:column;}
+}
+
+/* Each cam pane — both flex 1 by default; when dropped, collapses to 0
+   with a smooth transition so the surviving cam fluidly grows to fill. */
+.pane{
+  position:relative;
+  flex:1 1 0;
+  min-width:0;min-height:0;
+  background:#000;
+  overflow:hidden;
+  transition:flex 0.6s cubic-bezier(0.65, 0, 0.35, 1), opacity 0.4s ease;
+}
+.pane.dropped{
+  flex:0 0 0;
+  opacity:0;
+}
+
+mux-video{
+  display:block;
+  width:100%;height:100%;
+  object-fit:cover;
+  background:#000;
+}
+
+/* Per-pane corner label */
+.pane-label{
+  position:absolute;
+  top:clamp(12px,2vh,20px);
+  left:clamp(12px,2vw,20px);
+  font:600 11px/1 inherit;
+  letter-spacing:.2em;
+  text-transform:uppercase;
+  color:#fff;
+  background:rgba(0,0,0,.55);
+  border:1px solid rgba(255,255,255,.25);
+  padding:6px 10px;
+  border-radius:14px;
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  z-index:3;
+  pointer-events:none;
+  opacity:.85;
+}
+
+/* Per-pane audio toggle (mutually exclusive — only one cam unmuted at a time) */
+.audio-toggle{
+  position:absolute;
+  bottom:clamp(12px,2vh,20px);
+  right:clamp(12px,2vw,20px);
+  width:42px;height:42px;border-radius:50%;
+  background:rgba(0,0,0,.55);
+  border:1px solid rgba(255,255,255,.25);
+  color:#fff;
+  font-size:16px;cursor:pointer;
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  display:flex;align-items:center;justify-content:center;
+  z-index:3;
+  transition:background .2s ease,transform .15s ease,border-color .2s ease;
+  font-family:inherit;
+}
+.audio-toggle:hover{background:rgba(0,0,0,.8);}
+.audio-toggle:active{transform:scale(.92);}
+.audio-toggle.active{
+  background:rgba(0,229,212,.22);
+  border-color:rgba(0,229,212,.55);
+  color:#00e5d4;
+}
+
+/* Per-pane warmup overlay — fades when first frame arrives */
+.warmup{
+  position:absolute;inset:0;
+  background:#000;
+  display:flex;align-items:center;justify-content:center;flex-direction:column;
+  z-index:2;
+  pointer-events:none;
+  transition:opacity .5s ease;
+}
+.warmup.gone{opacity:0;}
+.warmup-mark{
+  display:block;margin-bottom:18px;
+  opacity:0;animation:warmup-in .7s ease forwards .1s;
+}
+.warmup-mark svg{
+  width:min(38vw,180px);height:auto;
+  filter:drop-shadow(0 0 18px rgba(255,255,255,.3));
+}
+.warmup-bars{display:flex;gap:4px;opacity:0;animation:warmup-in .5s ease forwards .35s;}
+.warmup-bars span{
+  width:2.5px;height:11px;background:rgba(255,255,255,.85);
+  animation:warmup-bar 1.1s ease infinite;transform-origin:center;
+}
+.warmup-bars span:nth-child(2){animation-delay:.12s;}
+.warmup-bars span:nth-child(3){animation-delay:.24s;}
+.warmup-bars span:nth-child(4){animation-delay:.36s;}
+.warmup-bars span:nth-child(5){animation-delay:.48s;}
+@keyframes warmup-in{to{opacity:1;}}
+@keyframes warmup-bar{
+  0%,100%{opacity:.3;transform:scaleY(.5);}
+  50%{opacity:1;transform:scaleY(1.5);}
+}
+
+/* Reconnect banner — top-center pill notifying which cam(s) are down.
+   Doesn't block content, just a subtle informational chip. */
+.reconnect-banner{
+  position:fixed;
+  top:clamp(16px,2.5vh,28px);
+  left:50%;
+  transform:translateX(-50%) translateY(-8px);
+  z-index:10;
+  background:rgba(255,200,87,.18);
+  border:1px solid rgba(255,200,87,.5);
+  color:#ffe4a3;
+  font:500 12px/1 inherit;
+  letter-spacing:.04em;
+  padding:10px 16px;
+  border-radius:20px;
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  display:flex;align-items:center;gap:8px;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .4s ease, transform .4s ease;
+  white-space:nowrap;
+}
+.reconnect-banner.show{
+  opacity:1;
+  transform:translateX(-50%) translateY(0);
+}
+.reconnect-banner.both{
+  background:rgba(255,91,91,.22);
+  border-color:rgba(255,91,91,.55);
+  color:#ffaaaa;
+}
+.reconnect-banner .pulse{
+  width:8px;height:8px;border-radius:50%;
+  background:#ffc857;
+  animation:pulse 1.4s ease-in-out infinite;
+}
+.reconnect-banner.both .pulse{background:#ff5b5b;animation-duration:1s;}
+@keyframes pulse{
+  0%,100%{opacity:1;transform:scale(1);}
+  50%{opacity:.4;transform:scale(.7);}
+}
+
+/* Tap-to-start fallback — only shown if autoplay-muted gets blocked.
+   We surface it after a 7s grace period if neither cam has reached 'live'. */
+.tap-start{
+  position:fixed;inset:0;
+  background:rgba(0,0,0,.7);
+  backdrop-filter:blur(4px);
+  -webkit-backdrop-filter:blur(4px);
+  z-index:20;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .4s ease;
+}
+.tap-start.show{opacity:1;pointer-events:auto;}
+.tap-start-msg{
+  font:600 13px/1 inherit;
+  letter-spacing:.2em;
+  text-transform:uppercase;
+  color:#fff;
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.3);
+  padding:16px 24px;
+  border-radius:30px;
+}
+
+/* Brand wordmark — small, bottom-center, doesn't compete with cam content */
+.brand{
+  position:fixed;
+  bottom:clamp(10px,1.5vh,16px);
+  left:50%;
+  transform:translateX(-50%);
+  z-index:5;
+  font-family:ui-monospace,"JetBrains Mono",Menlo,monospace;
+  font-size:9px;
+  letter-spacing:.28em;
+  color:rgba(255,255,255,.35);
+  text-transform:uppercase;
+  pointer-events:none;
+}
+@media (max-width:900px){
+  /* On stacked layout, hide the centerline brand to avoid overlapping the divider */
+  .brand{bottom:auto;top:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.6);padding:4px 10px;border-radius:10px;}
+}
+</style>
+</head>
+<body>
+
+<div class="dual" id="dual">
+
+  <div class="pane" id="pane1">
+    <mux-video
+      id="cam1"
+      playback-id="P3juo8srQDibzTGEy7HzTUUmPVR9RvQmTlIqZj8KzOI"
+      stream-type="live"
+      autoplay
+      muted
+      playsinline
+      preload="auto"
+      metadata-video-title="INTERDEPENDENT TV — Cam 1"
+    ></mux-video>
+    <div class="pane-label">CAM 1</div>
+    <button class="audio-toggle" id="audio1" type="button" aria-label="Cam 1 audio">🔇</button>
+    <div class="warmup" id="warmup1">
+      <div class="warmup-mark">
+        <svg viewBox="-1 -1 394 238" fill-rule="evenodd" role="img" aria-label="INTERDEPENDENT TV"><path fill="#fff" d="M72.4265993,181.599151 C66.4590298,181.599151 61.6302421,176.771465 61.6302421,170.837972 C61.6302421,164.895874 66.4590298,160.07249 72.4265993,160.07249 C78.3985826,160.07249 83.2229564,164.895874 83.2229564,170.837972 C83.2229564,176.771465 78.3985826,181.599151 72.4265993,181.599151 M91.860925,171.461871 C91.860925,160.132729 83.1567482,151.462687 73.0577845,151.462687 C61.6964503,151.462687 52.9966875,160.132729 52.9966875,171.461871 C52.9966875,181.538913 61.6964503,190.208955 73.0577845,190.208955 C83.1567482,190.208955 91.860925,181.538913 91.860925,171.461871M24.7317875,73.9701493 C24.7317875,114.823555 57.9498633,147.940299 99.5404822,147.940299 C139.904437,147.940299 173.122512,114.823555 173.122512,73.9701493 C173.122512,33.1167433 139.904437,0 99.5404822,0 C57.9498633,0 24.7317875,33.1167433 24.7317875,73.9701493 ZM127.194217,164.849451 C123.67483,164.849451 120.831581,162.010133 120.831581,158.511688 C120.831581,155.009017 123.67483,152.169699 127.194217,152.169699 C130.70927,152.169699 133.552519,155.009017 133.552519,158.511688 C133.552519,162.010133 130.70927,164.849451 127.194217,164.849451 M127.194217,147.940299 C121.338684,147.940299 116.592712,152.66827 116.592712,158.511688 C116.592712,164.346655 121.338684,169.074627 127.194217,169.074627 C133.045415,169.074627 137.791387,164.346655 137.791387,158.511688 C137.791387,152.66827 133.045415,147.940299 127.194217,147.940299M107.7622,183.164179 C102.884091,183.164179 98.92715,187.105962 98.92715,191.972361 C98.92715,196.834336 102.884091,200.776119 107.7622,200.776119 C112.640309,200.776119 116.592712,196.834336 116.592712,191.972361 C116.592712,187.105962 112.640309,183.164179 107.7622,183.164179M88.3256373,214.865672 C82.4745768,214.865672 77.728475,219.595655 77.728475,225.432836 C77.728475,231.270017 82.4745768,236 88.3256373,236 C94.1810481,236 98.92715,231.270017 98.92715,225.432836 C98.92715,219.595655 94.1810481,214.865672 88.3256373,214.865672M17.6655625,116.238806 C7.90718362,116.238806 0,124.123696 0,133.852952 C0,143.577797 7.90718362,151.462687 17.6655625,151.462687 C27.4239414,151.462687 35.331125,143.577797 35.331125,133.852952 C35.331125,124.123696 27.4239414,116.238806 17.6655625,116.238806M180.186475,112.716418 C170.433871,112.716418 162.523175,120.601308 162.523175,130.330564 C162.523175,140.055409 170.433871,147.940299 180.186475,147.940299 C189.943604,147.940299 197.8543,140.055409 197.8543,130.330564 C197.8543,120.601308 189.943604,112.716418 180.186475,112.716418M239.894118,45.170986 L282.776959,45.1709859 L282.776959,63.8942535 L239.894118,63.8942535 L239.894118,104.40507 C239.894118,124.823247 240.972673,126.780451 251.145666,126.780451 L253.001174,126.780451 C262.953117,126.780451 264.046554,124.770747 264.046554,106.053746 L264.046554,99.9894648 L284.426299,99.9894648 L284.426299,110.587606 C284.426299,139.540191 277.772511,146.534141 250.527164,146.534141 L247.228483,146.534141 C220.272791,146.534141 214.77252,139.9545 214.77252,106.672 L214.77252,63.8942535 L201.165465,63.8942535 L201.165465,45.1709859 L214.77252,45.170986 L214.77252,19.4104225 L239.894118,19.4104225 ZM318.496605,45.5306504 L341.82905,125.320038 L365.161495,45.5306504 L365.26667,45.1709859 L365.641397,45.1709859 L391,45.170986 L391.693801,45.170986 L391.474322,45.8291572 L358.487522,144.74972 L358.373533,145.091549 L324.459897,145.091549 L324.345908,144.74972 L291.359107,45.8291571 L291.139628,45.1709859 L318.39143,45.1709859 Z"/></svg>
+      </div>
+      <div class="warmup-bars"><span></span><span></span><span></span><span></span><span></span></div>
+    </div>
+  </div>
+
+  <div class="pane" id="pane2">
+    <mux-video
+      id="cam2"
+      playback-id="Gbr8YKpVoCYSlvLRZZuDwWahJECZg8lmVBZ37d00z00qk"
+      stream-type="live"
+      autoplay
+      muted
+      playsinline
+      preload="auto"
+      metadata-video-title="INTERDEPENDENT TV — Cam 2"
+    ></mux-video>
+    <div class="pane-label">CAM 2</div>
+    <button class="audio-toggle" id="audio2" type="button" aria-label="Cam 2 audio">🔇</button>
+    <div class="warmup" id="warmup2">
+      <div class="warmup-mark">
+        <svg viewBox="-1 -1 394 238" fill-rule="evenodd" role="img" aria-label="INTERDEPENDENT TV"><path fill="#fff" d="M72.4265993,181.599151 C66.4590298,181.599151 61.6302421,176.771465 61.6302421,170.837972 C61.6302421,164.895874 66.4590298,160.07249 72.4265993,160.07249 C78.3985826,160.07249 83.2229564,164.895874 83.2229564,170.837972 C83.2229564,176.771465 78.3985826,181.599151 72.4265993,181.599151 M91.860925,171.461871 C91.860925,160.132729 83.1567482,151.462687 73.0577845,151.462687 C61.6964503,151.462687 52.9966875,160.132729 52.9966875,171.461871 C52.9966875,181.538913 61.6964503,190.208955 73.0577845,190.208955 C83.1567482,190.208955 91.860925,181.538913 91.860925,171.461871M24.7317875,73.9701493 C24.7317875,114.823555 57.9498633,147.940299 99.5404822,147.940299 C139.904437,147.940299 173.122512,114.823555 173.122512,73.9701493 C173.122512,33.1167433 139.904437,0 99.5404822,0 C57.9498633,0 24.7317875,33.1167433 24.7317875,73.9701493 ZM127.194217,164.849451 C123.67483,164.849451 120.831581,162.010133 120.831581,158.511688 C120.831581,155.009017 123.67483,152.169699 127.194217,152.169699 C130.70927,152.169699 133.552519,155.009017 133.552519,158.511688 C133.552519,162.010133 130.70927,164.849451 127.194217,164.849451 M127.194217,147.940299 C121.338684,147.940299 116.592712,152.66827 116.592712,158.511688 C116.592712,164.346655 121.338684,169.074627 127.194217,169.074627 C133.045415,169.074627 137.791387,164.346655 137.791387,158.511688 C137.791387,152.66827 133.045415,147.940299 127.194217,147.940299M107.7622,183.164179 C102.884091,183.164179 98.92715,187.105962 98.92715,191.972361 C98.92715,196.834336 102.884091,200.776119 107.7622,200.776119 C112.640309,200.776119 116.592712,196.834336 116.592712,191.972361 C116.592712,187.105962 112.640309,183.164179 107.7622,183.164179M88.3256373,214.865672 C82.4745768,214.865672 77.728475,219.595655 77.728475,225.432836 C77.728475,231.270017 82.4745768,236 88.3256373,236 C94.1810481,236 98.92715,231.270017 98.92715,225.432836 C98.92715,219.595655 94.1810481,214.865672 88.3256373,214.865672M17.6655625,116.238806 C7.90718362,116.238806 0,124.123696 0,133.852952 C0,143.577797 7.90718362,151.462687 17.6655625,151.462687 C27.4239414,151.462687 35.331125,143.577797 35.331125,133.852952 C35.331125,124.123696 27.4239414,116.238806 17.6655625,116.238806M180.186475,112.716418 C170.433871,112.716418 162.523175,120.601308 162.523175,130.330564 C162.523175,140.055409 170.433871,147.940299 180.186475,147.940299 C189.943604,147.940299 197.8543,140.055409 197.8543,130.330564 C197.8543,120.601308 189.943604,112.716418 180.186475,112.716418M239.894118,45.170986 L282.776959,45.1709859 L282.776959,63.8942535 L239.894118,63.8942535 L239.894118,104.40507 C239.894118,124.823247 240.972673,126.780451 251.145666,126.780451 L253.001174,126.780451 C262.953117,126.780451 264.046554,124.770747 264.046554,106.053746 L264.046554,99.9894648 L284.426299,99.9894648 L284.426299,110.587606 C284.426299,139.540191 277.772511,146.534141 250.527164,146.534141 L247.228483,146.534141 C220.272791,146.534141 214.77252,139.9545 214.77252,106.672 L214.77252,63.8942535 L201.165465,63.8942535 L201.165465,45.1709859 L214.77252,45.170986 L214.77252,19.4104225 L239.894118,19.4104225 ZM318.496605,45.5306504 L341.82905,125.320038 L365.161495,45.5306504 L365.26667,45.1709859 L365.641397,45.1709859 L391,45.170986 L391.693801,45.170986 L391.474322,45.8291572 L358.487522,144.74972 L358.373533,145.091549 L324.459897,145.091549 L324.345908,144.74972 L291.359107,45.8291571 L291.139628,45.1709859 L318.39143,45.1709859 Z"/></svg>
+      </div>
+      <div class="warmup-bars"><span></span><span></span><span></span><span></span><span></span></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Reconnect notification — appears when one or both cams drop -->
+<div class="reconnect-banner" id="reconnect-banner">
+  <span class="pulse"></span>
+  <span id="reconnect-text">Reconnecting…</span>
+</div>
+
+<!-- Tap-to-start fallback (only surfaces if browser blocks autoplay-muted) -->
+<div class="tap-start" id="tap-start">
+  <div class="tap-start-msg">Tap to start</div>
+</div>
+
+<div class="brand">INTERDEPENDENT // DUAL</div>
+
+<script>
+(function(){
+  // ── Per-cam state machine ──────────────────────────────────────
+  // States:
+  //   init    — autoplay starting; warmup overlay visible
+  //   live    — receiving frames; warmup gone, pane filled
+  //   dropped — error / stall / ended; pane collapses to 0%, the
+  //             other cam fluidly grows to fill via CSS flex transition
+  //
+  // mux-video / hls.js does its own internal retry-and-recover. Our state
+  // machine just decides what UI to show. When the underlying player
+  // recovers and fires 'playing', we transition back to live and the
+  // pane re-expands smoothly.
+
+  var STALL_GRACE_MS = 5000;   // 'waiting' must persist this long before "dropped"
+  var INIT_CEILING_MS = 8000;  // if nothing plays within this, fall back to tap-start
+
+  function makeCam(camId){
+    return {
+      id: camId,
+      video: document.getElementById(camId),
+      pane: document.getElementById(camId === 'cam1' ? 'pane1' : 'pane2'),
+      audioBtn: document.getElementById(camId === 'cam1' ? 'audio1' : 'audio2'),
+      warmup: document.getElementById(camId === 'cam1' ? 'warmup1' : 'warmup2'),
+      label: camId === 'cam1' ? 'Cam 1' : 'Cam 2',
+      state: 'init',
+      stallTimer: null,
+    };
+  }
+  var cams = { cam1: makeCam('cam1'), cam2: makeCam('cam2') };
+  var banner = document.getElementById('reconnect-banner');
+  var bannerText = document.getElementById('reconnect-text');
+  var tapStart = document.getElementById('tap-start');
+
+  function dismissWarmup(c){
+    if (c.warmup.classList.contains('gone')) return;
+    c.warmup.classList.add('gone');
+    setTimeout(function(){ c.warmup.style.display = 'none'; }, 600);
+  }
+
+  function setState(camId, newState){
+    var c = cams[camId];
+    if (c.state === newState) return;
+    c.state = newState;
+    if (newState === 'live') {
+      c.pane.classList.remove('dropped');
+      dismissWarmup(c);
+    } else if (newState === 'dropped') {
+      c.pane.classList.add('dropped');
+    }
+    updateBanner();
+  }
+
+  function updateBanner(){
+    var down = [];
+    if (cams.cam1.state === 'dropped') down.push(cams.cam1.label);
+    if (cams.cam2.state === 'dropped') down.push(cams.cam2.label);
+    banner.classList.remove('both');
+    if (down.length === 0) {
+      banner.classList.remove('show');
+    } else if (down.length === 2) {
+      bannerText.textContent = 'Both streams reconnecting…';
+      banner.classList.add('both');
+      banner.classList.add('show');
+    } else {
+      bannerText.textContent = down[0] + ' reconnecting…';
+      banner.classList.add('show');
+    }
+  }
+
+  function wireCam(camId){
+    var c = cams[camId];
+
+    c.video.addEventListener('playing', function(){
+      clearTimeout(c.stallTimer);
+      c.stallTimer = null;
+      setState(camId, 'live');
+    });
+    // 'waiting' = buffering. Don't immediately drop — give grace period.
+    c.video.addEventListener('waiting', function(){
+      clearTimeout(c.stallTimer);
+      c.stallTimer = setTimeout(function(){
+        if (c.video.readyState < 3) setState(camId, 'dropped');
+      }, STALL_GRACE_MS);
+    });
+    c.video.addEventListener('error', function(){
+      clearTimeout(c.stallTimer);
+      setState(camId, 'dropped');
+    });
+    // 'ended' on a live stream means the broadcaster intentionally stopped
+    c.video.addEventListener('ended', function(){
+      setState(camId, 'dropped');
+    });
+
+    // Per-cam audio toggle. Mutually exclusive: unmuting cam1 mutes cam2 and
+    // vice versa — otherwise audio doubles up. Click again to mute (toggle off).
+    c.audioBtn.addEventListener('click', function(e){
+      e.stopPropagation();
+      var wasUnmuted = !c.video.muted;
+      // Mute everyone
+      Object.keys(cams).forEach(function(k){
+        cams[k].video.muted = true;
+        cams[k].audioBtn.textContent = '🔇';
+        cams[k].audioBtn.classList.remove('active');
+      });
+      // If this cam was muted before, unmute it now (toggle on)
+      if (!wasUnmuted) {
+        c.video.muted = false;
+        c.audioBtn.textContent = '🔊';
+        c.audioBtn.classList.add('active');
+        // Also kick play() in case autoplay was blocked
+        c.video.play().catch(function(){});
+      }
+    });
+  }
+
+  wireCam('cam1');
+  wireCam('cam2');
+
+  // If autoplay-muted is blocked entirely (some incognito modes / strict
+  // browser policies), neither cam will reach 'live' on its own. Surface a
+  // tap-to-start overlay after a grace period; clicking it calls play() on
+  // both, which counts as a user gesture and unblocks them.
+  setTimeout(function(){
+    if (cams.cam1.state === 'init' && cams.cam2.state === 'init') {
+      tapStart.classList.add('show');
+    }
+  }, INIT_CEILING_MS);
+
+  tapStart.addEventListener('click', function(){
+    Object.keys(cams).forEach(function(k){
+      cams[k].video.play().catch(function(){});
+    });
+    tapStart.classList.remove('show');
+    setTimeout(function(){ tapStart.style.display = 'none'; }, 500);
+  });
+})();
+</script>
+</body>
+</html>

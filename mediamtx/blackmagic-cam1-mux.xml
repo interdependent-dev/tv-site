@@ -2,8 +2,11 @@
 <!--
   INTERDEPENDENT TV — iPhone Cam 1, publishing direct to Mux Live.
 
-  Architecture: iPhone (Blackmagic Camera app) ──RTMPS──▶ Mux Live ──HLS──▶ Mux CDN ──▶ viewers
+  Architecture: iPhone (Blackmagic Camera app) ──RTMP──▶ Mux Live ──HLS──▶ Mux CDN ──▶ viewers
   No MediaMTX, no OBS, no Mac mini in this path.
+
+  Cam 1 → Mux Live Stream "iye00tyq..." (created May 8 2026)
+  Playback ID: P3juo8srQDibzTGEy7HzTUUmPVR9RvQmTlIqZj8KzOI
 
   HOW TO USE:
     1. AirDrop this file to the iPhone you want as Cam 1.
@@ -11,36 +14,68 @@
     3. Blackmagic Camera → Settings → Live Stream → Platform
        → Import Stream Settings → pick this file.
     4. Platform → "INTERDEPENDENT TV — Cam 1 (Mux)"
-    5. Quality → "Streaming High" (1080p30 @ 6 Mbps)
+    5. Quality → "Streaming High"
     6. Toggle Live Stream ON, hit record.
 
-  Mux pairs the publisher to the live stream by stream key (the
-  <key> below), so two iPhones using the SAME key would conflict.
-  Cam 2 uses a different file, blackmagic-cam2-mux.xml, which has
-  the second Mux Live Stream's key.
+  CAMERA SETTINGS THAT MUST MATCH:
+    Settings → Record → Codec      = H.264   (NOT HEVC — Mux Live's
+                                               RTMP ingest is H.264-only)
+    Settings → Record → Resolution = 1080p   (NOT 4K — see below)
+    Camera tab → FPS pill          = 30
+    Camera tab → Resolution        = 1080p
+
+  WHY NOT 4K: Per the Blackmagic Streaming XML spec, a <config> with
+  resolution="1080p" only applies to 1080p source modes (and 720p, 480p,
+  etc — anything ≤ 1080p). At 4K source, the streaming engine has no
+  matching profile and refuses to start, which surfaces as "Connection
+  Failed!" on the device. We've added 2160p (4K) and 720p configs below
+  as fallbacks if you keep the device at 4K, but Mux Standard ingest tier
+  caps at 1080p — the 4K config still down-encodes to 1080p output.
+
+  WHY RTMP NOT RTMPS: Switched from rtmps:443 to plain rtmp:5222 because
+  the iOS Camera app's RTMPS handshake is unreliable for custom XML
+  destinations (it's not in the official supported-devices list of the
+  Streaming XML spec). RTMP plain works more consistently. Stream key is
+  still the only credential — no real security loss for testing.
 -->
 <streaming>
     <service customizable-url="false">
         <name>INTERDEPENDENT TV — Cam 1 (Mux)</name>
-        <key>06f72770-4159-b078-1e61-31f2c6b62503</key>
+        <key>67171f80-9225-eac2-1746-f2809081ba3d</key>
         <servers>
             <server>
-                <name>Mux Live RTMPS</name>
-                <url>rtmps://global-live.mux.com:443/app</url>
+                <name>Mux Live RTMP</name>
+                <url>rtmp://global-live.mux.com:5222/app</url>
             </server>
         </servers>
         <profiles default="Streaming High">
             <profile>
                 <name>Streaming High</name>
+                <config resolution="2160p" fps="30" codec="H264">
+                    <bitrate>6000000</bitrate>
+                    <audio-bitrate>128000</audio-bitrate>
+                </config>
                 <config resolution="1080p" fps="30" codec="H264">
                     <bitrate>6000000</bitrate>
+                    <audio-bitrate>128000</audio-bitrate>
+                </config>
+                <config resolution="720p" fps="30" codec="H264">
+                    <bitrate>4000000</bitrate>
                     <audio-bitrate>128000</audio-bitrate>
                 </config>
             </profile>
             <profile>
                 <name>Streaming Medium</name>
-                <config resolution="720p" fps="30" codec="H264">
+                <config resolution="2160p" fps="30" codec="H264">
                     <bitrate>3500000</bitrate>
+                    <audio-bitrate>128000</audio-bitrate>
+                </config>
+                <config resolution="1080p" fps="30" codec="H264">
+                    <bitrate>3500000</bitrate>
+                    <audio-bitrate>128000</audio-bitrate>
+                </config>
+                <config resolution="720p" fps="30" codec="H264">
+                    <bitrate>2500000</bitrate>
                     <audio-bitrate>128000</audio-bitrate>
                 </config>
             </profile>
