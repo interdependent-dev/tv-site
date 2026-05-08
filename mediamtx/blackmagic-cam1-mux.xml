@@ -32,11 +32,11 @@
   as fallbacks if you keep the device at 4K, but Mux Standard ingest tier
   caps at 1080p — the 4K config still down-encodes to 1080p output.
 
-  WHY RTMP NOT RTMPS: Switched from rtmps:443 to plain rtmp:5222 because
-  the iOS Camera app's RTMPS handshake is unreliable for custom XML
-  destinations (it's not in the official supported-devices list of the
-  Streaming XML spec). RTMP plain works more consistently. Stream key is
-  still the only credential — no real security loss for testing.
+  WHY RTMPS NOT PLAIN RTMP: Mux's RTMP edge actively rejects plain
+  RTMP (port 5222) handshakes — verified empirically with ffmpeg from
+  the Mac mini. RTMPS on port 443 works cleanly. Mux's dashboard
+  dismisses RTMPS as just "more secure" but it's actually the only
+  variant that completes the handshake against current accounts.
 -->
 <streaming>
     <service customizable-url="false">
@@ -44,8 +44,8 @@
         <key>67171f80-9225-eac2-1746-f2809081ba3d</key>
         <servers>
             <server>
-                <name>Mux Live RTMP</name>
-                <url>rtmp://global-live.mux.com:5222/app</url>
+                <name>Mux Live RTMPS</name>
+                <url>rtmps://global-live.mux.com:443/app</url>
             </server>
         </servers>
         <profiles default="Streaming High">
