@@ -1,31 +1,30 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  INTERDEPENDENT TV — iPhone Cam 2, publishing direct to Mux Live.
+  INTERDEPENDENT TV — iPhone Cam 2, publishing direct to Mux Live via SRT.
 
-  Architecture: iPhone (Blackmagic Camera app) ──RTMP──▶ Mux Live ──HLS──▶ Mux CDN ──▶ viewers
-  No MediaMTX, no OBS, no Mac mini in this path.
+  Architecture: iPhone (Blackmagic Camera app) ──SRT──▶ Mux Live ──HLS──▶ Mux CDN ──▶ viewers
+
+  See blackmagic-cam1-mux.xml for the full why-SRT-not-RTMP rationale,
+  the URL-embedded streamid+passphrase trick we use to bypass the iOS
+  app's broken handling of <srt-extensions>, and the import procedure.
+  The only difference from cam1 is the streamid (Mux stream key) and
+  passphrase (per-stream SRT secret).
 
   Cam 2 → Mux Live Stream "Z4Gh58Y2..." (created Apr 23 2026)
   Playback ID: Gbr8YKpVoCYSlvLRZZuDwWahJECZg8lmVBZ37d00z00qk
-
-  HOW TO USE: identical to Cam 1's file — see blackmagic-cam1-mux.xml
-  for the full instructions and the why-these-settings notes (RTMPS-not-RTMP,
-  H.264-not-HEVC, 1080p-not-4K). The only difference between the two
-  files is the <key> element (Mux's per-stream credential) and the <name>.
-
-  CAMERA SETTINGS THAT MUST MATCH:
-    Settings → Record → Codec      = H.264 (NOT HEVC)
-    Settings → Record → Resolution = 1080p (NOT 4K, ideally)
-    Camera tab → FPS pill          = 30
 -->
 <streaming>
     <service customizable-url="false">
-        <name>INTERDEPENDENT TV — Cam 2 (Mux)</name>
-        <key>06f72770-4159-b078-1e61-31f2c6b62503</key>
+        <name>INTERDEPENDENT TV — Cam 2 (Mux SRT)</name>
         <servers>
             <server>
-                <name>Mux Live RTMP</name>
-                <url>rtmp://global-live.mux.com:5222/app</url>
+                <name>Mux Live SRT</name>
+                <url>srt://global-live.mux.com:6001?streamid=06f72770-4159-b078-1e61-31f2c6b62503&amp;passphrase=S7KpTBcQs58LMMKqRP5j6bUIUcTw02zT&amp;pkt_size=1316&amp;latency=200000</url>
+                <srt-extensions>
+                    <stream-id>
+                        <item key="copy" value="0"/>
+                    </stream-id>
+                </srt-extensions>
             </server>
         </servers>
         <profiles default="Streaming High">

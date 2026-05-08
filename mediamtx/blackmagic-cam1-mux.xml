@@ -1,55 +1,60 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  INTERDEPENDENT TV — iPhone Cam 1, publishing direct to Mux Live.
+  INTERDEPENDENT TV — iPhone Cam 1, publishing direct to Mux Live via SRT.
 
-  Architecture: iPhone (Blackmagic Camera app) ──RTMP──▶ Mux Live ──HLS──▶ Mux CDN ──▶ viewers
-  No MediaMTX, no OBS, no Mac mini in this path.
+  Architecture: iPhone (Blackmagic Camera app) ──SRT──▶ Mux Live ──HLS──▶ Mux CDN ──▶ viewers
+
+  WHY SRT, NOT RTMP/RTMPS: We empirically proved the iPhone Blackmagic
+  Camera app (a) successfully publishes SRT with URL-embedded streamid
+  params (worked against MediaMTX earlier this session), and (b) does
+  NOT successfully publish RTMP or RTMPS to Mux — multiple attempts
+  yielded zero network activity in idevicesyslog and zero connections
+  reaching Mux. The iOS app's "Live Stream" feature appears to have
+  working SRT but broken/missing custom RTMP, despite both being
+  documented in the Streaming XML File Format spec (which itself
+  doesn't list iOS Camera as a supported device).
+
+  Mux SRT ingest endpoint:
+    srt://global-live.mux.com:6001
+  with streamid=<stream-key> and passphrase=<srt-passphrase> from the
+  Mux dashboard.
 
   Cam 1 → Mux Live Stream "iye00tyq..." (created May 8 2026)
   Playback ID: P3juo8srQDibzTGEy7HzTUUmPVR9RvQmTlIqZj8KzOI
 
   HOW TO USE:
-    1. AirDrop this file to the iPhone you want as Cam 1.
-    2. Save to Files on iPhone.
+    1. Delete any prior "INTERDEPENDENT TV — Cam 1 (Mux)" import on
+       the iPhone (Settings → Live Stream → Platform → swipe-to-delete).
+       The iOS app caches imports by <name>; the new name below is
+       distinct so a fresh import won't collide.
+    2. AirDrop this file to the iPhone, save to Files.
     3. Blackmagic Camera → Settings → Live Stream → Platform
        → Import Stream Settings → pick this file.
-    4. Platform → "INTERDEPENDENT TV — Cam 1 (Mux)"
+    4. Platform → "INTERDEPENDENT TV — Cam 1 (Mux SRT)"
     5. Quality → "Streaming High"
-    6. Toggle Live Stream ON, hit record.
+    6. Settings → Record verify: Codec=H.264, Resolution=1080p, FPS=30
+    7. Toggle Live Stream ON, hit record.
 
-  CAMERA SETTINGS THAT MUST MATCH:
-    Settings → Record → Codec      = H.264   (NOT HEVC — Mux Live's
-                                               RTMP ingest is H.264-only)
-    Settings → Record → Resolution = 1080p   (NOT 4K — see below)
-    Camera tab → FPS pill          = 30
-    Camera tab → Resolution        = 1080p
-
-  WHY NOT 4K: Per the Blackmagic Streaming XML spec, a <config> with
-  resolution="1080p" only applies to 1080p source modes (and 720p, 480p,
-  etc — anything ≤ 1080p). At 4K source, the streaming engine has no
-  matching profile and refuses to start, which surfaces as "Connection
-  Failed!" on the device. We've added 2160p (4K) and 720p configs below
-  as fallbacks if you keep the device at 4K, but Mux Standard ingest tier
-  caps at 1080p — the 4K config still down-encodes to 1080p output.
-
-  WHY PLAIN RTMP, NOT RTMPS: empirically the iPhone Blackmagic Camera
-  app fails its TLS handshake against Mux's RTMPS endpoint — surfaces
-  as "Connection Failed!" on the device. Plain RTMP on port 5222 works.
-  ffmpeg from the Mac mini has the OPPOSITE compatibility (works on
-  RTMPS, fails on plain RTMP) but we don't care about ffmpeg — the
-  iPhone is the publisher. Trade-off accepted: stream key travels
-  unencrypted on port 5222. For a public test broadcast that's fine;
-  for production we'd switch publishers (Larix, OBS, ATEM hardware)
-  to ones that speak RTMPS reliably.
+  STREAMID + PASSPHRASE IN THE URL: We learned earlier that the iOS
+  Camera app doesn't reliably honor <srt-extensions><stream-id> from
+  imported XML — the streamid arrives empty at the receiver. The
+  workaround is to put the streamid (and Mux's required passphrase)
+  directly as URL query parameters, which the SRT library reads from
+  the URL string regardless of XML processing. This is the same
+  technique that made SRT-to-MediaMTX work for blackmagic-actor1.xml.
 -->
 <streaming>
     <service customizable-url="false">
-        <name>INTERDEPENDENT TV — Cam 1 (Mux)</name>
-        <key>67171f80-9225-eac2-1746-f2809081ba3d</key>
+        <name>INTERDEPENDENT TV — Cam 1 (Mux SRT)</name>
         <servers>
             <server>
-                <name>Mux Live RTMP</name>
-                <url>rtmp://global-live.mux.com:5222/app</url>
+                <name>Mux Live SRT</name>
+                <url>srt://global-live.mux.com:6001?streamid=67171f80-9225-eac2-1746-f2809081ba3d&amp;passphrase=hZ58SH9D1sCiFL6hqVrswD9l7WFSReux&amp;pkt_size=1316&amp;latency=200000</url>
+                <srt-extensions>
+                    <stream-id>
+                        <item key="copy" value="0"/>
+                    </stream-id>
+                </srt-extensions>
             </server>
         </servers>
         <profiles default="Streaming High">
