@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  INTERDEPENDENT TV — iPhone Cam 2, publishing direct to Mux Live.
+
+  Architecture: iPhone (Blackmagic Camera app) ──RTMPS──▶ Mux Live ──HLS──▶ Mux CDN ──▶ viewers
+  No MediaMTX, no OBS, no Mac mini in this path.
+
+  This is the second Mux Live Stream (Live Stream ID
+  iye00tyqfZWTB1AnZB9wcMpaCU8o02C9iriv3i6Nu9AJQ). Cam 1 publishes
+  to a different stream in the same Mux account. Each Mux Live
+  Stream accepts exactly one publisher, so two iPhones using the
+  same key would conflict — that's why the keys differ.
+
+  HOW TO USE:
+    1. AirDrop this file to iPhone #2.
+    2. Save to Files on iPhone.
+    3. Blackmagic Camera → Settings → Live Stream → Platform
+       → Import Stream Settings → pick this file.
+    4. Platform → "INTERDEPENDENT TV — Cam 2 (Mux)"
+    5. Quality → "Streaming High" (1080p30 @ 6 Mbps), or "Medium"
+       (720p30 @ 3.5 Mbps) if your home upload is tight.
+    6. CRITICAL: Camera tab → tap codec pill → set to H.264 (NOT HEVC).
+       Mux Live's RTMP ingest requires H.264 + AAC.
+    7. Toggle Live Stream ON, hit record.
+-->
+<streaming>
+    <service customizable-url="false">
+        <name>INTERDEPENDENT TV — Cam 2 (Mux)</name>
+        <key>67171f80-9225-eac2-1746-f2809081ba3d</key>
+        <servers>
+            <server>
+                <name>Mux Live RTMPS</name>
+                <url>rtmps://global-live.mux.com:443/app</url>
+            </server>
+        </servers>
+        <profiles default="Streaming High">
+            <profile>
+                <name>Streaming High</name>
+                <config resolution="1080p" fps="30" codec="H264">
+                    <bitrate>6000000</bitrate>
+                    <audio-bitrate>128000</audio-bitrate>
+                </config>
+            </profile>
+            <profile>
+                <name>Streaming Medium</name>
+                <config resolution="720p" fps="30" codec="H264">
+                    <bitrate>3500000</bitrate>
+                    <audio-bitrate>128000</audio-bitrate>
+                </config>
+            </profile>
+        </profiles>
+    </service>
+</streaming>
