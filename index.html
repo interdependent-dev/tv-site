@@ -77,68 +77,55 @@ mux-video{
 }
 
 /* ── Intro overlay ────────────────────────────────────────────────
-   Pre-click: the big catalyst circle breathes gently with a
-   "TAP TO BEGIN" prompt. The whole black overlay is the click
-   target — there's no separate button.
+   Pre-click: a paused <video> showing its poster (black), with the
+   red+white play button as the click target overlaid on top. The
+   whole overlay is clickable.
 
-   Click → JS adds .activated, which (a) punches the big circle,
-   (b) bubbles the rest of the catalyst constellation in with a
-   staggered scale-from-zero, (c) fires the gesture-required steps
-   (fullscreen / unmute / volume), and (d) starts movie playback.
-   After the bubble animation completes, .done is added and the
-   overlay fades, revealing the movie playing with sound. */
+   Click → JS adds .activated, which (a) snaps the play button out
+   in 90ms, (b) starts the intro video (intro.webm — pre-rendered
+   bubble-up animation that's smoother than any CSS keyframe set
+   could be), and (c) fires the gesture-required steps (fullscreen,
+   unmute the movie, set its volume, start movie playback hidden
+   behind the overlay). When the intro video fires `ended`, .done
+   is added and the overlay fades over 600ms to reveal the movie. */
 .intro{
   position:fixed;inset:0;z-index:20;
   height:100vh;
-  height:100dvh; /* fill the maximum visible viewport on mobile so the
-                    transition feels fullscreen even when the real
-                    Fullscreen API can't engage (iOS). */
+  height:100dvh;
   background:#000;
-  display:flex;flex-direction:column;
-  align-items:center;justify-content:center;
-  gap:clamp(18px,4vh,36px);
+  display:grid;place-items:center;
   cursor:pointer;user-select:none;-webkit-user-select:none;
-  transition:opacity .8s ease;
+  transition:opacity .6s ease;
+  overflow:hidden;
 }
 .intro.done{opacity:0;pointer-events:none}
 
-.intro-logo{
-  width:min(38vw,200px);height:auto;display:block;
-  filter:drop-shadow(0 0 32px rgba(255,0,0,.35));
-}
-/* Smaller logo on portrait phones so the prompt has room. */
-@media (max-width:480px) and (orientation:portrait){
-  .intro-logo{width:min(48vw,180px)}
+/* Pre-rendered intro animation. Fills the overlay behind the play
+   button; object-fit:contain so the 16:9 source letterboxes
+   gracefully on any aspect ratio. pointer-events:none so clicks on
+   the overlay reach the .intro element. */
+.intro-video{
+  position:absolute;inset:0;
+  width:100%;height:100%;
+  object-fit:contain;
+  background:#000;
+  pointer-events:none;
 }
 
-/* All circles start scaled-to-zero from their own centers. The big
-   circle (.c1) is the only one shown pre-click, gently breathing. */
-.intro-logo circle{
-  opacity:0;
-  transform:scale(0);
-  transform-origin:50% 50%;
-  transform-box:fill-box;
-}
-.intro-logo .c1{
-  opacity:1;transform:scale(1);
+/* Play button: the only thing visible before the click. SVG element
+   so it scales crisply; viewBox padded -12 so breathe scales don't
+   clip. drop-shadow gives the red disc a soft glow on black. */
+.play-button{
+  position:relative;z-index:2;
+  width:min(38vw,200px);height:auto;display:block;
+  filter:drop-shadow(0 0 32px rgba(255,0,0,.35));
   animation:breathe 2.2s ease-in-out infinite;
 }
-/* Play triangle pulses in lockstep with the big circle so the
-   button "breathes" as one unit. Its own bounding-box center is
-   slightly right of the circle center (deliberate optical-balance
-   offset), but each scales from its own box, so the relative
-   offset is preserved while sizing. */
-.intro-logo .play-icon{
-  opacity:1;
-  transform-origin:50% 50%;
-  transform-box:fill-box;
-  animation:breathe 2.2s ease-in-out infinite;
+@media (max-width:480px) and (orientation:portrait){
+  .play-button{width:min(48vw,180px)}
 }
 @media (hover:hover){
-  .intro:hover .intro-logo .c1,
-  .intro:hover .intro-logo .play-icon{
-    animation:breathe-fast 1.4s ease-in-out infinite;
-  }
+  .intro:hover .play-button{animation:breathe-fast 1.4s ease-in-out infinite}
 }
 @keyframes breathe{
   0%,100%{transform:scale(1)}
@@ -149,63 +136,20 @@ mux-video{
   50%{transform:scale(1.10)}
 }
 
-/* ── Activated state ─────────────────────────────────────────── */
-/* Big circle: brief "press" punch + brightness pop. */
-.intro.activated .c1{
-  animation:punch .42s cubic-bezier(.34,1.56,.64,1) forwards;
+/* On click: snap the play button out fast (90ms) so it isn't
+   lingering over the intro video's first frames. */
+.intro.activated .play-button{
+  animation:play-button-out 90ms ease forwards;
+  pointer-events:none;
 }
-/* Play arrow: shrink + fade out so the bubble reveal isn't fighting
-   a triangle for the viewer's attention. */
-.intro.activated .play-icon{
-  animation:play-fade .3s ease forwards;
-}
-@keyframes play-fade{
+@keyframes play-button-out{
   0%{opacity:1;transform:scale(1)}
-  100%{opacity:0;transform:scale(.4)}
-}
-/* Small circles + rings: stagger in with overshoot. Order chosen
-   to feel balanced (left/right anchors first, then the smaller
-   detail bits). */
-.intro.activated .c2,
-.intro.activated .c3,
-.intro.activated .c4,
-.intro.activated .c5,
-.intro.activated .c6,
-.intro.activated .c7{
-  animation:bubble-up .55s cubic-bezier(.34,1.56,.64,1) forwards;
-}
-.intro.activated .c5{animation-delay:.18s}  /* left anchor */
-.intro.activated .c3{animation-delay:.28s}  /* right anchor */
-.intro.activated .c7{animation-delay:.38s}  /* big ring */
-.intro.activated .c6{animation-delay:.50s}  /* bottom dot */
-.intro.activated .c4{animation-delay:.62s}  /* mid dot */
-.intro.activated .c2{animation-delay:.76s}  /* small ring */
-
-@keyframes punch{
-  0%{transform:scale(1);filter:brightness(1)}
-  35%{transform:scale(.92);filter:brightness(1.6)}
-  100%{transform:scale(1);filter:brightness(1)}
-}
-@keyframes bubble-up{
-  0%{opacity:0;transform:scale(0)}
-  55%{opacity:1}
-  100%{opacity:1;transform:scale(1)}
+  100%{opacity:0;transform:scale(.85)}
 }
 
-/* Respect users who don't want motion — collapse to a static reveal. */
 @media (prefers-reduced-motion:reduce){
-  .intro-logo .c1,
-  .intro-logo .play-icon{animation:none}
-  .intro.activated .c1,
-  .intro.activated .c2,
-  .intro.activated .c3,
-  .intro.activated .c4,
-  .intro.activated .c5,
-  .intro.activated .c6,
-  .intro.activated .c7{
-    animation:none;opacity:1;transform:scale(1);
-  }
-  .intro.activated .play-icon{animation:none;opacity:0}
+  .play-button{animation:none}
+  .intro.activated .play-button{animation:none;opacity:0}
 }
 
 /* Watermark — bottom-right. max() against safe-area-inset so it
@@ -283,37 +227,34 @@ mux-video{
   </media-container>
 </video-player>
 
-<!-- Intro overlay — single-click activation. Pre-click: the big
-     Catalyst circle with a white play triangle inside (the whole
-     thing is the play button) breathes gently on black. The SVG
-     is broken into individual <circle> elements (rather than the
-     original compound path) so each can animate independently for
-     the Netflix-style bubble-up. Rings are drawn with `stroke`
-     rather than even-odd fill so the same scale-from-zero
-     animation works on them.
+<!-- Intro overlay — one-click activation.
 
-     viewBox is intentionally padded -12 / +24 vs the source SVG's
-     264×315 so the big circle has room to breathe (and the breathe-
-     fast hover scales to 1.10) without clipping at the viewBox edge.
-     All circle cx/cy/r values are unchanged from the source. -->
+     Pre-click: paused <video> showing its poster (black), with the
+     red+white play button overlaid as the click target. The whole
+     overlay is clickable.
+
+     On click: play button snaps out (90ms), intro.webm starts
+     playing the pre-rendered bubble-up animation (5.79s @ 24fps,
+     VP9 / 64 KB; MP4 H.264 fallback for Safari). When the intro
+     video fires `ended`, the overlay fades over 600ms revealing
+     the movie playing with sound. Safety net: if the intro errors
+     or stalls, the overlay reveals after 7s regardless. -->
 <div id="intro" class="intro" role="button" aria-label="Play to begin">
-  <svg class="intro-logo" viewBox="-12 -12 288 339" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-    <circle class="c1" cx="131.4" cy="95.4"  r="97"    fill="#FF0000"/>
-    <!-- Play triangle: sits on top of the big circle, white on red.
-         Width 60 / height 72, centered visually (left edge offset
-         left of cx by W/3 so the triangle's optical centroid lands
-         on the circle's center, not its geometric one). Rounded
-         joins for a softer, more "button" feel. -->
-    <path class="play-icon"
-          d="M111 59 L111 131 L171 95 Z"
+  <video id="introVideo" class="intro-video"
+         playsinline muted preload="auto"
+         poster="poster.jpg" aria-hidden="true">
+    <source src="intro.webm" type="video/webm">
+    <source src="intro.mp4"  type="video/mp4">
+  </video>
+  <!-- Play button: red disc + white triangle. viewBox is padded by
+       12 units so the breathe animation has room to scale without
+       clipping. The triangle is left-shifted by W/3 from geometric
+       center so its optical centroid sits on the circle center. -->
+  <svg class="play-button" viewBox="-12 -12 288 339" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <circle cx="131.4" cy="95.4" r="97" fill="#FF0000"/>
+    <path d="M111 59 L111 131 L171 95 Z"
           fill="#fff" stroke="#fff" stroke-width="6"
           stroke-linejoin="round" stroke-linecap="round"/>
-    <circle class="c5" cx="23.7"  cy="168"   r="22.85" fill="#FF0000"/>
-    <circle class="c3" cx="240"   cy="168"   r="22.85" fill="#FF0000"/>
-    <circle class="c7" cx="94.27" cy="221.67" r="19.75" stroke="#FF0000" stroke-width="11.5" fill="none"/>
-    <circle class="c6" cx="117.9" cy="289"   r="14"    fill="#FF0000"/>
-    <circle class="c4" cx="138"   cy="247"   r="11"    fill="#FF0000"/>
-    <circle class="c2" cx="168.5" cy="204.8" r="11.2"  stroke="#FF0000" stroke-width="5.6" fill="none"/>
   </svg>
 </div>
 
@@ -321,42 +262,35 @@ mux-video{
 // ── Intro sequence + first-gesture activation ─────────────────────
 //
 // One click on the intro overlay does everything:
-//   1. Fullscreen request (desktop / Android Chrome — no-op on iOS
-//      Safari, which doesn't expose requestFullscreen on arbitrary
-//      elements; on iOS we fall back to the CSS "fake fullscreen").
-//   2. Unmute + volume = 0.5 — both set synchronously inside the
-//      gesture handler so the browser's autoplay-with-sound policy
-//      sees them as user-initiated.
-//   3. Adds .activated to the intro overlay, which kicks off the
-//      catalyst-logo bubble-up animation (CSS keyframes; 0.42s
-//      punch on the big circle + 0.55s × 6 staggered bubble-ups
-//      ≈ 1.3s total).
-//   4. Calls mv.play() to start the movie. Synchronous within the
-//      gesture; if the source isn't buffered yet, defer until canplay.
-//   5. After ~1.6s the intro overlay fades (0.8s CSS transition),
-//      revealing the playing movie. Overlay is removed from the DOM
-//      after the fade for a clean tree.
+//   1. Fullscreen request on <html> / <body>.
+//   2. Unmute the movie (mv.muted = false) but hold its audio at
+//      volume = 0. This consumes the user gesture and registers the
+//      element as "unmuted" with the autoplay policy, so we can ramp
+//      the volume back up later without needing a fresh activation
+//      (iOS transient activation only lasts ~5s, shorter than the
+//      5.79s intro). Also starts mv.play() so the movie is buffering
+//      / decoding behind the overlay.
+//   3. Plays the pre-rendered intro animation (intro.webm).
+//   4. When the intro video fires `ended`, we restart the movie from
+//      t=0 (mv.currentTime = 0), ramp its volume to 0.5, and fade
+//      the overlay out over 600ms, removing it from the DOM after.
 //
-// Wait for customElements.whenDefined so <mux-video> is upgraded
-// (and .play() is real) before we wire anything up.
+// Safety net: if the intro video errors or stalls past 7s, finish
+// anyway so the page never gets stuck behind a broken intro.
 customElements.whenDefined('mux-video').then(function(){
-  var mv    = document.querySelector('mux-video');
-  var intro = document.getElementById('intro');
-  if (!mv || !intro) return;
+  var mv         = document.querySelector('mux-video');
+  var intro      = document.getElementById('intro');
+  var introVideo = document.getElementById('introVideo');
+  if (!mv || !intro || !introVideo) return;
 
   // ── Fullscreen helper ─────────────────────────────────────────
   // Targets the root of the document so the intro overlay AND the
   // <video-player> are both inside the fullscreen surface during
-  // the transition (they're both descendants of <html>/<body>).
-  // Fallback chain: <html> → <body>, with the standard API first
-  // and the webkit prefix as a fallback for older Safari. Chrome
-  // accepts { navigationUI: 'hide' } to suppress its own UI; other
-  // engines ignore the options object so we retry plain on throw.
-  //
-  // iOS Safari / iPhone Chrome: requestFullscreen is not exposed
-  // on non-<video> elements at all on iPhone; all calls below
-  // return early. We rely on the CSS "fake fullscreen" (position:
-  // fixed; inset:0; viewport-fit=cover; 100dvh) for those.
+  // the transition (both are descendants of <html>/<body>).
+  // Fallback chain: <html> → <body>, standard API → webkit prefix.
+  // iOS Safari / iPhone Chrome don't expose this on non-<video>
+  // elements — every call below no-ops and the CSS fake-fullscreen
+  // (position:fixed; inset:0; viewport-fit=cover; 100dvh) carries.
   function enterFullscreen(){
     var candidates = [document.documentElement, document.body];
     for (var i = 0; i < candidates.length; i++) {
@@ -378,48 +312,68 @@ customElements.whenDefined('mux-video').then(function(){
     }
   }
 
+  // ── Start the movie defensively ───────────────────────────────
+  // mux-video v10 attaches its MSE blob: source asynchronously
+  // after upgrade; if .play() is called before canplay, the promise
+  // rejects. Retry once on canplay so we don't lose the gesture.
+  function startMovie(){
+    var p = mv.play();
+    if (p && p.catch) p.catch(function(){
+      var once = function(){
+        mv.removeEventListener('canplay', once);
+        mv.play().catch(function(){});
+      };
+      mv.addEventListener('canplay', once);
+    });
+  }
+
   var activated = false;
+  var finished  = false;
+
   function activate(){
     if (activated) return;
     activated = true;
 
-    // (1) Fullscreen — must be called synchronously inside the
-    //     user gesture handler. Fire-and-forget; if it fails on
-    //     iOS, we still get unmute + volume + the intro animation.
+    // (1) Fullscreen — must be sync inside the gesture handler.
     enterFullscreen();
 
-    // (2) Sound. Set inside the gesture so the policy treats this
-    //     as user-initiated; the values stick after.
+    // (2) Movie audio prep — unmute + hold at zero. Doing both
+    //     inside the gesture consumes activation in a way that
+    //     lets us bring volume back up without a fresh gesture.
     mv.muted = false;
+    mv.volume = 0;
+    startMovie();
+
+    // (3) Snap the play button out + start the intro animation.
+    intro.classList.add('activated');
+    var ip = introVideo.play();
+    if (ip && ip.catch) ip.catch(finish);
+  }
+
+  function finish(){
+    if (finished) return;
+    finished = true;
+
+    // Restart the movie from frame 0 so the viewer sees the actual
+    // opening, not the ~5.8s of buffered playback they've been
+    // hearing-silently behind the overlay.
+    try { mv.currentTime = 0; } catch (_) {}
     mv.volume = 0.5;
 
-    // (3) Bubble-up animation. CSS does the rest.
-    intro.classList.add('activated');
-
-    // (4) Start playback. If MSE hasn't attached yet, retry on canplay.
-    function start(){
-      var p = mv.play();
-      if (p && p.catch) p.catch(function(){
-        var once = function(){
-          mv.removeEventListener('canplay', once);
-          mv.play().catch(function(){});
-        };
-        mv.addEventListener('canplay', once);
-      });
-    }
-    start();
-
-    // (5) Fade overlay after the bubble animation lands, then remove
-    //     it from the DOM for cleanliness once the fade completes.
-    setTimeout(function(){ intro.classList.add('done'); }, 1600);
+    intro.classList.add('done');
     setTimeout(function(){
       if (intro.parentNode) intro.parentNode.removeChild(intro);
-    }, 2600);
+    }, 700);
   }
+
+  introVideo.addEventListener('ended', finish);
+  introVideo.addEventListener('error', finish);
+  // Safety net: if the intro never reaches `ended` (errors swallowed,
+  // stall on a slow device, codec mismatch), reveal at 7s anyway.
+  setTimeout(function(){ if (activated) finish(); }, 7000);
 
   intro.addEventListener('click', activate);
   intro.addEventListener('touchstart', activate, { passive: true });
-  // Keyboard accessibility — Enter/Space on the focused overlay.
   intro.tabIndex = 0;
   intro.addEventListener('keydown', function(e){
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activate(); }
