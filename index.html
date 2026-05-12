@@ -72,23 +72,167 @@ mux-video{
   background:#000;
 }
 
-/* Watermark — bottom-right, sits above the player chrome. */
-.logo{position:fixed;bottom:clamp(20px,4vh,40px);right:clamp(20px,4vw,48px);z-index:5;pointer-events:none}
+/* ── Intro overlay ────────────────────────────────────────────────
+   Pre-click: the big catalyst circle breathes gently with a
+   "TAP TO BEGIN" prompt. The whole black overlay is the click
+   target — there's no separate button.
+
+   Click → JS adds .activated, which (a) punches the big circle,
+   (b) bubbles the rest of the catalyst constellation in with a
+   staggered scale-from-zero, (c) fires the gesture-required steps
+   (fullscreen / unmute / volume), and (d) starts movie playback.
+   After the bubble animation completes, .done is added and the
+   overlay fades, revealing the movie playing with sound. */
+.intro{
+  position:fixed;inset:0;z-index:20;
+  background:#000;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:clamp(18px,4vh,36px);
+  cursor:pointer;user-select:none;-webkit-user-select:none;
+  transition:opacity .8s ease;
+}
+.intro.done{opacity:0;pointer-events:none}
+
+.intro-logo{
+  width:min(38vw,200px);height:auto;display:block;
+  filter:drop-shadow(0 0 32px rgba(255,0,0,.35));
+}
+/* Smaller logo on portrait phones so the prompt has room. */
+@media (max-width:480px) and (orientation:portrait){
+  .intro-logo{width:min(48vw,180px)}
+}
+
+/* All circles start scaled-to-zero from their own centers. The big
+   circle (.c1) is the only one shown pre-click, gently breathing. */
+.intro-logo circle{
+  opacity:0;
+  transform:scale(0);
+  transform-origin:50% 50%;
+  transform-box:fill-box;
+}
+.intro-logo .c1{
+  opacity:1;transform:scale(1);
+  animation:breathe 2.2s ease-in-out infinite;
+}
+@media (hover:hover){
+  .intro:hover .intro-logo .c1{animation:breathe-fast 1.4s ease-in-out infinite}
+}
+@keyframes breathe{
+  0%,100%{transform:scale(1)}
+  50%{transform:scale(1.06)}
+}
+@keyframes breathe-fast{
+  0%,100%{transform:scale(1.04)}
+  50%{transform:scale(1.10)}
+}
+
+.intro-prompt{
+  font:500 13px/1.4 inherit;
+  letter-spacing:.35em;text-transform:uppercase;
+  color:rgba(255,255,255,.85);
+  animation:prompt-pulse 1.8s ease-in-out infinite;
+}
+@keyframes prompt-pulse{
+  0%,100%{opacity:.45}
+  50%{opacity:.95}
+}
+
+/* ── Activated state ─────────────────────────────────────────── */
+/* Big circle: brief "press" punch + brightness pop. */
+.intro.activated .c1{
+  animation:punch .42s cubic-bezier(.34,1.56,.64,1) forwards;
+}
+/* Small circles + rings: stagger in with overshoot. Order chosen
+   to feel balanced (left/right anchors first, then the smaller
+   detail bits). */
+.intro.activated .c2,
+.intro.activated .c3,
+.intro.activated .c4,
+.intro.activated .c5,
+.intro.activated .c6,
+.intro.activated .c7{
+  animation:bubble-up .55s cubic-bezier(.34,1.56,.64,1) forwards;
+}
+.intro.activated .c5{animation-delay:.18s}  /* left anchor */
+.intro.activated .c3{animation-delay:.28s}  /* right anchor */
+.intro.activated .c7{animation-delay:.38s}  /* big ring */
+.intro.activated .c6{animation-delay:.50s}  /* bottom dot */
+.intro.activated .c4{animation-delay:.62s}  /* mid dot */
+.intro.activated .c2{animation-delay:.76s}  /* small ring */
+.intro.activated .intro-prompt{
+  opacity:0;
+  transition:opacity .18s ease;
+}
+
+@keyframes punch{
+  0%{transform:scale(1);filter:brightness(1)}
+  35%{transform:scale(.92);filter:brightness(1.6)}
+  100%{transform:scale(1);filter:brightness(1)}
+}
+@keyframes bubble-up{
+  0%{opacity:0;transform:scale(0)}
+  55%{opacity:1}
+  100%{opacity:1;transform:scale(1)}
+}
+
+/* Respect users who don't want motion — collapse to a static reveal. */
+@media (prefers-reduced-motion:reduce){
+  .intro-logo .c1{animation:none}
+  .intro.activated .c1,
+  .intro.activated .c2,
+  .intro.activated .c3,
+  .intro.activated .c4,
+  .intro.activated .c5,
+  .intro.activated .c6,
+  .intro.activated .c7{
+    animation:none;opacity:1;transform:scale(1);
+  }
+}
+
+/* Watermark — bottom-right. max() against safe-area-inset so it
+   doesn't slide under the iPhone home indicator or notch. */
+.logo{
+  position:fixed;
+  bottom:max(env(safe-area-inset-bottom,0px), clamp(12px,3vh,32px));
+  right:max(env(safe-area-inset-right,0px), clamp(12px,3vw,40px));
+  z-index:5;pointer-events:none;
+}
 .logo svg{
-  width:min(22vw,140px);height:auto;
+  width:min(20vw,120px);height:auto;
   opacity:0;animation:f 1.4s ease-in forwards .3s;
   filter:drop-shadow(0 0 16px rgba(255,255,255,.3));
 }
 @keyframes f{to{opacity:.7}}
+
+/* Portrait phones — shrink the mark and pad it away from the iPhone
+   Chrome / Safari bottom toolbar (which is shown when scroll is at top
+   on iPhone Chrome and overlaps fixed-position elements). */
+@media (max-width:480px) and (orientation:portrait){
+  .logo{
+    bottom:max(env(safe-area-inset-bottom,0px), 16px);
+    right:max(env(safe-area-inset-right,0px), 14px);
+  }
+  .logo svg{width:min(26vw,72px)}
+}
+
+/* Landscape phones — wide-but-short. Keep the logo tight to the
+   corner; horizontal real estate is precious. */
+@media (max-height:480px) and (orientation:landscape){
+  .logo{
+    bottom:max(env(safe-area-inset-bottom,0px), 10px);
+    right:max(env(safe-area-inset-right,0px), 12px);
+  }
+  .logo svg{width:min(14vh,64px)}
+}
 </style>
 </head>
 <body>
 
 <!--
-  VOD playback from Mux via Video.js v10. No UI chrome FOR NOW — just
-  autoplay, full-bleed video. The <video-player> state store stays so
-  the default skin (or a custom UI) can be slotted back in by wrapping
-  <mux-video> in <video-skin> later.
+  VOD playback from Mux via Video.js v10. The video preloads
+  silently while the intro overlay is up; on the first user gesture
+  it unmutes, sets volume to 50%, and starts playback with sound.
 
   Note: v10's <mux-video> does NOT observe `playback-id` (unlike
   standalone @mux/mux-video). Its observedAttributes are plain
@@ -102,42 +246,123 @@ mux-video{
     max_resolution_tier=1080p   — caps the ladder; documents intent for
                                   the 4K-tier swap (change to 2160p)
 
-  metadata-video-title is kept for forward-compat with Mux Data once an
-  env-key is wired. Swap asset: change the playback ID in the URL.
+  Why no `autoplay`: we want playback to begin on the user's tap so
+  they don't miss the opening of the movie (the v8 autoplay-muted
+  flow had the video already 5–10s in by the time anyone clicked).
+  metadata-video-title is kept for forward-compat with Mux Data once
+  an env-key is wired. Swap asset: change the playback ID in the URL.
 -->
 <video-player>
   <media-container>
     <mux-video
       src="https://stream.mux.com/Apdb9mHDmGuMt00AVKNNVx6VZEXw7602eYCcTPJIFtpVE.m3u8?rendition_order=desc&max_resolution_tier=1080p"
       metadata-video-title="tears_of_steel_1080p"
-      autoplay
       muted
+      preload="auto"
       playsinline
       crossorigin="anonymous"
     ></mux-video>
   </media-container>
 </video-player>
 
+<!-- Intro overlay — single-click activation. Pre-click: big catalyst
+     circle breathing on black + "TAP TO BEGIN". The SVG is broken
+     into individual <circle> elements (rather than the original
+     compound path) so each can animate independently for the Netflix-
+     style bubble-up. Rings are drawn with `stroke` rather than
+     even-odd fill so the same scale-from-zero animation works on them. -->
+<div id="intro" class="intro" role="button" aria-label="Tap to begin playback">
+  <svg class="intro-logo" viewBox="0 0 264 315" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <circle class="c1" cx="131.4" cy="95.4"  r="97"    fill="#FF0000"/>
+    <circle class="c5" cx="23.7"  cy="168"   r="22.85" fill="#FF0000"/>
+    <circle class="c3" cx="240"   cy="168"   r="22.85" fill="#FF0000"/>
+    <circle class="c7" cx="94.27" cy="221.67" r="19.75" stroke="#FF0000" stroke-width="11.5" fill="none"/>
+    <circle class="c6" cx="117.9" cy="289"   r="14"    fill="#FF0000"/>
+    <circle class="c4" cx="138"   cy="247"   r="11"    fill="#FF0000"/>
+    <circle class="c2" cx="168.5" cy="204.8" r="11.2"  stroke="#FF0000" stroke-width="5.6" fill="none"/>
+  </svg>
+  <div class="intro-prompt">Tap to begin</div>
+</div>
+
 <script>
-// v10 beta autoplay nudge: <mux-video autoplay> sets the attribute on
-// the inner <video>, but MSE attaches the blob: source AFTER the initial
-// autoplay attempt would fire, so the inner video sits paused at
-// readyState 4. Calling play() once metadata is ready triggers playback
-// reliably. Muted, so this never trips the browser's gesture-required
-// autoplay policy; the rejection is caught defensively.
-(function(){
-  var mv = document.querySelector('mux-video');
-  if (!mv) return;
-  var tried = false;
-  var nudge = function(){
-    if (tried) return;
-    tried = true;
-    var p = mv.play();
-    if (p && p.catch) p.catch(function(){ tried = false; });
-  };
-  mv.addEventListener('loadedmetadata', nudge);
-  mv.addEventListener('canplay', nudge);
-})();
+// ── Intro sequence + first-gesture activation ─────────────────────
+//
+// One click on the intro overlay does everything:
+//   1. Fullscreen request (desktop / Android Chrome — no-op on iOS
+//      Safari, which doesn't expose requestFullscreen on arbitrary
+//      elements; on iOS we fall back to the CSS "fake fullscreen").
+//   2. Unmute + volume = 0.5 — both set synchronously inside the
+//      gesture handler so the browser's autoplay-with-sound policy
+//      sees them as user-initiated.
+//   3. Adds .activated to the intro overlay, which kicks off the
+//      catalyst-logo bubble-up animation (CSS keyframes; 0.42s
+//      punch on the big circle + 0.55s × 6 staggered bubble-ups
+//      ≈ 1.3s total).
+//   4. Calls mv.play() to start the movie. Synchronous within the
+//      gesture; if the source isn't buffered yet, defer until canplay.
+//   5. After ~1.6s the intro overlay fades (0.8s CSS transition),
+//      revealing the playing movie. Overlay is removed from the DOM
+//      after the fade for a clean tree.
+//
+// Wait for customElements.whenDefined so <mux-video> is upgraded
+// (and .play() is real) before we wire anything up.
+customElements.whenDefined('mux-video').then(function(){
+  var mv    = document.querySelector('mux-video');
+  var intro = document.getElementById('intro');
+  if (!mv || !intro) return;
+
+  var activated = false;
+  function activate(){
+    if (activated) return;
+    activated = true;
+
+    // (1) Fullscreen — fire-and-forget; rejected promise is fine.
+    var el = document.documentElement;
+    var req = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (req) {
+      try {
+        var fp = req.call(el);
+        if (fp && fp.catch) fp.catch(function(){});
+      } catch (_) {}
+    }
+
+    // (2) Sound. Set inside the gesture so the policy treats this
+    //     as user-initiated; the values stick after.
+    mv.muted = false;
+    mv.volume = 0.5;
+
+    // (3) Bubble-up animation. CSS does the rest.
+    intro.classList.add('activated');
+
+    // (4) Start playback. If MSE hasn't attached yet, retry on canplay.
+    function start(){
+      var p = mv.play();
+      if (p && p.catch) p.catch(function(){
+        var once = function(){
+          mv.removeEventListener('canplay', once);
+          mv.play().catch(function(){});
+        };
+        mv.addEventListener('canplay', once);
+      });
+    }
+    start();
+
+    // (5) Fade overlay after the bubble animation lands, then remove
+    //     it from the DOM for cleanliness once the fade completes.
+    setTimeout(function(){ intro.classList.add('done'); }, 1600);
+    setTimeout(function(){
+      if (intro.parentNode) intro.parentNode.removeChild(intro);
+    }, 2600);
+  }
+
+  intro.addEventListener('click', activate);
+  intro.addEventListener('touchstart', activate, { passive: true });
+  // Keyboard accessibility — Enter/Space on the focused overlay.
+  intro.tabIndex = 0;
+  intro.addEventListener('keydown', function(e){
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activate(); }
+  });
+});
 </script>
 
 <!-- Watermark -->
