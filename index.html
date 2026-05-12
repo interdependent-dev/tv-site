@@ -63,6 +63,10 @@ media-container{
   display:block;
   position:fixed;inset:0;
   width:100vw;height:100vh;
+  height:100dvh; /* dvh tracks the live visible viewport — when
+                    iOS Safari/Chrome retracts its URL bar, the
+                    media surface grows to fill the new area
+                    without us needing a Fullscreen API call. */
   background:#000;
 }
 mux-video{
@@ -85,6 +89,10 @@ mux-video{
    overlay fades, revealing the movie playing with sound. */
 .intro{
   position:fixed;inset:0;z-index:20;
+  height:100vh;
+  height:100dvh; /* fill the maximum visible viewport on mobile so the
+                    transition feels fullscreen even when the real
+                    Fullscreen API can't engage (iOS). */
   background:#000;
   display:flex;flex-direction:column;
   align-items:center;justify-content:center;
@@ -311,20 +319,49 @@ customElements.whenDefined('mux-video').then(function(){
   var intro = document.getElementById('intro');
   if (!mv || !intro) return;
 
+  // ── Fullscreen helper ─────────────────────────────────────────
+  // Targets the root of the document so the intro overlay AND the
+  // <video-player> are both inside the fullscreen surface during
+  // the transition (they're both descendants of <html>/<body>).
+  // Fallback chain: <html> → <body>, with the standard API first
+  // and the webkit prefix as a fallback for older Safari. Chrome
+  // accepts { navigationUI: 'hide' } to suppress its own UI; other
+  // engines ignore the options object so we retry plain on throw.
+  //
+  // iOS Safari / iPhone Chrome: requestFullscreen is not exposed
+  // on non-<video> elements at all on iPhone; all calls below
+  // return early. We rely on the CSS "fake fullscreen" (position:
+  // fixed; inset:0; viewport-fit=cover; 100dvh) for those.
+  function enterFullscreen(){
+    var candidates = [document.documentElement, document.body];
+    for (var i = 0; i < candidates.length; i++) {
+      var el = candidates[i];
+      if (!el) continue;
+      var fn = el.requestFullscreen || el.webkitRequestFullscreen;
+      if (typeof fn !== 'function') continue;
+      try {
+        var p = fn.call(el, { navigationUI: 'hide' });
+        if (p && p.catch) p.catch(function(){});
+        return;
+      } catch (_) {
+        try {
+          var p2 = fn.call(el);
+          if (p2 && p2.catch) p2.catch(function(){});
+          return;
+        } catch (__) {}
+      }
+    }
+  }
+
   var activated = false;
   function activate(){
     if (activated) return;
     activated = true;
 
-    // (1) Fullscreen — fire-and-forget; rejected promise is fine.
-    var el = document.documentElement;
-    var req = el.requestFullscreen || el.webkitRequestFullscreen;
-    if (req) {
-      try {
-        var fp = req.call(el);
-        if (fp && fp.catch) fp.catch(function(){});
-      } catch (_) {}
-    }
+    // (1) Fullscreen — must be called synchronously inside the
+    //     user gesture handler. Fire-and-forget; if it fails on
+    //     iOS, we still get unmute + volume + the intro animation.
+    enterFullscreen();
 
     // (2) Sound. Set inside the gesture so the policy treats this
     //     as user-initiated; the values stick after.
