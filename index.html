@@ -123,8 +123,22 @@ mux-video{
   opacity:1;transform:scale(1);
   animation:breathe 2.2s ease-in-out infinite;
 }
+/* Play triangle pulses in lockstep with the big circle so the
+   button "breathes" as one unit. Its own bounding-box center is
+   slightly right of the circle center (deliberate optical-balance
+   offset), but each scales from its own box, so the relative
+   offset is preserved while sizing. */
+.intro-logo .play-icon{
+  opacity:1;
+  transform-origin:50% 50%;
+  transform-box:fill-box;
+  animation:breathe 2.2s ease-in-out infinite;
+}
 @media (hover:hover){
-  .intro:hover .intro-logo .c1{animation:breathe-fast 1.4s ease-in-out infinite}
+  .intro:hover .intro-logo .c1,
+  .intro:hover .intro-logo .play-icon{
+    animation:breathe-fast 1.4s ease-in-out infinite;
+  }
 }
 @keyframes breathe{
   0%,100%{transform:scale(1)}
@@ -135,21 +149,19 @@ mux-video{
   50%{transform:scale(1.10)}
 }
 
-.intro-prompt{
-  font:500 13px/1.4 inherit;
-  letter-spacing:.35em;text-transform:uppercase;
-  color:rgba(255,255,255,.85);
-  animation:prompt-pulse 1.8s ease-in-out infinite;
-}
-@keyframes prompt-pulse{
-  0%,100%{opacity:.45}
-  50%{opacity:.95}
-}
-
 /* ── Activated state ─────────────────────────────────────────── */
 /* Big circle: brief "press" punch + brightness pop. */
 .intro.activated .c1{
   animation:punch .42s cubic-bezier(.34,1.56,.64,1) forwards;
+}
+/* Play arrow: shrink + fade out so the bubble reveal isn't fighting
+   a triangle for the viewer's attention. */
+.intro.activated .play-icon{
+  animation:play-fade .3s ease forwards;
+}
+@keyframes play-fade{
+  0%{opacity:1;transform:scale(1)}
+  100%{opacity:0;transform:scale(.4)}
 }
 /* Small circles + rings: stagger in with overshoot. Order chosen
    to feel balanced (left/right anchors first, then the smaller
@@ -168,10 +180,6 @@ mux-video{
 .intro.activated .c6{animation-delay:.50s}  /* bottom dot */
 .intro.activated .c4{animation-delay:.62s}  /* mid dot */
 .intro.activated .c2{animation-delay:.76s}  /* small ring */
-.intro.activated .intro-prompt{
-  opacity:0;
-  transition:opacity .18s ease;
-}
 
 @keyframes punch{
   0%{transform:scale(1);filter:brightness(1)}
@@ -186,7 +194,8 @@ mux-video{
 
 /* Respect users who don't want motion — collapse to a static reveal. */
 @media (prefers-reduced-motion:reduce){
-  .intro-logo .c1{animation:none}
+  .intro-logo .c1,
+  .intro-logo .play-icon{animation:none}
   .intro.activated .c1,
   .intro.activated .c2,
   .intro.activated .c3,
@@ -196,6 +205,7 @@ mux-video{
   .intro.activated .c7{
     animation:none;opacity:1;transform:scale(1);
   }
+  .intro.activated .play-icon{animation:none;opacity:0}
 }
 
 /* Watermark — bottom-right. max() against safe-area-inset so it
@@ -273,15 +283,31 @@ mux-video{
   </media-container>
 </video-player>
 
-<!-- Intro overlay — single-click activation. Pre-click: big catalyst
-     circle breathing on black + "TAP TO BEGIN". The SVG is broken
-     into individual <circle> elements (rather than the original
-     compound path) so each can animate independently for the Netflix-
-     style bubble-up. Rings are drawn with `stroke` rather than
-     even-odd fill so the same scale-from-zero animation works on them. -->
-<div id="intro" class="intro" role="button" aria-label="Tap to begin playback">
-  <svg class="intro-logo" viewBox="0 0 264 315" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+<!-- Intro overlay — single-click activation. Pre-click: the big
+     Catalyst circle with a white play triangle inside (the whole
+     thing is the play button) breathes gently on black. The SVG
+     is broken into individual <circle> elements (rather than the
+     original compound path) so each can animate independently for
+     the Netflix-style bubble-up. Rings are drawn with `stroke`
+     rather than even-odd fill so the same scale-from-zero
+     animation works on them.
+
+     viewBox is intentionally padded -12 / +24 vs the source SVG's
+     264×315 so the big circle has room to breathe (and the breathe-
+     fast hover scales to 1.10) without clipping at the viewBox edge.
+     All circle cx/cy/r values are unchanged from the source. -->
+<div id="intro" class="intro" role="button" aria-label="Play to begin">
+  <svg class="intro-logo" viewBox="-12 -12 288 339" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <circle class="c1" cx="131.4" cy="95.4"  r="97"    fill="#FF0000"/>
+    <!-- Play triangle: sits on top of the big circle, white on red.
+         Width 60 / height 72, centered visually (left edge offset
+         left of cx by W/3 so the triangle's optical centroid lands
+         on the circle's center, not its geometric one). Rounded
+         joins for a softer, more "button" feel. -->
+    <path class="play-icon"
+          d="M111 59 L111 131 L171 95 Z"
+          fill="#fff" stroke="#fff" stroke-width="6"
+          stroke-linejoin="round" stroke-linecap="round"/>
     <circle class="c5" cx="23.7"  cy="168"   r="22.85" fill="#FF0000"/>
     <circle class="c3" cx="240"   cy="168"   r="22.85" fill="#FF0000"/>
     <circle class="c7" cx="94.27" cy="221.67" r="19.75" stroke="#FF0000" stroke-width="11.5" fill="none"/>
@@ -289,7 +315,6 @@ mux-video{
     <circle class="c4" cx="138"   cy="247"   r="11"    fill="#FF0000"/>
     <circle class="c2" cx="168.5" cy="204.8" r="11.2"  stroke="#FF0000" stroke-width="5.6" fill="none"/>
   </svg>
-  <div class="intro-prompt">Tap to begin</div>
 </div>
 
 <script>
