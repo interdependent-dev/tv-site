@@ -1,0 +1,107 @@
+# generated: 2026-05-12
+# last_updated: 2026-05-12
+# project: tv
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: /Users/interdependent/tv/_bmad-output/implementation-artifacts/stories
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file exists in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# PROJECT-SPECIFIC NOTES:
+# ======================
+# - Epic TV-1 (Linear Channel Playback POC) decomposed into:
+#     Epic 0 = Pre-Sprint-1 Prep (gating items)
+#     Epic 1 = Sprint 1 — Schedule and single-channel playback
+#     Epic 2 = Sprint 2 — Multi-channel and channel guide
+#     Epic 3 = Sprint 3 — Resume / live decision UX
+#     Epic 4 = Sprint 4 — Polish and demo readiness
+# - All 22 story files authored 2026-05-12; 2 additional stories added 2026-05-12
+#   during implementation-readiness + architecture review (party-mode consensus):
+#     - 0.3 (infrastructure provisioning, D1-INFRA decision)
+#     - 4.7 (Stream Analytics evaluation memo, Plan C analytics decision)
+#   Total: 24 stories, all status: ready-for-dev.
+# - Sprint 1 gated on: 0.1 (asset inventory) AND 0.3 (Cloudflare + Neon + DNS + Mux Data) closing.
+# - §17 decisions: 6 of 7 Closed (2026-05-12); 17.3 Gated (closes with 0.1).
+# - Readiness-review decisions: D1-INFRA=A (Story 0.3 added), D2-VOD-URL=B (session canonical),
+#   D3-SCHEMA=B (additive evolution in 3.1/3.3).
+# - Architecture decisions (2026-05-12 party): Mux-vs-Cloudflare=A (stay Cloudflare R2 + FFmpeg);
+#   Analytics Plan C (Mux Data SDK on R2 player; Stream Analytics evaluated via free-trial memo, Story 4.7).
+
+generated: 2026-05-12
+last_updated: 2026-05-12
+project: tv
+project_key: NOKEY
+tracking_system: file-system
+story_location: /Users/interdependent/tv/_bmad-output/implementation-artifacts/stories
+
+development_status:
+  # ===== Epic 0: Pre-Sprint-1 Prep (gating) =====
+  epic-0: backlog
+  0-1-confirm-asset-inventory: ready-for-dev
+  0-2-name-hls-encoding-pipeline-owner: ready-for-dev
+  0-3-infrastructure-provisioning: ready-for-dev
+  epic-0-retrospective: optional
+
+  # ===== Epic 1: Sprint 1 — Schedule and single-channel playback =====
+  epic-1: backlog
+  1-1-data-model-and-seed: ready-for-dev
+  1-2-api-time-and-channel-manifest-endpoints: ready-for-dev
+  1-3-useservertime-and-usesession-hooks: ready-for-dev
+  1-4-channelplayer-minimal-viable: ready-for-dev
+  1-5-cold-load-performance-baseline: ready-for-dev
+  epic-1-retrospective: optional
+
+  # ===== Epic 2: Sprint 2 — Multi-channel and channel guide =====
+  epic-2: backlog
+  2-1-seed-4-additional-channels: ready-for-dev
+  2-2-get-api-channels-list-endpoint: ready-for-dev
+  2-3-channelguide-quick-switch-row: ready-for-dev
+  2-4-watch-slug-route-and-player-wiring: ready-for-dev
+  2-5-concurrency-soak-test: ready-for-dev
+  epic-2-retrospective: optional
+
+  # ===== Epic 3: Sprint 3 — Resume / live decision UX =====
+  epic-3: backlog
+  3-1-resume-modal: ready-for-dev
+  3-2-vod-detour-mode-in-player: ready-for-dev
+  3-3-session-age-and-edge-case-handling: ready-for-dev
+  3-4-analytics-events: ready-for-dev
+  epic-3-retrospective: optional
+
+  # ===== Epic 4: Sprint 4 — Polish and demo readiness =====
+  epic-4: backlog
+  4-1-error-states-and-retry: ready-for-dev
+  4-2-loading-skeletons: ready-for-dev
+  4-3-mobile-responsiveness-pass: ready-for-dev
+  4-4-500-concurrent-load-test-and-tuning: ready-for-dev
+  4-5-keyboard-nav-full-coverage: ready-for-dev
+  4-6-internal-demo-flow-walkthrough-doc: ready-for-dev
+  4-7-stream-analytics-evaluation-memo: ready-for-dev
+  epic-4-retrospective: optional
+
+# ===== Gating items (advisory; for human reference) =====
+# blockers:
+#   sprint_1_kickoff:
+#     - 0-1-confirm-asset-inventory  # §17.3 (Vik) — content rights + inventory
+#     - 0-2-name-hls-encoding-pipeline-owner  # Chris owns per D13 — encoding + R2
+#     - 0-3-infrastructure-provisioning  # Chris owns — Cloudflare + Neon + DNS
+#   story_1_4_demo:
+#     - r2_cors_policy_applied_for_cdn_interdependent_tv  # Cat 7 #8
+#   sprint_4_demo:
+#     - k6_500_concurrent_passes_against_deployed_preview  # Cat 4 acceptance gate (G3)
