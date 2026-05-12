@@ -14,21 +14,34 @@
 <title>INTERDEPENDENT TV</title>
 
 <!-- ── Network hints ───────────────────────────────────────────────
-     Warm DNS + TLS to Mux's HLS edge before video.js asks for the
-     manifest. Saves ~1 RTT on cold start.
+     Warm DNS + TLS to both the player CDN (modules) and Mux's HLS
+     edge (manifest + segments) before the browser asks for them.
 -->
+<link rel="dns-prefetch" href="//cdn.jsdelivr.net">
 <link rel="dns-prefetch" href="//stream.mux.com">
+<link rel="dns-prefetch" href="//image.mux.com">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://stream.mux.com" crossorigin>
+<link rel="preconnect" href="https://image.mux.com" crossorigin>
 
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCA3NC42IDg5LjQnIGZpbGwtcnVsZT0nZXZlbm9kZCc+PHBhdGggZmlsbD0nIzAwMCcgZD0nTTkuMyAyOGEyOCAyOCAwIDEgMCA1NiAwIDI4IDI4IDAgMSAwLTU2IDBNMjAgNjQuOWE3LjUgNy4zIDAgMSAwIDE1IDAgNy41IDcuMyAwIDEgMC0xNSAwTTIzLjIgNjQuN2E0LjEgNC4xIDAgMSAwIDguMiAwIDQuMSA0LjEgMCAxIDAtOC4yIDBNNDMuOSA2MGE0IDQgMCAxIDAgOCAwIDQgNCAwIDEgMC04IDBNNDUuNSA2MGEyLjQgMi40IDAgMSAwIDQuOCAwIDIuNCAyLjQgMCAxIDAtNC44IDBNMzcuMyA3Mi43YTMuMyAzLjMgMCAxIDAgNi42IDAgMy4zIDMuMyAwIDEgMC02LjYgME0yOS4zIDg1LjRhNCA0IDAgMSAwIDggMCA0IDQgMCAxIDAtOCAwTTAgNTAuN2E2LjcgNi43IDAgMSAwIDEzLjQgMCA2LjcgNi43IDAgMSAwLTEzLjQgME02MS4zIDQ5LjNhNi43IDYuNyAwIDEgMCAxMy4zIDAgNi43IDYuNyAwIDEgMC0xMy4zIDAnLz48L3N2Zz4=">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 
-<!-- Video.js — latest stable major (v8). User asked for v10 but that
-     major doesn't exist on npm yet; v9 was skipped. Pinning to @8 so a
-     future v9/v10 release doesn't silently break the player. -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/video.js@8/dist/video-js.min.css">
-<script src="https://cdn.jsdelivr.net/npm/video.js@8/dist/video.min.js"></script>
+<!-- ── Video.js v10 (beta) ──────────────────────────────────────────
+     v10 is a full rewrite published under a new package, @videojs/html,
+     organized as web components. The main bundle registers the
+     <video-player> state store (used even without a UI, so the skin can
+     be slotted back in trivially). The mux-video media element is a
+     separate module — it wraps Mux's delivery stack so playback-id /
+     stream-type / rendition-order / max-resolution become native
+     attributes.
+
+     Pinned to an exact beta because the API is still evolving; bump
+     deliberately when you want to track upstream.
+-->
+<script type="module" src="https://cdn.jsdelivr.net/npm/@videojs/html@10.0.0-beta.23/cdn/video.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/npm/@videojs/html@10.0.0-beta.23/cdn/media/mux-video.js"></script>
 
 <style>
 *{margin:0;box-sizing:border-box}
@@ -41,34 +54,22 @@ html,body{
   overflow:hidden;
 }
 
-/* Letterbox the 12:5 cinema asset within whatever viewport we land in. */
-.stage{
+/* Chrome-less full-bleed playback. <media-container> is the v10
+   interaction surface — it provides the mediaContext that <mux-video>
+   needs to actually render. We give it no UI children (no controls,
+   no poster, no buffering indicator), so all that draws is the video
+   itself. 12:5 asset letterboxes via object-fit:contain on any aspect. */
+media-container{
+  display:block;
   position:fixed;inset:0;
-  display:flex;align-items:center;justify-content:center;
-}
-
-.video-js{
+  width:100vw;height:100vh;
   background:#000;
-  font-family:inherit;
-  aspect-ratio:12 / 5;
-  width:100%;
-  max-width:100vw;
-  max-height:100vh;
 }
-
-/* Branded big-play button — centered, slightly fancier than the default. */
-.video-js .vjs-big-play-button{
-  width:96px;height:96px;line-height:96px;
-  border-radius:50%;border:2px solid rgba(255,255,255,.85);
-  background:rgba(0,0,0,.4);
-  font-size:42px;
-  top:50%;left:50%;margin:-48px 0 0 -48px;
-  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
-  transition:transform .15s ease,background .2s ease;
-}
-.video-js:hover .vjs-big-play-button,
-.video-js .vjs-big-play-button:focus{
-  background:rgba(0,0,0,.75);transform:scale(1.05);
+mux-video{
+  display:block;
+  width:100%;height:100%;
+  object-fit:contain;
+  background:#000;
 }
 
 /* Watermark — bottom-right, sits above the player chrome. */
@@ -84,52 +85,65 @@ html,body{
 <body>
 
 <!--
-  VOD playback from Mux. Architecture:
-    Mux Asset ──HLS──▶ Mux Global CDN (Fastly + edgemv) ──▶ this player
+  VOD playback from Mux via Video.js v10. No UI chrome FOR NOW — just
+  autoplay, full-bleed video. The <video-player> state store stays so
+  the default skin (or a custom UI) can be slotted back in by wrapping
+  <mux-video> in <video-skin> later.
 
-  `?rendition_order=desc` reorders the master manifest so the highest
-  rendition (1920×800, the 1080p tier of this 12:5 asset) is listed
-  first. video.js's bundled HLS engine starts at the first entry, so
-  playback opens at 1080p and ABR only steps down if bandwidth forces
-  it. For a future 4K asset, append `&max_resolution_tier=2160p` and
-  re-encode to that tier in Mux.
+  Note: v10's <mux-video> does NOT observe `playback-id` (unlike
+  standalone @mux/mux-video). Its observedAttributes are plain
+  HTMLVideoElement attrs + a few Cast-specific ones. So we pass the
+  full Mux HLS URL via `src` and push playback-ladder hints into
+  Mux's manifest query params:
 
-  To swap to another asset, change the playback ID in the <source> URL.
+    rendition_order=desc        — order the master manifest top-down so
+                                  hls.js opens at 1080p; ABR steps down
+                                  only if bandwidth forces it
+    max_resolution_tier=1080p   — caps the ladder; documents intent for
+                                  the 4K-tier swap (change to 2160p)
+
+  metadata-video-title is kept for forward-compat with Mux Data once an
+  env-key is wired. Swap asset: change the playback ID in the URL.
 -->
-<div class="stage">
-  <video-js
-    id="player"
-    class="video-js vjs-default-skin vjs-big-play-centered"
-    controls
-    preload="metadata"
-    playsinline
-    crossorigin="anonymous">
-    <source
-      src="https://stream.mux.com/Apdb9mHDmGuMt00AVKNNVx6VZEXw7602eYCcTPJIFtpVE.m3u8?rendition_order=desc"
-      type="application/x-mpegURL">
-  </video-js>
-</div>
+<video-player>
+  <media-container>
+    <mux-video
+      src="https://stream.mux.com/Apdb9mHDmGuMt00AVKNNVx6VZEXw7602eYCcTPJIFtpVE.m3u8?rendition_order=desc&max_resolution_tier=1080p"
+      metadata-video-title="tears_of_steel_1080p"
+      autoplay
+      muted
+      playsinline
+      crossorigin="anonymous"
+    ></mux-video>
+  </media-container>
+</video-player>
+
+<script>
+// v10 beta autoplay nudge: <mux-video autoplay> sets the attribute on
+// the inner <video>, but MSE attaches the blob: source AFTER the initial
+// autoplay attempt would fire, so the inner video sits paused at
+// readyState 4. Calling play() once metadata is ready triggers playback
+// reliably. Muted, so this never trips the browser's gesture-required
+// autoplay policy; the rejection is caught defensively.
+(function(){
+  var mv = document.querySelector('mux-video');
+  if (!mv) return;
+  var tried = false;
+  var nudge = function(){
+    if (tried) return;
+    tried = true;
+    var p = mv.play();
+    if (p && p.catch) p.catch(function(){ tried = false; });
+  };
+  mv.addEventListener('loadedmetadata', nudge);
+  mv.addEventListener('canplay', nudge);
+})();
+</script>
 
 <!-- Watermark -->
 <div class="logo">
 <svg viewBox="-1 -1 394 238" fill-rule="evenodd" role="img" aria-label="INTERDEPENDENT TV"><path fill="#fff" d="M72.4265993,181.599151 C66.4590298,181.599151 61.6302421,176.771465 61.6302421,170.837972 C61.6302421,164.895874 66.4590298,160.07249 72.4265993,160.07249 C78.3985826,160.07249 83.2229564,164.895874 83.2229564,170.837972 C83.2229564,176.771465 78.3985826,181.599151 72.4265993,181.599151 M91.860925,171.461871 C91.860925,160.132729 83.1567482,151.462687 73.0577845,151.462687 C61.6964503,151.462687 52.9966875,160.132729 52.9966875,171.461871 C52.9966875,181.538913 61.6964503,190.208955 73.0577845,190.208955 C83.1567482,190.208955 91.860925,181.538913 91.860925,171.461871M24.7317875,73.9701493 C24.7317875,114.823555 57.9498633,147.940299 99.5404822,147.940299 C139.904437,147.940299 173.122512,114.823555 173.122512,73.9701493 C173.122512,33.1167433 139.904437,0 99.5404822,0 C57.9498633,0 24.7317875,33.1167433 24.7317875,73.9701493 ZM127.194217,164.849451 C123.67483,164.849451 120.831581,162.010133 120.831581,158.511688 C120.831581,155.009017 123.67483,152.169699 127.194217,152.169699 C130.70927,152.169699 133.552519,155.009017 133.552519,158.511688 C133.552519,162.010133 130.70927,164.849451 127.194217,164.849451 M127.194217,147.940299 C121.338684,147.940299 116.592712,152.66827 116.592712,158.511688 C116.592712,164.346655 121.338684,169.074627 127.194217,169.074627 C133.045415,169.074627 137.791387,164.346655 137.791387,158.511688 C137.791387,152.66827 133.045415,147.940299 127.194217,147.940299M107.7622,183.164179 C102.884091,183.164179 98.92715,187.105962 98.92715,191.972361 C98.92715,196.834336 102.884091,200.776119 107.7622,200.776119 C112.640309,200.776119 116.592712,196.834336 116.592712,191.972361 C116.592712,187.105962 112.640309,183.164179 107.7622,183.164179M88.3256373,214.865672 C82.4745768,214.865672 77.728475,219.595655 77.728475,225.432836 C77.728475,231.270017 82.4745768,236 88.3256373,236 C94.1810481,236 98.92715,231.270017 98.92715,225.432836 C98.92715,219.595655 94.1810481,214.865672 88.3256373,214.865672M17.6655625,116.238806 C7.90718362,116.238806 0,124.123696 0,133.852952 C0,143.577797 7.90718362,151.462687 17.6655625,151.462687 C27.4239414,151.462687 35.331125,143.577797 35.331125,133.852952 C35.331125,124.123696 27.4239414,116.238806 17.6655625,116.238806M180.186475,112.716418 C170.433871,112.716418 162.523175,120.601308 162.523175,130.330564 C162.523175,140.055409 170.433871,147.940299 180.186475,147.940299 C189.943604,147.940299 197.8543,140.055409 197.8543,130.330564 C197.8543,120.601308 189.943604,112.716418 180.186475,112.716418M239.894118,45.170986 L282.776959,45.1709859 L282.776959,63.8942535 L239.894118,63.8942535 L239.894118,104.40507 C239.894118,124.823247 240.972673,126.780451 251.145666,126.780451 L253.001174,126.780451 C262.953117,126.780451 264.046554,124.770747 264.046554,106.053746 L264.046554,99.9894648 L284.426299,99.9894648 L284.426299,110.587606 C284.426299,139.540191 277.772511,146.534141 250.527164,146.534141 L247.228483,146.534141 C220.272791,146.534141 214.77252,139.9545 214.77252,106.672 L214.77252,63.8942535 L201.165465,63.8942535 L201.165465,45.1709859 L214.77252,45.170986 L214.77252,19.4104225 L239.894118,19.4104225 ZM318.496605,45.5306504 L341.82905,125.320038 L365.161495,45.5306504 L365.26667,45.1709859 L365.641397,45.1709859 L391,45.170986 L391.693801,45.170986 L391.474322,45.8291572 L358.487522,144.74972 L358.373533,145.091549 L324.459897,145.091549 L324.345908,144.74972 L291.359107,45.8291571 L291.139628,45.1709859 L318.39143,45.1709859 Z"/></svg>
 </div>
 
-<script>
-(function(){
-  var player = videojs('player', {
-    playbackRates: [0.5, 1, 1.25, 1.5, 2],
-    controlBar: {
-      pictureInPictureToggle: true,
-      remainingTimeDisplay: true,
-    },
-  });
-
-  player.on('error', function(){
-    var err = player.error();
-    if (err) console.error('[player error]', err.code, err.message);
-  });
-})();
-</script>
 </body>
 </html>
