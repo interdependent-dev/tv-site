@@ -1213,21 +1213,37 @@ customElements.whenDefined('mux-video').then(function(){
   let channelLive = false;
   let hideTimer   = 0;
   function showAllControls(on){
-    // GUIDE button and the IV watermark reveal/hide TOGETHER, and
-    // both only show after the channel is live (post-intro). During
-    // the cold-start phase the visible affordance is the ON / OFF
-    // AIR badge — pre-show GUIDE access would feel premature.
-    // During the between-show interlude (#static) and OFF AIR
-    // (#offair), the centered IV logo is the brand mark, so we
-    // suppress the corner watermark (would be a duplicate). The
-    // GUIDE pill stays put regardless — it's an info affordance,
-    // not chrome, and mobile users need it always reachable.
-    const centerLogoShowing =
-      !channelLive
-      || staticEl.classList.contains('on')
-      || offairEl.classList.contains('on');
-    const shouldShow = on && !centerLogoShowing;
-    watermark.classList.toggle('show', shouldShow);
+    // Three regimes drive the corner chrome (watermark + GUIDE pill):
+    //
+    //   A) Pre-activation (cold-start):
+    //      Watermark hidden (it would dupe the centered IV logo).
+    //      GUIDE is managed by the dedicated 8s reveal timer — not
+    //      touched here so we don't fight it.
+    //
+    //   B) Channel-live + info surface (#static interlude / #offair):
+    //      Watermark hidden (centered logo dupes again).
+    //      GUIDE stays put. Info states are where viewers most want
+    //      the schedule — never hide it from them on touch devices.
+    //
+    //   C) Channel-live + active movie playback:
+    //      Watermark and GUIDE fade together on idle. Active
+    //      watching gets a clean picture; any mouse-move / tap /
+    //      keypress brings both back via pingControls().
+    const onInfoSurface =
+      channelLive
+      && (staticEl.classList.contains('on') || offairEl.classList.contains('on'));
+    const onMovieSurface = channelLive && !onInfoSurface;
+
+    if (onInfoSurface) {
+      watermark.classList.remove('show');
+      guideBtn.classList.add('show');
+    } else if (onMovieSurface) {
+      watermark.classList.toggle('show', on);
+      guideBtn.classList.toggle('show', on);
+    } else {
+      // Pre-activation: watermark hidden; GUIDE governed elsewhere.
+      watermark.classList.remove('show');
+    }
   }
   // Idle-hide delay. Touch devices (phones, tablets) get a quicker
   // 3s fade — controls aren't useful sitting over the video on a
@@ -2022,11 +2038,15 @@ customElements.whenDefined('mux-video').then(function(){
              "Returning to the channel" === "returning to playback",
              so the icon mirrors the intro page's PUSH PLAY triangle
              (outline-only, miter joins, butt caps) — same drawing
-             language end-to-end. Stroke 8 / 394 ≈ 6px on screen at
-             the desktop max width. Centered on the disc center
-             (cx=99.54, cy=73.97). -->
+             language end-to-end. Sized to match the watermark's
+             fullscreen-bracket envelope: vertical extent ±28 (56
+             tall), horizontal extent ±26 (slightly narrower so the
+             triangle's aspect tracks the intro PUSH PLAY icon's
+             11×12 ratio). Centered on the disc center
+             (cx=99.54, cy=73.97). Stroke 8 — same as the FS
+             brackets — so the visual weight matches. -->
         <g class="guide-back-icon" transform="translate(99.54 73.97)">
-          <path d="M -18,-22 L 22,0 L -18,22 Z"
+          <path d="M -26,-28 L 26,0 L -26,28 Z"
                 fill="none" stroke="#000" stroke-width="8"
                 stroke-linejoin="miter" stroke-linecap="butt"/>
         </g>
