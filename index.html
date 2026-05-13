@@ -127,56 +127,60 @@ mux-video{
   pointer-events:none;
 }
 
-/* Play button — white outline triangle inside a circle frame,
-   centered in the overlay. Breathes gently to signal interactivity;
-   slightly faster on hover (desktop). Scale-and-fade out on click. */
-.play-button{
-  position:relative;z-index:2;
-  width:clamp(96px,18vw,160px);
-  height:clamp(96px,18vw,160px);
-  border:2px solid rgba(255,255,255,.9);
-  border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  color:#fff;
-  filter:drop-shadow(0 0 24px rgba(255,255,255,.18));
-  animation:breathe 2.2s ease-in-out infinite;
-  transition:background .15s ease, border-color .15s ease;
+/* Dim CRT static behind the play triangle (V1 cold-start). 24%
+   intensity so it reads as texture and doesn't fight the
+   triangle. Half-res buffer scaled up with pixelated rendering. */
+.intro-noise{
+  position:absolute;inset:0;z-index:0;
+  width:100%;height:100%;
+  image-rendering:pixelated;
+  opacity:.65;
+  pointer-events:none;
 }
-.play-button svg{
-  width:38%;height:auto;display:block;
+.intro-vignette{
+  position:absolute;inset:0;z-index:1;
+  background:radial-gradient(ellipse at center,transparent 30%,rgba(0,0,0,.7) 100%);
+  pointer-events:none;
+}
+
+/* Red play triangle — large (~2.5x the prior framed button), thin
+   stroke, no circle. Fades in over 2.5s (V1 `f` keyframe), then
+   pulses indefinitely. Drop-shadow gives it a soft red bloom on
+   the noise. */
+.play-triangle{
+  position:relative;z-index:3;
+  width:clamp(220px,42vw,480px);
+  height:auto;display:block;
+  filter:drop-shadow(0 0 40px rgba(255,0,0,.45));
   /* Optical centering — geometric centroid of a play triangle is
-     1/3 from the left, so nudge right so the visual center sits
-     on the circle's center. */
-  transform:translateX(6%);
+     1/3 from the left, so nudge the whole SVG right ~2% so the
+     visual mass sits on the page's center. */
+  transform:translateX(2%);
+  opacity:0;
+  animation:
+    intro-fade-in 2.5s ease-in forwards .5s,
+    play-triangle-pulse 2.4s ease-in-out 3.2s infinite;
 }
-@media (hover:hover){
-  .intro:hover .play-button{
-    animation:breathe-fast 1.4s ease-in-out infinite;
-    background:rgba(255,255,255,.06);
-    border-color:#fff;
-  }
+@keyframes intro-fade-in{
+  to{opacity:1}
 }
-@keyframes breathe{
-  0%,100%{transform:scale(1)}
-  50%{transform:scale(1.06)}
-}
-@keyframes breathe-fast{
-  0%,100%{transform:scale(1.04)}
-  50%{transform:scale(1.10)}
+@keyframes play-triangle-pulse{
+  0%,100%{opacity:1;transform:translateX(2%) scale(1)}
+  50%    {opacity:.7;transform:translateX(2%) scale(1.04)}
 }
 
 .intro.activated{cursor:default}
-.intro.activated .play-button{
-  animation:play-button-out .25s ease forwards;
+.intro.activated .play-triangle{
+  animation:play-triangle-out .25s ease forwards;
   pointer-events:none;
 }
-@keyframes play-button-out{
-  0%{opacity:1;transform:scale(1)}
-  100%{opacity:0;transform:scale(.85)}
+@keyframes play-triangle-out{
+  0%  {opacity:1;transform:translateX(2%) scale(1)}
+  100%{opacity:0;transform:translateX(2%) scale(.88)}
 }
 @media (prefers-reduced-motion:reduce){
-  .play-button{animation:none}
-  .intro.activated .play-button{animation:none;opacity:0}
+  .play-triangle{animation:intro-fade-in 1.2s ease-in forwards .2s}
+  .intro.activated .play-triangle{animation:none;opacity:0}
 }
 
 /* Watermark — bottom-right. max() against safe-area-inset so it
@@ -185,11 +189,13 @@ mux-video{
   position:fixed;
   bottom:max(env(safe-area-inset-bottom,0px), clamp(12px,3vh,32px));
   right:max(env(safe-area-inset-right,0px), clamp(12px,3vw,40px));
-  z-index:5;pointer-events:none;
+  z-index:21;pointer-events:none; /* above intro (z:20), below guide (z:25) */
 }
-/* Watermark fades along with the other on-screen controls (auto-
-   hide after 5s of idle). Initial opacity 0 — JS adds .show via
-   pingControls() once channelLive flips true on intro.ended. */
+/* Watermark fades along with the other on-screen controls. Now
+   z-index 21 so it paints above the intro overlay (z:20) and is
+   visible from page load (JS adds .show right away). The 5s
+   idle auto-hide cycle only engages once channelLive flips true
+   on intro.ended. */
 .logo svg{
   width:min(20vw,120px);height:auto;
   opacity:0;
@@ -312,7 +318,7 @@ mux-video{
   position:fixed;
   bottom:max(env(safe-area-inset-bottom,0px), clamp(14px,3vh,28px));
   left:max(env(safe-area-inset-left,0px),  clamp(14px,3vw,28px));
-  z-index:6;
+  z-index:21; /* above intro (z:20), below guide (z:25) */
   appearance:none;border:1px solid rgba(255,255,255,.35);
   background:rgba(0,0,0,.45);
   backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
@@ -337,7 +343,7 @@ mux-video{
   position:fixed;
   left:max(env(safe-area-inset-left,0px), clamp(14px,3vw,28px));
   top:max(env(safe-area-inset-top,0px), clamp(14px,3vh,28px));
-  z-index:6;
+  z-index:21; /* above intro (z:20), below guide (z:25) */
   appearance:none;border:1px solid rgba(255,255,255,.35);
   background:rgba(0,0,0,.45);
   backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
@@ -642,28 +648,38 @@ mux-video{
 
 </video-player>
 
-<!-- Intro overlay — blank black surface with a centered play icon.
-     Click anywhere on the overlay → gesture-required steps fire
-     (fullscreen + audio gate), the intro plays with sound (the
-     user gesture authorizes autoplay-with-sound reliably on first
-     visit; no Media-Engagement-Index lottery), and the mux-video
-     starts at the live offset behind it. On intro.ended, the
-     overlay fades to reveal the channel mid-show with sound. -->
+<!-- Intro overlay — CRT-snow backdrop with a big red play triangle
+     fading in (V1 cold-start aesthetic). Click anywhere → gesture-
+     required steps fire (fullscreen + audio gate), the intro plays
+     with sound, and the mux-video starts at the live offset behind
+     it. On intro.ended, the overlay fades to reveal the channel
+     mid-show. The three corner controls (FS top-left, GUIDE
+     bottom-left, IV watermark bottom-right) are visible right from
+     page load — they paint above this overlay via z-index. -->
 <div id="intro" class="intro" role="button" aria-label="Play to begin" tabindex="0">
+  <!-- Dim analog snow behind everything. Half-resolution buffer
+       redrawn ~15fps; intensity 24% so it sits as texture, not
+       distraction. Stops when the intro video begins. -->
+  <canvas id="introNoise" class="intro-noise" aria-hidden="true"></canvas>
+  <!-- Cinema-curtain radial vignette over the noise. -->
+  <div class="intro-vignette" aria-hidden="true"></div>
+  <!-- The intro animation video — covers everything once activated. -->
   <video id="introVideo" class="intro-video"
          playsinline preload="auto" muted
          poster="poster.jpg" aria-hidden="true">
     <source src="intro.webm" type="video/webm">
     <source src="intro.mp4"  type="video/mp4">
   </video>
-  <!-- Play button — Streamline outline triangle (CC BY 4.0) inside a
-       white-stroked circle frame. Breathes gently; click-anywhere
-       on the overlay (or this button specifically) triggers activate(). -->
-  <span class="play-button" aria-hidden="true">
-    <svg viewBox="0 0 14 14" aria-hidden="true">
-      <path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="miter" stroke-linecap="butt" d="M2 1 L13 7 L2 13 Z"/>
-    </svg>
-  </span>
+  <!-- Red play triangle — Streamline outline (CC BY 4.0), enlarged
+       ~2.5x vs the previous circle-framed version. No circle frame;
+       very thin stroke (non-scaling-stroke=1.5px regardless of SVG
+       size); fades in (2.5s) then pulses indefinitely. -->
+  <svg class="play-triangle" viewBox="0 0 14 14" aria-hidden="true">
+    <path fill="none" stroke="#ff0000" stroke-width="1.5"
+          stroke-linejoin="miter" stroke-linecap="butt"
+          vector-effect="non-scaling-stroke"
+          d="M2 1 L13 7 L2 13 Z"/>
+  </svg>
 </div>
 
 <script>
@@ -860,29 +876,56 @@ customElements.whenDefined('mux-video').then(function(){
   });
 
 
-  // ── TV static canvas ──────────────────────────────────────────────
-  // 240×135 ImageData of Math.random() noise, redrawn each rAF.
-  // The canvas element is upscaled to viewport via CSS with
-  // image-rendering: pixelated, so this stays cheap (~32 KB per frame
-  // of work). Only ticks while the static overlay is visible.
-  const NOISE_W = 240, NOISE_H = 135;
-  canvas.width = NOISE_W; canvas.height = NOISE_H;
-  const noiseCtx = canvas.getContext('2d');
-  const noiseImg = noiseCtx.createImageData(NOISE_W, NOISE_H);
-  let noiseRaf = 0;
-  function drawNoise(){
-    const data = noiseImg.data;
-    for (let i = 0; i < data.length; i += 4) {
-      const v = (Math.random() * 255) | 0;
-      data[i] = v; data[i+1] = v; data[i+2] = v; data[i+3] = 255;
+  // ── Noise renderer (shared) ──────────────────────────────────────
+  // Two surfaces use canvas analog snow:
+  //   - #static (between-show interlude): full brightness, scan-lines.
+  //   - #introNoise (cold-start backdrop): 24% intensity, no lines.
+  // Both are half-resolution buffers redrawn at ~15fps so the CPU
+  // cost stays well under 1% on a midrange laptop. `intensity`
+  // scales the per-channel value (1 = bright, .24 = dim).
+  function makeNoiseRenderer(cnv, intensity){
+    const ctx = cnv.getContext('2d');
+    let img = null;
+    let timer = 0;
+    let alive = true;
+    function ensureSize(){
+      const w = Math.max(1, (cnv.clientWidth  || innerWidth)  >> 1);
+      const h = Math.max(1, (cnv.clientHeight || innerHeight) >> 1);
+      if (cnv.width !== w || cnv.height !== h) {
+        cnv.width = w; cnv.height = h;
+        img = ctx.createImageData(w, h);
+      } else if (!img) {
+        img = ctx.createImageData(w, h);
+      }
     }
-    noiseCtx.putImageData(noiseImg, 0, 0);
-    noiseRaf = requestAnimationFrame(drawNoise);
+    function draw(){
+      if (!alive) return;
+      ensureSize();
+      const p = img.data;
+      const scale = 255 * intensity;
+      for (let i = p.length - 4; i >= 0; i -= 4) {
+        const v = (Math.random() * scale) | 0;
+        p[i] = p[i+1] = p[i+2] = v;
+        p[i+3] = 255;
+      }
+      ctx.putImageData(img, 0, 0);
+      timer = setTimeout(draw, 66); // ~15fps, V1 cadence
+    }
+    return {
+      start(){ alive = true; if (!timer) draw(); },
+      stop() { alive = false; clearTimeout(timer); timer = 0; },
+    };
   }
-  function startNoise(){ if (!noiseRaf) drawNoise(); }
-  function stopNoise(){
-    if (noiseRaf) { cancelAnimationFrame(noiseRaf); noiseRaf = 0; }
-  }
+
+  // #static interlude — full brightness analog snow.
+  const staticNoise = makeNoiseRenderer(canvas, 1);
+  function startNoise(){ staticNoise.start(); }
+  function stopNoise(){  staticNoise.stop();  }
+
+  // Intro cold-start — dim CRT texture behind the play triangle.
+  const introNoiseCanvas = document.getElementById('introNoise');
+  const introNoise = introNoiseCanvas ? makeNoiseRenderer(introNoiseCanvas, .24) : null;
+  if (introNoise) introNoise.start();
 
   // ── Channel state machine ────────────────────────────────────────
   // Applies the right surface (movie, static, or off-air) for the
@@ -1207,6 +1250,9 @@ customElements.whenDefined('mux-video').then(function(){
     if (userActivated) return;
     userActivated = true;
 
+    // Stop the cold-start noise — the intro video covers it now.
+    if (introNoise) introNoise.stop();
+
     // (1) Fullscreen — gesture-required, sync inside the click.
     enterFullscreen();
 
@@ -1257,6 +1303,14 @@ customElements.whenDefined('mux-video').then(function(){
       if (intro.parentNode) intro.parentNode.removeChild(intro);
     }, 700);
   }
+
+  // Reveal the 3 corner controls (FS top-left, GUIDE bottom-left,
+  // IV watermark bottom-right) right away so they're visible on
+  // the cold-start screen too. The 5s idle auto-hide cycle stays
+  // off until intro.ended (channelLive flag) so the controls
+  // don't fade while the user is just looking at the cold start.
+  showAllControls(true);
+  syncFsIcon();
 
   // Click target: the intro overlay (full-screen black surface
   // with the play button). Click anywhere — on the button or the
