@@ -316,6 +316,35 @@ mux-video{
 #guide-button.show{opacity:1;transform:translateY(0)}
 #guide-button:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.8)}
 
+/* ── FULLSCREEN button (bottom-right, auto-hide after 5s idle) ──────
+   Identical pill chrome to GUIDE for visual consistency. Sits above
+   the IV watermark so they stack vertically without overlap. JS shows
+   it on any mousemove / touch / keydown and arms a 5-second hide
+   timer; the timer resets on every activity. Icon swaps between
+   "enter fullscreen" (corners outward) and "exit fullscreen"
+   (corners inward) based on document.fullscreenElement. */
+#fs-button{
+  position:fixed;
+  right:max(env(safe-area-inset-right,0px), clamp(14px,3vw,28px));
+  bottom:max(env(safe-area-inset-bottom,0px), clamp(96px,15vh,128px));
+  z-index:6;
+  appearance:none;border:1px solid rgba(255,255,255,.35);
+  background:rgba(0,0,0,.45);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  color:#fff;cursor:pointer;
+  width:44px;height:44px;border-radius:50%;
+  display:grid;place-items:center;
+  opacity:0;transform:translateY(8px);pointer-events:none;
+  transition:opacity .35s ease, transform .35s ease, background .15s ease, border-color .15s ease;
+}
+#fs-button.show{opacity:1;transform:translateY(0);pointer-events:auto}
+#fs-button:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.8)}
+#fs-button svg{width:18px;height:18px;display:block}
+/* Default state shows "enter" icon; in-fullscreen state flips to "exit". */
+#fs-button .fs-icon-exit{display:none}
+#fs-button.in-fs .fs-icon-enter{display:none}
+#fs-button.in-fs .fs-icon-exit{display:block}
+
 /* ── TV GUIDE overlay ─────────────────────────────────────────────
    White gridlines on near-black, retro cable-EPG layout. Masthead +
    live clock at top; 7-day × 5-slot grid; description strip at
@@ -336,6 +365,13 @@ mux-video{
 .guide-mast{
   display:flex;align-items:flex-end;justify-content:space-between;
   padding-bottom:clamp(12px,2vh,20px);
+  /* Right padding clears the absolute-positioned close button so
+     the day/date/time cluster never slides under the × hit area.
+     Generous min (72px) so the clearance survives small viewports
+     where the close-button position clamp hits its 14px floor and
+     leaves only ~50px between the X's left edge and the screen
+     edge. */
+  padding-right:clamp(72px,8vw,108px);
   border-bottom:1px solid rgba(255,255,255,.5);
   gap:24px;flex-wrap:wrap;
 }
@@ -374,8 +410,11 @@ mux-video{
   color:#fff;
 }
 
-/* Grid: rows = days, cols = time slots. White gridlines per the
-   reference (1px solid rgba(255,255,255,.55)). */
+/* Grid: rows = days, cols = ALL 48 time slots of the channel day
+   (11:00–22:45). Horizontally scrollable inside .guide-grid-wrap.
+   Day-label column is sticky-left so it stays visible while
+   scrolling through the schedule; time-header row is sticky-top
+   for the same reason on vertical scroll. */
 .guide-grid-wrap{
   flex:1;
   display:flex;flex-direction:column;
@@ -383,12 +422,13 @@ mux-video{
   overflow:auto;
   border:1px solid rgba(255,255,255,.5);
   border-radius:2px;
+  /* Pre-paint a dark fill behind sticky cells so content underneath
+     doesn't bleed through the semi-transparent header/label bg. */
+  background:#000;
 }
 .guide-grid{
   display:grid;
-  /* 80px label column + 5 equal time columns. */
-  grid-template-columns:clamp(64px,9vw,108px) repeat(5,1fr);
-  min-width:680px;
+  grid-template-columns:clamp(68px,8vw,108px) repeat(48,130px);
 }
 .guide-header,
 .guide-cell{
@@ -400,17 +440,23 @@ mux-video{
   min-height:46px;
 }
 .guide-header{
-  background:rgba(255,255,255,.04);
+  background:#0a1830;
   text-transform:uppercase;letter-spacing:.18em;
   font-weight:700;font-size:clamp(10px,1.1vw,12px);
-  opacity:.9;
+  opacity:.95;
+  position:sticky;top:0;z-index:2;
 }
 .guide-row-label{
   font-weight:700;letter-spacing:.22em;text-transform:uppercase;
-  background:rgba(255,255,255,.03);
+  background:#000;
+  position:sticky;left:0;z-index:1;
+}
+/* Top-left corner: needs to win both stickys. */
+.guide-header.corner{
+  left:0;z-index:3;background:#0a1830;
 }
 .guide-row-label.today{
-  background:rgba(255,0,0,.10);
+  background:#1a0000;
   color:#ff5a5a;
 }
 .guide-cell{
@@ -478,11 +524,13 @@ mux-video{
 }
 .guide-close:hover{background:rgba(255,255,255,.12);border-color:#fff}
 
-/* Mobile: tighter padding, smaller font scales, fewer columns. */
+/* Mobile: tighter padding, smaller font scales. Columns stay 48
+   wide (full schedule) but each column is narrower so swiping
+   feels brisk. The sticky day-label column shrinks too. */
 @media (max-width:640px){
   #guide{padding:18px 16px}
-  .guide-grid{grid-template-columns:60px repeat(5,minmax(110px,1fr));min-width:0}
-  .guide-mast{gap:12px}
+  .guide-grid{grid-template-columns:54px repeat(48,108px)}
+  .guide-mast{gap:12px;padding-right:48px}
   .guide-logo{font-size:30px;letter-spacing:.06em}
   .guide-desc{grid-template-columns:1fr;gap:8px}
 }
@@ -667,6 +715,7 @@ customElements.whenDefined('mux-video').then(function(){
   const offairNext = document.getElementById('offairNext');
   const staticCountdown = document.getElementById('staticCountdown');
   const guideBtn   = document.getElementById('guide-button');
+  const fsBtn      = document.getElementById('fs-button');
   const guideEl    = document.getElementById('guide');
   const guideClose = document.getElementById('guideClose');
   const guideGrid  = document.getElementById('guideGrid');
@@ -677,7 +726,10 @@ customElements.whenDefined('mux-video').then(function(){
   const canvas     = staticEl.querySelector('canvas');
   if (!mv) return;
 
-  // ── Fullscreen helper ─────────────────────────────────────────────
+  // ── Fullscreen helpers ────────────────────────────────────────────
+  function isFullscreen(){
+    return !!(document.fullscreenElement || document.webkitFullscreenElement);
+  }
   function enterFullscreen(){
     const candidates = [document.documentElement, document.body];
     for (let i = 0; i < candidates.length; i++) {
@@ -698,6 +750,46 @@ customElements.whenDefined('mux-video').then(function(){
       }
     }
   }
+  function exitFullscreen(){
+    const fn = document.exitFullscreen || document.webkitExitFullscreen;
+    if (typeof fn === 'function') {
+      try {
+        const p = fn.call(document);
+        if (p && p.catch) p.catch(function(){});
+      } catch (_) {}
+    }
+  }
+  function toggleFullscreen(){
+    isFullscreen() ? exitFullscreen() : enterFullscreen();
+  }
+  function syncFsIcon(){
+    fsBtn.classList.toggle('in-fs', isFullscreen());
+  }
+  document.addEventListener('fullscreenchange', syncFsIcon);
+  document.addEventListener('webkitfullscreenchange', syncFsIcon);
+
+  // ── Auto-hide controls (FS button) ────────────────────────────────
+  // Show on any mousemove / touch / keydown, hide after 5s of idle.
+  // Only active after the intro finishes (channelLive flips true)
+  // so the button doesn't pop up during the intro sequence.
+  let channelLive = false;
+  let fsHideTimer = 0;
+  function pingControls(){
+    if (!channelLive) return;
+    fsBtn.classList.add('show');
+    clearTimeout(fsHideTimer);
+    fsHideTimer = setTimeout(function(){
+      fsBtn.classList.remove('show');
+    }, 5000);
+  }
+  document.addEventListener('mousemove',  pingControls);
+  document.addEventListener('touchstart', pingControls, { passive: true });
+  document.addEventListener('keydown',    pingControls);
+  fsBtn.addEventListener('click', function(e){
+    e.stopPropagation();
+    toggleFullscreen();
+    pingControls(); // reset the idle timer
+  });
 
   // ── TV static canvas ──────────────────────────────────────────────
   // 240×135 ImageData of Math.random() noise, redrawn each rAF.
@@ -797,49 +889,48 @@ customElements.whenDefined('mux-video').then(function(){
   }, 1000);
 
   // ── EPG (TV Guide overlay) ───────────────────────────────────────
-  // Renders a 7-day × 5-slot grid centered around the user's current
-  // quarter-hour. The current cell is highlighted. Static slots
-  // (when the movie has already aired and we're in the 2:46 gap)
-  // are dimmed. Pre-channel-hours and post-hours render as "OFF AIR".
-  function quarterHourBoundary(d){
-    const out = new Date(d);
-    out.setMinutes(Math.floor(out.getMinutes() / 15) * 15, 0, 0);
-    return out;
+  // Renders a 7-day × 48-slot grid covering the full broadcast day
+  // (11:00–22:45). Horizontally scrollable; the user's current slot
+  // is centered on open. Day labels (left col) and time headers
+  // (top row) are sticky so they stay visible while scrolling.
+  // The clock + "now" highlighting update every 1s; the grid
+  // structure is rebuilt only when the slot index changes (so
+  // scroll position survives ticks).
+  const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  const SLOTS_PER_DAY = (CHANNEL.endHour - CHANNEL.startHour) * 4; // 48
+
+  function slotForCol(col){
+    const totalMin = CHANNEL.startHour * 60 + col * 15;
+    return { hour: Math.floor(totalMin / 60), minute: totalMin % 60 };
   }
-  function slotLabel(d){
-    // Inside hours: program title. Otherwise: OFF AIR.
-    const h = d.getHours();
-    if (h < CHANNEL.startHour || h >= CHANNEL.endHour) {
-      return { title: 'OFF AIR', meta: '' };
-    }
-    return { title: SHOW.title, meta: SHOW.duration };
+  function nowSlotCol(d){
+    if (d.getHours() < CHANNEL.startHour || d.getHours() >= CHANNEL.endHour) return -1;
+    return (d.getHours() - CHANNEL.startHour) * 4 + Math.floor(d.getMinutes() / 15);
   }
-  function renderGuide(){
+
+  function buildGuideGrid(){
     const now = new Date();
     const todayDow = now.getDay();
-    // Header row: 5 time columns centered on "now" (current slot
-    // is index 1 so users see what's next).
-    const slotStart = quarterHourBoundary(now);
-    const cols = [];
-    for (let i = -1; i < 4; i++) {
-      const t = new Date(slotStart.getTime() + i * 15 * 60 * 1000);
-      cols.push(t);
-    }
 
     guideGrid.innerHTML = '';
-    // Top-left corner blank cell
+
+    // Top-left corner cell (sticky both axes).
     const corner = document.createElement('div');
-    corner.className = 'guide-header';
+    corner.className = 'guide-header corner';
     corner.textContent = '';
     guideGrid.appendChild(corner);
-    // Column headers (time slots)
-    cols.forEach(function(t){
+
+    // Time column headers (sticky-top). All 48 slots of the day.
+    for (let c = 0; c < SLOTS_PER_DAY; c++) {
+      const s = slotForCol(c);
+      const t = new Date(now.getFullYear(), now.getMonth(), now.getDate(), s.hour, s.minute);
       const h = document.createElement('div');
       h.className = 'guide-header';
       h.textContent = fmtSlot(t).toUpperCase();
       guideGrid.appendChild(h);
-    });
-    // Rows: 7 days starting with today
+    }
+
+    // Day rows.
     for (let r = 0; r < 7; r++) {
       const dow = (todayDow + r) % 7;
       const isToday = r === 0;
@@ -847,44 +938,61 @@ customElements.whenDefined('mux-video').then(function(){
       label.className = 'guide-cell guide-row-label' + (isToday ? ' today' : '');
       label.textContent = DAYS_SHORT[dow];
       guideGrid.appendChild(label);
-      cols.forEach(function(t){
-        const cellTime = new Date(t);
-        cellTime.setDate(cellTime.getDate() + r);
-        const info = getSlotInfo(cellTime.getTime() + 1000);
-        const isNow = isToday &&
-          cellTime.getHours() === slotStart.getHours() &&
-          cellTime.getMinutes() === slotStart.getMinutes();
-        const labelInfo = slotLabel(cellTime);
+      for (let c = 0; c < SLOTS_PER_DAY; c++) {
         const cell = document.createElement('div');
         cell.className = 'guide-cell';
-        if (isNow) cell.classList.add('now');
+        cell.dataset.row = String(r);
+        cell.dataset.col = String(c);
         if (!isToday) cell.style.opacity = '.65';
         cell.innerHTML =
-          '<div class="title">' + labelInfo.title + '</div>' +
-          (labelInfo.meta ? '<div class="meta">' + labelInfo.meta + '</div>' : '');
+          '<div class="title">' + SHOW.title + '</div>' +
+          '<div class="meta">' + SHOW.duration + '</div>';
         guideGrid.appendChild(cell);
-      });
+      }
     }
+  }
 
-    // Clock header
+  function updateGuideClockAndNow(){
+    const now = new Date();
+    const todayDow = now.getDay();
     guideDay.textContent  = DAYS_LONG[todayDow];
-    const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-    guideDate.textContent =
-      months[now.getMonth()] + ' ' + now.getDate() + ', ' + now.getFullYear();
+    guideDate.textContent = MONTHS[now.getMonth()] + ' ' + now.getDate() + ', ' + now.getFullYear();
     guideTime.textContent = fmtClock(now);
 
-    // Now-playing tag at the bottom
+    // Refresh "now" highlight — strip old, mark new.
+    const prev = guideGrid.querySelector('.guide-cell.now');
+    if (prev) prev.classList.remove('now');
+    const col = nowSlotCol(now);
+    if (col >= 0) {
+      const nowCell = guideGrid.querySelector(
+        '.guide-cell[data-row="0"][data-col="' + col + '"]'
+      );
+      if (nowCell) nowCell.classList.add('now');
+    }
+
     const live = getSlotInfo();
     if (live.offAir)      guideDescTag.textContent = 'CHANNEL OFF AIR';
     else if (live.inShow) guideDescTag.textContent = 'NOW PLAYING · ' + SHOW.duration;
     else                  guideDescTag.textContent = 'NO SIGNAL · NEXT SLOT';
   }
+
   let guideTick = 0;
   function openGuide(){
-    renderGuide();
+    buildGuideGrid();
+    updateGuideClockAndNow();
     guideEl.classList.add('on');
+
+    // Center the current slot horizontally on open.
+    requestAnimationFrame(function(){
+      const nowCell = guideGrid.querySelector('.guide-cell.now');
+      if (nowCell && nowCell.scrollIntoView) {
+        try { nowCell.scrollIntoView({ inline: 'center', block: 'nearest' }); }
+        catch (_) {}
+      }
+    });
+
     clearInterval(guideTick);
-    guideTick = setInterval(renderGuide, 1000);
+    guideTick = setInterval(updateGuideClockAndNow, 1000);
   }
   function closeGuide(){
     guideEl.classList.remove('on');
@@ -949,8 +1057,13 @@ customElements.whenDefined('mux-video').then(function(){
 
     mv.volume = 0.5;
     applyState();
-    // Reveal the guide button now that the channel is live.
+    // Reveal the guide button now that the channel is live, and
+    // flip the channelLive flag so subsequent mousemove / touch /
+    // keydown events ping the auto-hiding FS button.
     guideBtn.classList.add('show');
+    channelLive = true;
+    syncFsIcon();
+    pingControls(); // give the FS button its first 5s visibility burst
 
     intro.classList.add('done');
     setTimeout(function(){
@@ -995,6 +1108,18 @@ customElements.whenDefined('mux-video').then(function(){
 
 <!-- ── GUIDE button — toggles the EPG overlay ─────────────────────── -->
 <button id="guide-button" type="button" aria-label="Open TV guide">GUIDE</button>
+
+<!-- ── FULLSCREEN toggle — bottom-right, auto-hides after 5s idle.
+     The same gesture-required Fullscreen API as the initial entry;
+     this exists so users can re-enter / leave fullscreen any time. -->
+<button id="fs-button" type="button" aria-label="Toggle fullscreen">
+  <svg class="fs-icon-enter" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M3 7V3h4 M13 3h4v4 M17 13v4h-4 M7 17H3v-4"/>
+  </svg>
+  <svg class="fs-icon-exit" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M7 3v4H3 M13 7V3h4 M17 13h-4v4 M3 13h4v4"/>
+  </svg>
+</button>
 
 <!-- ── TV GUIDE overlay ──────────────────────────────────────────────
      White gridlines on dark, Eurostile throughout. Masthead +
