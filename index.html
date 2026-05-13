@@ -98,33 +98,27 @@ mux-video{
 }
 
 /* ── Intro overlay ────────────────────────────────────────────────
-   Pre-click: a paused <video> showing its poster (black), with the
-   red+white play button as the click target overlaid on top. The
-   whole overlay is clickable.
-
-   Click → JS adds .activated, which (a) snaps the play button out
-   in 90ms, (b) starts the intro video (intro.webm — pre-rendered
-   bubble-up animation that's smoother than any CSS keyframe set
-   could be), and (c) fires the gesture-required steps (fullscreen,
-   unmute the movie, set its volume, start movie playback hidden
-   behind the overlay). When the intro video fires `ended`, .done
-   is added and the overlay fades over 600ms to reveal the movie. */
+   Dark backdrop while the pre-rendered intro autoplays on page
+   load. No play button — the whole document is the first-click
+   target (a one-shot capture-phase listener triggers fullscreen +
+   unmute when the user clicks anywhere). Behind the overlay, the
+   mux-video is already playing silently at the live wall-clock
+   offset, so when this overlay fades out on intro.ended the
+   channel is right where the world is. */
 .intro{
   position:fixed;inset:0;z-index:20;
   height:100vh;
   height:100dvh;
   background:#000;
   display:grid;place-items:center;
-  cursor:pointer;user-select:none;-webkit-user-select:none;
+  user-select:none;-webkit-user-select:none;
   transition:opacity .6s ease;
   overflow:hidden;
 }
 .intro.done{opacity:0;pointer-events:none}
 
-/* Pre-rendered intro animation. Fills the overlay behind the play
-   button; object-fit:contain so the 16:9 source letterboxes
-   gracefully on any aspect ratio. pointer-events:none so clicks on
-   the overlay reach the .intro element. */
+/* Pre-rendered intro animation. object-fit:contain so the 16:9
+   source letterboxes gracefully on any aspect ratio. */
 .intro-video{
   position:absolute;inset:0;
   width:100%;height:100%;
@@ -133,45 +127,10 @@ mux-video{
   pointer-events:none;
 }
 
-/* Play button: the only thing visible before the click. SVG element
-   so it scales crisply; viewBox padded -12 so breathe scales don't
-   clip. drop-shadow gives the red disc a soft glow on black. */
-.play-button{
-  position:relative;z-index:2;
-  width:min(38vw,200px);height:auto;display:block;
-  filter:drop-shadow(0 0 32px rgba(255,0,0,.35));
-  animation:breathe 2.2s ease-in-out infinite;
-}
-@media (max-width:480px) and (orientation:portrait){
-  .play-button{width:min(48vw,180px)}
-}
-@media (hover:hover){
-  .intro:hover .play-button{animation:breathe-fast 1.4s ease-in-out infinite}
-}
-@keyframes breathe{
-  0%,100%{transform:scale(1)}
-  50%{transform:scale(1.06)}
-}
-@keyframes breathe-fast{
-  0%,100%{transform:scale(1.04)}
-  50%{transform:scale(1.10)}
-}
-
-/* On click: snap the play button out fast (90ms) so it isn't
-   lingering over the intro video's first frames. */
-.intro.activated .play-button{
-  animation:play-button-out 90ms ease forwards;
-  pointer-events:none;
-}
-@keyframes play-button-out{
-  0%{opacity:1;transform:scale(1)}
-  100%{opacity:0;transform:scale(.85)}
-}
-
-@media (prefers-reduced-motion:reduce){
-  .play-button{animation:none}
-  .intro.activated .play-button{animation:none;opacity:0}
-}
+/* Cursor hint while we're waiting for the first click — pointer
+   over the whole page; revert to default the moment the user
+   activates (JS removes `.pre-active` from <body>). */
+body.pre-active{cursor:pointer}
 
 /* Watermark — bottom-right. max() against safe-area-inset so it
    doesn't slide under the iPhone home indicator or notch. */
@@ -574,35 +533,23 @@ mux-video{
   </media-container>
 </video-player>
 
-<!-- Intro overlay — one-click activation.
+<!-- Intro overlay — no play button. The intro video autoplays the
+     moment the page loads (muted autoplay is always allowed; we
+     also try with sound and fall back to muted if the browser's
+     autoplay-with-sound policy rejects).
 
-     Pre-click: paused <video> showing its poster (black), with the
-     red+white play button overlaid as the click target. The whole
-     overlay is clickable.
-
-     On click: play button snaps out (90ms), intro.webm starts
-     playing the pre-rendered bubble-up animation (5.79s @ 24fps,
-     VP9 / 64 KB; MP4 H.264 fallback for Safari). When the intro
-     video fires `ended`, the overlay fades over 600ms revealing
-     the movie playing with sound. Safety net: if the intro errors
-     or stalls, the overlay reveals after 7s regardless. -->
-<div id="intro" class="intro" role="button" aria-label="Play to begin">
+     The dark overlay sits on top of the mux-video (which is also
+     playing silently at the live offset) until the intro ends and
+     fades out. First click anywhere on the page → unmute the movie
+     and enter fullscreen. If the click lands mid-intro, the intro
+     also unmutes for the remainder of its 5.79s. -->
+<div id="intro" class="intro" aria-hidden="true">
   <video id="introVideo" class="intro-video"
-         playsinline muted preload="auto"
+         playsinline preload="auto"
          poster="poster.jpg" aria-hidden="true">
     <source src="intro.webm" type="video/webm">
     <source src="intro.mp4"  type="video/mp4">
   </video>
-  <!-- Play button: red disc + white triangle. viewBox is padded by
-       12 units so the breathe animation has room to scale without
-       clipping. The triangle is left-shifted by W/3 from geometric
-       center so its optical centroid sits on the circle center. -->
-  <svg class="play-button" viewBox="-12 -12 288 339" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-    <circle cx="131.4" cy="95.4" r="97" fill="#FF0000"/>
-    <path d="M111 59 L111 131 L171 95 Z"
-          fill="#fff" stroke="#fff" stroke-width="6"
-          stroke-linejoin="round" stroke-linecap="round"/>
-  </svg>
 </div>
 
 <script>
@@ -1008,8 +955,38 @@ customElements.whenDefined('mux-video').then(function(){
     if (e.key === 'Escape') closeGuide();
   });
 
-  // ── Intro sequence (audio enabled now) + first-gesture activation ─
-  function startMovie(){
+  // ── Channel boot sequence ──────────────────────────────────────
+  //
+  // On page load (no user gesture required):
+  //   (1) Movie preloads and starts playing MUTED at the live wall-
+  //       clock offset. Muted autoplay is universally allowed; the
+  //       audio is gated behind the user's first click.
+  //   (2) Intro animation autoplays. We try with sound first — on a
+  //       returning visit where Chromium's Media Engagement Index
+  //       has accumulated enough, this is allowed and the intro is
+  //       audible without any click. If the browser rejects (first
+  //       visit / Safari / iOS / Firefox-default), we mute and
+  //       retry. There is no known way around the policy itself;
+  //       muting and retrying is the only fallback.
+  //
+  // On the first user click anywhere:
+  //   (3) Enter fullscreen.
+  //   (4) Unmute the movie (volume → 0.5).
+  //   (5) If the intro is still mid-play and was forced-muted,
+  //       unmute it too for the remainder of its 5.79s.
+  //
+  // On intro.ended:
+  //   (6) Fade the overlay out (600ms) and remove it from the DOM.
+  //   (7) applyState() reveals the right channel surface (movie /
+  //       static / off-air) and arms the next transition timer.
+
+  function startMovieMuted(){
+    mv.muted = true;
+    mv.volume = 0;
+    const info = getSlotInfo();
+    if (!info.offAir && info.inShow) {
+      try { mv.currentTime = info.tInShow; } catch (_) {}
+    }
     const p = mv.play();
     if (p && p.catch) p.catch(function(){
       const once = function(){
@@ -1020,50 +997,70 @@ customElements.whenDefined('mux-video').then(function(){
     });
   }
 
-  let activated = false;
-  let finished  = false;
-
-  function activate(){
-    if (activated) return;
-    activated = true;
-
-    enterFullscreen();
-
-    // Open audio gate inside the gesture; hold movie at silent
-    // until the intro ends. (Intro itself plays unmuted.)
-    mv.muted = false;
-    mv.volume = 0;
-    // Seek movie to the live channel position now so it's already
-    // decoding the right frames behind the overlay.
-    const info = getSlotInfo();
-    if (!info.offAir && info.inShow) {
-      try { mv.currentTime = info.tInShow; } catch (_) {}
-      startMovie();
-    } else {
-      // We'll snap to live position on intro-end via applyState().
-    }
-
-    intro.classList.add('activated');
-    // Intro plays unmuted (has audio in this version).
+  async function startIntroBestEffort(){
+    // First attempt: with sound.
     introVideo.muted = false;
     introVideo.volume = 0.85;
-    const ip = introVideo.play();
-    if (ip && ip.catch) ip.catch(finish);
+    try {
+      await introVideo.play();
+      return; // sound autoplay allowed (returning visitor, MEI, etc.)
+    } catch (_) {}
+    // Second attempt: muted. Always allowed.
+    introVideo.muted = true;
+    introVideo.volume = 0;
+    try { await introVideo.play(); } catch (_) {}
+  }
+
+  let userActivated = false;
+  let finished      = false;
+
+  function activate(e){
+    if (userActivated) return;
+    userActivated = true;
+    document.body.classList.remove('pre-active');
+    document.removeEventListener('click', activate, true);
+    document.removeEventListener('touchstart', activate, true);
+    document.removeEventListener('keydown', onActivateKey, true);
+
+    // Enter fullscreen — skip the call if the click was the FS
+    // button itself (its own handler does the toggle correctly).
+    if (!e || !fsBtn.contains(e.target)) {
+      enterFullscreen();
+    }
+
+    // Unmute the intro mid-flight if it was forced-muted.
+    if (!introVideo.ended) {
+      introVideo.muted = false;
+      introVideo.volume = 0.85;
+    }
+
+    // Open audio gate for the movie. If the intro is still going,
+    // hold at silent and ramp up on intro.ended; if the intro is
+    // already done, ramp now.
+    mv.muted = false;
+    mv.volume = introVideo.ended ? 0.5 : 0;
+  }
+  function onActivateKey(e){
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      activate(e);
+    }
   }
 
   function finish(){
     if (finished) return;
     finished = true;
 
-    mv.volume = 0.5;
+    // If the user has already clicked, the movie's audio gate is
+    // open — ramp to listening volume. Otherwise leave it muted
+    // and wait for them to click.
+    if (userActivated) mv.volume = 0.5;
+
     applyState();
-    // Reveal the guide button now that the channel is live, and
-    // flip the channelLive flag so subsequent mousemove / touch /
-    // keydown events ping the auto-hiding FS button.
     guideBtn.classList.add('show');
     channelLive = true;
     syncFsIcon();
-    pingControls(); // give the FS button its first 5s visibility burst
+    pingControls();
 
     intro.classList.add('done');
     setTimeout(function(){
@@ -1071,16 +1068,20 @@ customElements.whenDefined('mux-video').then(function(){
     }, 700);
   }
 
+  // Wire up the channel: kick off the movie + intro immediately,
+  // and arm the one-shot first-click listener on the document.
+  document.body.classList.add('pre-active');
+  startMovieMuted();
+  startIntroBestEffort();
+  document.addEventListener('click', activate, true);
+  document.addEventListener('touchstart', activate, true);
+  document.addEventListener('keydown', onActivateKey, true);
+
   introVideo.addEventListener('ended', finish);
   introVideo.addEventListener('error', finish);
-  setTimeout(function(){ if (activated) finish(); }, 7000);
-
-  intro.addEventListener('click', activate);
-  intro.addEventListener('touchstart', activate, { passive: true });
-  intro.tabIndex = 0;
-  intro.addEventListener('keydown', function(e){
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activate(); }
-  });
+  // Safety net: if the intro never reaches `ended` (codec mismatch,
+  // network hiccup, blocked entirely), reveal at 8s anyway.
+  setTimeout(finish, 8000);
 });
 </script>
 
