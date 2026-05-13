@@ -451,6 +451,11 @@ body.no-fs .logo.show{pointer-events:none}
   font:700 clamp(14px,2.2vw,22px)/1 "Eurostile","Eurostile Wide",sans-serif;
   color:#fff;letter-spacing:.18em;text-transform:uppercase;
   text-shadow:0 0 12px rgba(0,0,0,.8);
+  /* Tabular numerals + matching feature setting so the digits in
+     the countdown ("OFF AIR · BACK IN 02:34") are equal-width and
+     the label doesn't jitter horizontally as the seconds tick. */
+  font-variant-numeric:tabular-nums;
+  font-feature-settings:"tnum";
 }
 
 /* ── "OFF AIR" screen (outside 11:00–23:00 local) ────────────────── */
@@ -1080,28 +1085,38 @@ customElements.whenDefined('mux-video').then(function(){
   let channelLive = false;
   let hideTimer   = 0;
   function showAllControls(on){
-    // GUIDE button reveals/hides on its own. The IV watermark
-    // (which now doubles as the fullscreen CTA) is gated
-    // separately — only shows when the channel is on the actual
-    // movie surface. Cold-start (intro), the between-show
-    // interlude (#static), and OFF AIR (#offair) each already
-    // display the IV logo centered, so a corner watermark would
-    // be a duplicate brand mark.
-    if (guideBtn) guideBtn.classList.toggle('show', on);
+    // GUIDE button and the IV watermark reveal/hide TOGETHER, and
+    // both only show after the channel is live (post-intro). During
+    // the cold-start phase the visible affordance is the ON / OFF
+    // AIR badge — pre-show GUIDE access would feel premature.
+    // During the between-show interlude (#static) and OFF AIR
+    // (#offair), the centered IV logo is the brand mark, so we
+    // suppress the corner watermark (would be a duplicate) and
+    // the GUIDE pill (the user is in an info/wait state, not a
+    // browse-the-schedule state).
     const centerLogoShowing =
       !channelLive
       || staticEl.classList.contains('on')
       || offairEl.classList.contains('on');
-    watermark.classList.toggle('show', on && !centerLogoShowing);
+    const shouldShow = on && !centerLogoShowing;
+    if (guideBtn) guideBtn.classList.toggle('show', shouldShow);
+    watermark.classList.toggle('show', shouldShow);
   }
+  // Idle-hide delay. Touch devices (phones, tablets) get a quicker
+  // 3s fade — controls aren't useful sitting over the video on a
+  // small screen, and the user can re-summon by tapping. Desktop
+  // (mouse / fine pointer) keeps the 5s standard so a hovering
+  // user doesn't watch them flicker.
+  const HIDE_DELAY_MS =
+    matchMedia('(hover: none) and (pointer: coarse)').matches ? 3000 : 5000;
+
   function pingControls(){
-    // Not gated on channelLive — FS and GUIDE need to be discoverable
-    // from the cold-start too. showAllControls() internally keeps the
-    // bottom-right watermark suppressed until the movie surface is
-    // actually showing, so the brand-mark redundancy is still avoided.
+    // showAllControls() internally gates GUIDE + watermark on
+    // channelLive — they only appear once the channel is live, so
+    // the cold-start screen shows only the ON / OFF AIR badge.
     showAllControls(true);
     clearTimeout(hideTimer);
-    hideTimer = setTimeout(function(){ showAllControls(false); }, 5000);
+    hideTimer = setTimeout(function(){ showAllControls(false); }, HIDE_DELAY_MS);
   }
   document.addEventListener('mousemove',  pingControls);
   document.addEventListener('touchstart', pingControls, { passive: true });
