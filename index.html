@@ -44,11 +44,32 @@
 <script type="module" src="https://cdn.jsdelivr.net/npm/@videojs/html@10.0.0-beta.23/cdn/media/mux-video.js"></script>
 
 <style>
+/* ── Eurostile Next Pro ──────────────────────────────────────────────
+   Embedded TTF (Adobe-licensed, user-supplied via the project's
+   approved font collection). Two weights for body + one wide-bold
+   cut for the masthead. Browsers handle TTF natively for @font-face;
+   sacrificing ~30% over woff2 for build-step simplicity. */
+@font-face{
+  font-family:"Eurostile";
+  src:url("fonts/EurostileNextPro-Regular.ttf") format("truetype");
+  font-weight:400;font-style:normal;font-display:swap;
+}
+@font-face{
+  font-family:"Eurostile";
+  src:url("fonts/EurostileNextPro-Bold.ttf") format("truetype");
+  font-weight:700;font-style:normal;font-display:swap;
+}
+@font-face{
+  font-family:"Eurostile Wide";
+  src:url("fonts/EurostileNextPro-WideBold.ttf") format("truetype");
+  font-weight:700;font-style:normal;font-display:swap;
+}
+
 *{margin:0;box-sizing:border-box}
 html,body{
   height:100%;width:100%;
   background:#000;color:#fff;
-  font-family:-apple-system,BlinkMacSystemFont,"Inter",system-ui,sans-serif;
+  font-family:"Eurostile",-apple-system,BlinkMacSystemFont,"Inter",system-ui,sans-serif;
   -webkit-font-smoothing:antialiased;
   -webkit-tap-highlight-color:transparent;
   overflow:hidden;
@@ -187,6 +208,284 @@ mux-video{
   }
   .logo svg{width:min(14vh,64px)}
 }
+
+/* ─────────────────────────────────────────────────────────────────────
+   ── LINEAR CHANNEL UX ────────────────────────────────────────────────
+   ─────────────────────────────────────────────────────────────────────
+   The site is a deterministic linear channel: every 15 minutes a new
+   slot starts (00 / 15 / 30 / 45 past the hour) between 11:00–23:00
+   local time. Each slot = 12:14 of Tears of Steel + 2:46 of static.
+   Every viewer worldwide computes the same in-slot position from
+   their wall clock, so the channel is "live" without a server.
+
+   Three full-bleed states sit on top of the mux-video and toggle via
+   JS visibility:
+     1. movie       (default — the mux-video shows through)
+     2. #static     (the 2:46 "no signal" interlude between slots)
+     3. #offair     (outside channel hours, 23:00–11:00)
+
+   A fourth overlay, #guide, slides in when the user hits the GUIDE
+   button bottom-left. None of these affect playback timing — the
+   mux-video keeps playing whether or not it's visible. */
+
+/* ── "NO SIGNAL" static screen ────────────────────────────────────
+   Canvas-driven analog snow: a 240×135 buffer of Math.random()
+   pixels, upscaled to fill the viewport with image-rendering:
+   pixelated for the crispy block look. CSS scan lines + a vignette
+   on top complete the analog feel. */
+#static{
+  position:fixed;inset:0;z-index:15;
+  background:#000;
+  display:none;
+  align-items:center;justify-content:center;
+}
+#static.on{display:flex}
+#static canvas{
+  position:absolute;inset:0;
+  width:100%;height:100%;
+  image-rendering:pixelated;
+  opacity:.55;
+}
+/* Scan lines on top of the noise for the CRT feel. */
+#static::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(
+    to bottom,
+    rgba(0,0,0,0) 0,
+    rgba(0,0,0,0) 2px,
+    rgba(0,0,0,.35) 3px,
+    rgba(0,0,0,.35) 4px
+  );
+  mix-blend-mode:multiply;
+}
+#static .static-label{
+  position:relative;z-index:2;
+  text-align:center;color:#fff;
+  font-family:"Eurostile Wide","Eurostile",sans-serif;
+  font-weight:700;letter-spacing:.4em;
+  font-size:clamp(28px,5vw,64px);
+  text-shadow:0 0 24px rgba(0,0,0,.8);
+  user-select:none;-webkit-user-select:none;
+}
+#static .static-sub{
+  font-family:"Eurostile",sans-serif;
+  font-weight:400;letter-spacing:.25em;
+  font-size:clamp(11px,1.4vw,14px);
+  text-transform:uppercase;
+  margin-top:14px;opacity:.7;
+}
+
+/* ── "OFF AIR" screen (outside 11:00–23:00 local) ────────────────── */
+#offair{
+  position:fixed;inset:0;z-index:14;
+  background:#000;
+  display:none;
+  flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:18px;
+}
+#offair.on{display:flex}
+#offair .offair-title{
+  font-family:"Eurostile Wide","Eurostile",sans-serif;
+  font-weight:700;letter-spacing:.4em;
+  font-size:clamp(28px,5vw,56px);
+}
+#offair .offair-sub{
+  font-family:"Eurostile",sans-serif;
+  font-weight:400;letter-spacing:.25em;
+  font-size:clamp(11px,1.4vw,13px);
+  text-transform:uppercase;opacity:.6;
+}
+
+/* ── GUIDE button (toggle pill, bottom-left) ─────────────────────── */
+#guide-button{
+  position:fixed;
+  bottom:max(env(safe-area-inset-bottom,0px), clamp(14px,3vh,28px));
+  left:max(env(safe-area-inset-left,0px),  clamp(14px,3vw,28px));
+  z-index:6;
+  appearance:none;border:1px solid rgba(255,255,255,.35);
+  background:rgba(0,0,0,.45);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  color:#fff;cursor:pointer;
+  font:700 12px/1 "Eurostile",sans-serif;
+  letter-spacing:.32em;text-transform:uppercase;
+  padding:11px 18px 10px;border-radius:999px;
+  opacity:0;transform:translateY(8px);
+  transition:opacity .4s ease, transform .4s ease, background .15s ease, border-color .15s ease;
+}
+#guide-button.show{opacity:1;transform:translateY(0)}
+#guide-button:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.8)}
+
+/* ── TV GUIDE overlay ─────────────────────────────────────────────
+   White gridlines on near-black, retro cable-EPG layout. Masthead +
+   live clock at top; 7-day × 5-slot grid; description strip at
+   bottom. Slides in via opacity + tiny translate. */
+#guide{
+  position:fixed;inset:0;z-index:25;
+  background:radial-gradient(ellipse at top, #0a1830 0%, #000 70%);
+  display:none;
+  flex-direction:column;
+  padding:clamp(16px,3.5vh,32px) clamp(16px,3vw,40px);
+  opacity:0;transform:translateY(8px);
+  transition:opacity .35s ease, transform .35s ease;
+  overflow:hidden;
+  font-family:"Eurostile",sans-serif;
+}
+#guide.on{display:flex;opacity:1;transform:translateY(0)}
+
+.guide-mast{
+  display:flex;align-items:flex-end;justify-content:space-between;
+  padding-bottom:clamp(12px,2vh,20px);
+  border-bottom:1px solid rgba(255,255,255,.5);
+  gap:24px;flex-wrap:wrap;
+}
+.guide-logo{
+  font-family:"Eurostile Wide","Eurostile",sans-serif;
+  font-weight:700;
+  font-size:clamp(36px,6.5vw,84px);
+  letter-spacing:.04em;line-height:.95;
+  text-transform:uppercase;
+  background:linear-gradient(180deg,#fff 0%,#cfd6e0 100%);
+  -webkit-background-clip:text;background-clip:text;
+  color:transparent;
+  text-shadow:0 0 28px rgba(180,200,255,.15);
+}
+.guide-clock{
+  text-align:right;
+  font-family:"Eurostile",sans-serif;
+}
+.guide-clock .day{
+  font-weight:700;
+  font-size:clamp(13px,1.6vw,18px);
+  letter-spacing:.32em;text-transform:uppercase;
+  opacity:.95;
+}
+.guide-clock .date{
+  font-weight:400;
+  font-size:clamp(11px,1.2vw,13px);
+  letter-spacing:.22em;text-transform:uppercase;
+  opacity:.6;margin-top:4px;
+}
+.guide-clock .time{
+  font-weight:700;
+  font-size:clamp(22px,3vw,32px);
+  letter-spacing:.1em;
+  margin-top:6px;
+  color:#fff;
+}
+
+/* Grid: rows = days, cols = time slots. White gridlines per the
+   reference (1px solid rgba(255,255,255,.55)). */
+.guide-grid-wrap{
+  flex:1;
+  display:flex;flex-direction:column;
+  margin-top:clamp(10px,2vh,18px);
+  overflow:auto;
+  border:1px solid rgba(255,255,255,.5);
+  border-radius:2px;
+}
+.guide-grid{
+  display:grid;
+  /* 80px label column + 5 equal time columns. */
+  grid-template-columns:clamp(64px,9vw,108px) repeat(5,1fr);
+  min-width:680px;
+}
+.guide-header,
+.guide-cell{
+  border-right:1px solid rgba(255,255,255,.4);
+  border-bottom:1px solid rgba(255,255,255,.4);
+  padding:clamp(8px,1.4vh,14px) clamp(8px,1.2vw,16px);
+  font-size:clamp(11px,1.2vw,13px);
+  display:flex;flex-direction:column;justify-content:center;
+  min-height:46px;
+}
+.guide-header{
+  background:rgba(255,255,255,.04);
+  text-transform:uppercase;letter-spacing:.18em;
+  font-weight:700;font-size:clamp(10px,1.1vw,12px);
+  opacity:.9;
+}
+.guide-row-label{
+  font-weight:700;letter-spacing:.22em;text-transform:uppercase;
+  background:rgba(255,255,255,.03);
+}
+.guide-row-label.today{
+  background:rgba(255,0,0,.10);
+  color:#ff5a5a;
+}
+.guide-cell{
+  cursor:default;
+  position:relative;
+}
+.guide-cell .title{
+  font-weight:700;font-size:clamp(11px,1.2vw,13px);
+  letter-spacing:.04em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.guide-cell .meta{
+  font-size:clamp(9px,1vw,11px);
+  opacity:.55;margin-top:2px;letter-spacing:.06em;
+  text-transform:uppercase;
+}
+.guide-cell.now{
+  background:linear-gradient(90deg, rgba(255,0,0,.35), rgba(255,0,0,.15));
+  color:#fff;
+  box-shadow:inset 0 0 0 2px #ff0000;
+}
+.guide-cell.now .title{color:#fff}
+.guide-cell.static-slot{
+  background:rgba(255,255,255,.02);
+  opacity:.4;
+}
+.guide-cell.static-slot .title{font-weight:400}
+
+/* Show description strip */
+.guide-desc{
+  margin-top:clamp(10px,2vh,18px);
+  border:1px solid rgba(255,255,255,.5);
+  padding:clamp(10px,1.6vh,16px) clamp(12px,1.4vw,20px);
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:18px;align-items:center;
+}
+.guide-desc .desc-title{
+  font-family:"Eurostile Wide","Eurostile",sans-serif;
+  font-weight:700;letter-spacing:.04em;
+  font-size:clamp(16px,2vw,22px);
+  text-transform:uppercase;
+}
+.guide-desc .desc-body{
+  font-size:clamp(11px,1.2vw,14px);
+  opacity:.75;margin-top:4px;line-height:1.45;
+}
+.guide-desc .desc-tag{
+  font-size:clamp(9px,1vw,11px);
+  letter-spacing:.32em;text-transform:uppercase;
+  border:1px solid rgba(255,255,255,.5);
+  padding:8px 12px 6px;
+  opacity:.8;
+}
+
+/* Close button */
+.guide-close{
+  position:absolute;top:clamp(14px,2.4vh,24px);right:clamp(14px,2vw,24px);
+  appearance:none;background:transparent;border:1px solid rgba(255,255,255,.4);
+  color:#fff;cursor:pointer;
+  width:36px;height:36px;border-radius:50%;
+  display:grid;place-items:center;
+  font:700 16px/1 "Eurostile",sans-serif;
+  transition:background .15s ease, border-color .15s ease;
+}
+.guide-close:hover{background:rgba(255,255,255,.12);border-color:#fff}
+
+/* Mobile: tighter padding, smaller font scales, fewer columns. */
+@media (max-width:640px){
+  #guide{padding:18px 16px}
+  .guide-grid{grid-template-columns:60px repeat(5,minmax(110px,1fr));min-width:0}
+  .guide-mast{gap:12px}
+  .guide-logo{font-size:30px;letter-spacing:.06em}
+  .guide-desc{grid-template-columns:1fr;gap:8px}
+}
 </style>
 </head>
 <body>
@@ -259,52 +558,140 @@ mux-video{
 </div>
 
 <script>
-// ── Intro sequence + first-gesture activation ─────────────────────
+// ─────────────────────────────────────────────────────────────────────
+// INTERDEPENDENT TV — linear channel runtime
+// ─────────────────────────────────────────────────────────────────────
 //
-// One click on the intro overlay does everything:
-//   1. Fullscreen request on <html> / <body>.
-//   2. Unmute the movie (mv.muted = false) but hold its audio at
-//      volume = 0. This consumes the user gesture and registers the
-//      element as "unmuted" with the autoplay policy, so we can ramp
-//      the volume back up later without needing a fresh activation
-//      (iOS transient activation only lasts ~5s, shorter than the
-//      5.79s intro). Also starts mv.play() so the movie is buffering
-//      / decoding behind the overlay.
-//   3. Plays the pre-rendered intro animation (intro.webm).
-//   4. When the intro video fires `ended`, we restart the movie from
-//      t=0 (mv.currentTime = 0), ramp its volume to 0.5, and fade
-//      the overlay out over 600ms, removing it from the DOM after.
+// Schedule semantics
+//   - Channel operates 11:00–23:00 local time.
+//   - Slot length: 15 min (900s). Movie: 12:14 (734s). Static gap: 2:46.
+//   - Slot starts on every quarter-hour boundary: :00, :15, :30, :45.
+//   - The "live position" inside a slot is t = (now - slotStart)/1000.
+//     If t < SHOW_SECS, the mux-video is playing at currentTime = t.
+//     If t ≥ SHOW_SECS, the #static overlay is up until the next slot.
 //
-// Safety net: if the intro video errors or stalls past 7s, finish
-// anyway so the page never gets stuck behind a broken intro.
-customElements.whenDefined('mux-video').then(function(){
-  var mv         = document.querySelector('mux-video');
-  var intro      = document.getElementById('intro');
-  var introVideo = document.getElementById('introVideo');
-  if (!mv || !intro || !introVideo) return;
+// Sync model
+//   Pure client-side, deterministic. Every browser computes the same
+//   in-slot offset from its own wall-clock, so all viewers worldwide
+//   land on the same frame at the same minute without any server.
+//   No Mux Live, no ffmpeg loop, no scheduling service.
+//
+// Lifecycle
+//   load → intro overlay visible, mux-video preloads silently.
+//   click → unmute prep (muted=false, volume=0), play movie at
+//           the live offset, play intro.webm (now with audio).
+//   intro.ended → ramp volume to 0.5, fade intro overlay.
+//   after fade → handleState() takes over: ensures the movie is
+//           seeked to the live position, then schedules the next
+//           transition (show→static or static→show) precisely at
+//           its quarter-hour boundary.
+//
+// ─────────────────────────────────────────────────────────────────────
 
-  // ── Fullscreen helper ─────────────────────────────────────────
-  // Targets the root of the document so the intro overlay AND the
-  // <video-player> are both inside the fullscreen surface during
-  // the transition (both are descendants of <html>/<body>).
-  // Fallback chain: <html> → <body>, standard API → webkit prefix.
-  // iOS Safari / iPhone Chrome don't expose this on non-<video>
-  // elements — every call below no-ops and the CSS fake-fullscreen
-  // (position:fixed; inset:0; viewport-fit=cover; 100dvh) carries.
+const CHANNEL = {
+  startHour: 11,   // 11:00 — first slot of the day starts at 11:00
+  endHour:   23,   // 23:00 — last slot starts at 22:45, ends at 23:00
+  slotSec:   900,  // 15 min per slot
+  showSec:   734,  // Tears of Steel: 12:14 = 734s
+};
+CHANNEL.staticSec = CHANNEL.slotSec - CHANNEL.showSec;
+
+const SHOW = {
+  title: 'TEARS OF STEEL',
+  duration: '12:14',
+  description:
+    'Open-source 4K sci-fi short — a fractured science team races ' +
+    'to undo a future that was never theirs to write. Directed by ' +
+    'Ian Hubert · Blender Foundation, 2012.',
+};
+
+// ── Wall-clock slot math ────────────────────────────────────────────
+// Returns the current slot state for a given (or now) timestamp.
+function getSlotInfo(now) {
+  now = now || Date.now();
+  const d = new Date(now);
+  const hour = d.getHours();
+
+  // Off-air outside CHANNEL.startHour ≤ hour < CHANNEL.endHour
+  if (hour < CHANNEL.startHour || hour >= CHANNEL.endHour) {
+    const next = new Date(d);
+    next.setHours(CHANNEL.startHour, 0, 0, 0);
+    if (next.getTime() <= now) next.setDate(next.getDate() + 1);
+    return { offAir: true, nextOnAir: next.getTime() };
+  }
+
+  // Round down to the quarter hour
+  const slotMin = Math.floor(d.getMinutes() / 15) * 15;
+  const slotStart = new Date(
+    d.getFullYear(), d.getMonth(), d.getDate(), hour, slotMin, 0, 0
+  ).getTime();
+  const tInSlot = (now - slotStart) / 1000;
+  const inShow = tInSlot < CHANNEL.showSec;
+
+  return {
+    offAir: false,
+    inShow,
+    slotStart,
+    nextSlotStart: slotStart + CHANNEL.slotSec * 1000,
+    showEnd:       slotStart + CHANNEL.showSec * 1000,
+    tInSlot,
+    tInShow:    inShow ? tInSlot : CHANNEL.showSec,
+    tInStatic:  inShow ? 0       : tInSlot - CHANNEL.showSec,
+  };
+}
+
+function fmtClock(d){
+  let h = d.getHours();
+  const m = d.getMinutes();
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  return h + ':' + (m < 10 ? '0' + m : m) + ' ' + ampm;
+}
+function fmtSlot(d){
+  let h = d.getHours();
+  const m = d.getMinutes();
+  const ampm = h >= 12 ? 'p' : 'a';
+  h = h % 12 || 12;
+  return h + ':' + (m < 10 ? '0' + m : m) + ampm;
+}
+const DAYS_SHORT = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+const DAYS_LONG  = ['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'];
+
+// ── Defer everything until mux-video is upgraded ────────────────────
+customElements.whenDefined('mux-video').then(function(){
+  const mv         = document.querySelector('mux-video');
+  const intro      = document.getElementById('intro');
+  const introVideo = document.getElementById('introVideo');
+  const staticEl   = document.getElementById('static');
+  const offairEl   = document.getElementById('offair');
+  const offairNext = document.getElementById('offairNext');
+  const staticCountdown = document.getElementById('staticCountdown');
+  const guideBtn   = document.getElementById('guide-button');
+  const guideEl    = document.getElementById('guide');
+  const guideClose = document.getElementById('guideClose');
+  const guideGrid  = document.getElementById('guideGrid');
+  const guideDay   = document.getElementById('guideDay');
+  const guideDate  = document.getElementById('guideDate');
+  const guideTime  = document.getElementById('guideTime');
+  const guideDescTag = document.getElementById('guideDescTag');
+  const canvas     = staticEl.querySelector('canvas');
+  if (!mv) return;
+
+  // ── Fullscreen helper ─────────────────────────────────────────────
   function enterFullscreen(){
-    var candidates = [document.documentElement, document.body];
-    for (var i = 0; i < candidates.length; i++) {
-      var el = candidates[i];
+    const candidates = [document.documentElement, document.body];
+    for (let i = 0; i < candidates.length; i++) {
+      const el = candidates[i];
       if (!el) continue;
-      var fn = el.requestFullscreen || el.webkitRequestFullscreen;
+      const fn = el.requestFullscreen || el.webkitRequestFullscreen;
       if (typeof fn !== 'function') continue;
       try {
-        var p = fn.call(el, { navigationUI: 'hide' });
+        const p = fn.call(el, { navigationUI: 'hide' });
         if (p && p.catch) p.catch(function(){});
         return;
       } catch (_) {
         try {
-          var p2 = fn.call(el);
+          const p2 = fn.call(el);
           if (p2 && p2.catch) p2.catch(function(){});
           return;
         } catch (__) {}
@@ -312,14 +699,212 @@ customElements.whenDefined('mux-video').then(function(){
     }
   }
 
-  // ── Start the movie defensively ───────────────────────────────
-  // mux-video v10 attaches its MSE blob: source asynchronously
-  // after upgrade; if .play() is called before canplay, the promise
-  // rejects. Retry once on canplay so we don't lose the gesture.
+  // ── TV static canvas ──────────────────────────────────────────────
+  // 240×135 ImageData of Math.random() noise, redrawn each rAF.
+  // The canvas element is upscaled to viewport via CSS with
+  // image-rendering: pixelated, so this stays cheap (~32 KB per frame
+  // of work). Only ticks while the static overlay is visible.
+  const NOISE_W = 240, NOISE_H = 135;
+  canvas.width = NOISE_W; canvas.height = NOISE_H;
+  const noiseCtx = canvas.getContext('2d');
+  const noiseImg = noiseCtx.createImageData(NOISE_W, NOISE_H);
+  let noiseRaf = 0;
+  function drawNoise(){
+    const data = noiseImg.data;
+    for (let i = 0; i < data.length; i += 4) {
+      const v = (Math.random() * 255) | 0;
+      data[i] = v; data[i+1] = v; data[i+2] = v; data[i+3] = 255;
+    }
+    noiseCtx.putImageData(noiseImg, 0, 0);
+    noiseRaf = requestAnimationFrame(drawNoise);
+  }
+  function startNoise(){ if (!noiseRaf) drawNoise(); }
+  function stopNoise(){
+    if (noiseRaf) { cancelAnimationFrame(noiseRaf); noiseRaf = 0; }
+  }
+
+  // ── Channel state machine ────────────────────────────────────────
+  // Applies the right surface (movie, static, or off-air) for the
+  // current wall-clock moment, then schedules a precise setTimeout
+  // to the next transition. Re-entrant safe: any caller can request
+  // a re-sync (e.g. visibilitychange) and we'll re-compute.
+  let nextTransitionId = 0;
+  function showSurface(which){
+    // which ∈ 'movie' | 'static' | 'offair'
+    staticEl.classList.toggle('on', which === 'static');
+    offairEl.classList.toggle('on', which === 'offair');
+    if (which === 'static') startNoise(); else stopNoise();
+  }
+
+  function applyState(){
+    const info = getSlotInfo();
+
+    if (info.offAir) {
+      try { mv.pause(); } catch (_) {}
+      const t = new Date(info.nextOnAir);
+      offairNext.textContent =
+        'CHANNEL RESUMES AT ' + fmtClock(t).toUpperCase();
+      showSurface('offair');
+      scheduleNext(info.nextOnAir - Date.now());
+      return;
+    }
+
+    if (info.inShow) {
+      // Seek to the live offset and play. Use a small drift tolerance
+      // so we don't keep nudging the video with seeks every tick.
+      const target = info.tInShow;
+      const drift = Math.abs(mv.currentTime - target);
+      if (drift > 0.6) {
+        try { mv.currentTime = target; } catch (_) {}
+      }
+      if (mv.paused) {
+        const p = mv.play();
+        if (p && p.catch) p.catch(function(){});
+      }
+      showSurface('movie');
+      // Next event: show ends at info.showEnd
+      scheduleNext(info.showEnd - Date.now());
+    } else {
+      // Static interlude until next slot
+      try { mv.pause(); } catch (_) {}
+      showSurface('static');
+      scheduleNext(info.nextSlotStart - Date.now());
+    }
+  }
+
+  function scheduleNext(ms){
+    clearTimeout(nextTransitionId);
+    // Add a small guard so we always fire just-past the boundary
+    // rather than just-before (clock skew, monotonic adjustments).
+    const wait = Math.max(50, ms + 60);
+    nextTransitionId = setTimeout(applyState, wait);
+  }
+
+  // If the tab was hidden across a transition, re-sync on return.
+  document.addEventListener('visibilitychange', function(){
+    if (!document.hidden && finished) applyState();
+  });
+
+  // Per-second countdown on the static screen.
+  setInterval(function(){
+    if (!staticEl.classList.contains('on')) return;
+    const info = getSlotInfo();
+    if (info.offAir || info.inShow) return;
+    const secs = Math.max(0, Math.ceil((info.nextSlotStart - Date.now()) / 1000));
+    const mm = String(Math.floor(secs / 60)).padStart(2, '0');
+    const ss = String(secs % 60).padStart(2, '0');
+    staticCountdown.textContent = 'UP NEXT IN ' + mm + ':' + ss;
+  }, 1000);
+
+  // ── EPG (TV Guide overlay) ───────────────────────────────────────
+  // Renders a 7-day × 5-slot grid centered around the user's current
+  // quarter-hour. The current cell is highlighted. Static slots
+  // (when the movie has already aired and we're in the 2:46 gap)
+  // are dimmed. Pre-channel-hours and post-hours render as "OFF AIR".
+  function quarterHourBoundary(d){
+    const out = new Date(d);
+    out.setMinutes(Math.floor(out.getMinutes() / 15) * 15, 0, 0);
+    return out;
+  }
+  function slotLabel(d){
+    // Inside hours: program title. Otherwise: OFF AIR.
+    const h = d.getHours();
+    if (h < CHANNEL.startHour || h >= CHANNEL.endHour) {
+      return { title: 'OFF AIR', meta: '' };
+    }
+    return { title: SHOW.title, meta: SHOW.duration };
+  }
+  function renderGuide(){
+    const now = new Date();
+    const todayDow = now.getDay();
+    // Header row: 5 time columns centered on "now" (current slot
+    // is index 1 so users see what's next).
+    const slotStart = quarterHourBoundary(now);
+    const cols = [];
+    for (let i = -1; i < 4; i++) {
+      const t = new Date(slotStart.getTime() + i * 15 * 60 * 1000);
+      cols.push(t);
+    }
+
+    guideGrid.innerHTML = '';
+    // Top-left corner blank cell
+    const corner = document.createElement('div');
+    corner.className = 'guide-header';
+    corner.textContent = '';
+    guideGrid.appendChild(corner);
+    // Column headers (time slots)
+    cols.forEach(function(t){
+      const h = document.createElement('div');
+      h.className = 'guide-header';
+      h.textContent = fmtSlot(t).toUpperCase();
+      guideGrid.appendChild(h);
+    });
+    // Rows: 7 days starting with today
+    for (let r = 0; r < 7; r++) {
+      const dow = (todayDow + r) % 7;
+      const isToday = r === 0;
+      const label = document.createElement('div');
+      label.className = 'guide-cell guide-row-label' + (isToday ? ' today' : '');
+      label.textContent = DAYS_SHORT[dow];
+      guideGrid.appendChild(label);
+      cols.forEach(function(t){
+        const cellTime = new Date(t);
+        cellTime.setDate(cellTime.getDate() + r);
+        const info = getSlotInfo(cellTime.getTime() + 1000);
+        const isNow = isToday &&
+          cellTime.getHours() === slotStart.getHours() &&
+          cellTime.getMinutes() === slotStart.getMinutes();
+        const labelInfo = slotLabel(cellTime);
+        const cell = document.createElement('div');
+        cell.className = 'guide-cell';
+        if (isNow) cell.classList.add('now');
+        if (!isToday) cell.style.opacity = '.65';
+        cell.innerHTML =
+          '<div class="title">' + labelInfo.title + '</div>' +
+          (labelInfo.meta ? '<div class="meta">' + labelInfo.meta + '</div>' : '');
+        guideGrid.appendChild(cell);
+      });
+    }
+
+    // Clock header
+    guideDay.textContent  = DAYS_LONG[todayDow];
+    const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+    guideDate.textContent =
+      months[now.getMonth()] + ' ' + now.getDate() + ', ' + now.getFullYear();
+    guideTime.textContent = fmtClock(now);
+
+    // Now-playing tag at the bottom
+    const live = getSlotInfo();
+    if (live.offAir)      guideDescTag.textContent = 'CHANNEL OFF AIR';
+    else if (live.inShow) guideDescTag.textContent = 'NOW PLAYING · ' + SHOW.duration;
+    else                  guideDescTag.textContent = 'NO SIGNAL · NEXT SLOT';
+  }
+  let guideTick = 0;
+  function openGuide(){
+    renderGuide();
+    guideEl.classList.add('on');
+    clearInterval(guideTick);
+    guideTick = setInterval(renderGuide, 1000);
+  }
+  function closeGuide(){
+    guideEl.classList.remove('on');
+    clearInterval(guideTick); guideTick = 0;
+  }
+  guideBtn.addEventListener('click', openGuide);
+  guideClose.addEventListener('click', closeGuide);
+  guideEl.addEventListener('click', function(e){
+    // Click on the overlay backdrop (not on its children) closes.
+    if (e.target === guideEl) closeGuide();
+  });
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape') closeGuide();
+  });
+
+  // ── Intro sequence (audio enabled now) + first-gesture activation ─
   function startMovie(){
-    var p = mv.play();
+    const p = mv.play();
     if (p && p.catch) p.catch(function(){
-      var once = function(){
+      const once = function(){
         mv.removeEventListener('canplay', once);
         mv.play().catch(function(){});
       };
@@ -327,26 +912,34 @@ customElements.whenDefined('mux-video').then(function(){
     });
   }
 
-  var activated = false;
-  var finished  = false;
+  let activated = false;
+  let finished  = false;
 
   function activate(){
     if (activated) return;
     activated = true;
 
-    // (1) Fullscreen — must be sync inside the gesture handler.
     enterFullscreen();
 
-    // (2) Movie audio prep — unmute + hold at zero. Doing both
-    //     inside the gesture consumes activation in a way that
-    //     lets us bring volume back up without a fresh gesture.
+    // Open audio gate inside the gesture; hold movie at silent
+    // until the intro ends. (Intro itself plays unmuted.)
     mv.muted = false;
     mv.volume = 0;
-    startMovie();
+    // Seek movie to the live channel position now so it's already
+    // decoding the right frames behind the overlay.
+    const info = getSlotInfo();
+    if (!info.offAir && info.inShow) {
+      try { mv.currentTime = info.tInShow; } catch (_) {}
+      startMovie();
+    } else {
+      // We'll snap to live position on intro-end via applyState().
+    }
 
-    // (3) Snap the play button out + start the intro animation.
     intro.classList.add('activated');
-    var ip = introVideo.play();
+    // Intro plays unmuted (has audio in this version).
+    introVideo.muted = false;
+    introVideo.volume = 0.85;
+    const ip = introVideo.play();
     if (ip && ip.catch) ip.catch(finish);
   }
 
@@ -354,11 +947,10 @@ customElements.whenDefined('mux-video').then(function(){
     if (finished) return;
     finished = true;
 
-    // Restart the movie from frame 0 so the viewer sees the actual
-    // opening, not the ~5.8s of buffered playback they've been
-    // hearing-silently behind the overlay.
-    try { mv.currentTime = 0; } catch (_) {}
     mv.volume = 0.5;
+    applyState();
+    // Reveal the guide button now that the channel is live.
+    guideBtn.classList.add('show');
 
     intro.classList.add('done');
     setTimeout(function(){
@@ -368,8 +960,6 @@ customElements.whenDefined('mux-video').then(function(){
 
   introVideo.addEventListener('ended', finish);
   introVideo.addEventListener('error', finish);
-  // Safety net: if the intro never reaches `ended` (errors swallowed,
-  // stall on a slow device, codec mismatch), reveal at 7s anyway.
   setTimeout(function(){ if (activated) finish(); }, 7000);
 
   intro.addEventListener('click', activate);
@@ -384,6 +974,52 @@ customElements.whenDefined('mux-video').then(function(){
 <!-- Watermark -->
 <div class="logo">
 <svg viewBox="-1 -1 394 238" fill-rule="evenodd" role="img" aria-label="INTERDEPENDENT TV"><path fill="#fff" d="M72.4265993,181.599151 C66.4590298,181.599151 61.6302421,176.771465 61.6302421,170.837972 C61.6302421,164.895874 66.4590298,160.07249 72.4265993,160.07249 C78.3985826,160.07249 83.2229564,164.895874 83.2229564,170.837972 C83.2229564,176.771465 78.3985826,181.599151 72.4265993,181.599151 M91.860925,171.461871 C91.860925,160.132729 83.1567482,151.462687 73.0577845,151.462687 C61.6964503,151.462687 52.9966875,160.132729 52.9966875,171.461871 C52.9966875,181.538913 61.6964503,190.208955 73.0577845,190.208955 C83.1567482,190.208955 91.860925,181.538913 91.860925,171.461871M24.7317875,73.9701493 C24.7317875,114.823555 57.9498633,147.940299 99.5404822,147.940299 C139.904437,147.940299 173.122512,114.823555 173.122512,73.9701493 C173.122512,33.1167433 139.904437,0 99.5404822,0 C57.9498633,0 24.7317875,33.1167433 24.7317875,73.9701493 ZM127.194217,164.849451 C123.67483,164.849451 120.831581,162.010133 120.831581,158.511688 C120.831581,155.009017 123.67483,152.169699 127.194217,152.169699 C130.70927,152.169699 133.552519,155.009017 133.552519,158.511688 C133.552519,162.010133 130.70927,164.849451 127.194217,164.849451 M127.194217,147.940299 C121.338684,147.940299 116.592712,152.66827 116.592712,158.511688 C116.592712,164.346655 121.338684,169.074627 127.194217,169.074627 C133.045415,169.074627 137.791387,164.346655 137.791387,158.511688 C137.791387,152.66827 133.045415,147.940299 127.194217,147.940299M107.7622,183.164179 C102.884091,183.164179 98.92715,187.105962 98.92715,191.972361 C98.92715,196.834336 102.884091,200.776119 107.7622,200.776119 C112.640309,200.776119 116.592712,196.834336 116.592712,191.972361 C116.592712,187.105962 112.640309,183.164179 107.7622,183.164179M88.3256373,214.865672 C82.4745768,214.865672 77.728475,219.595655 77.728475,225.432836 C77.728475,231.270017 82.4745768,236 88.3256373,236 C94.1810481,236 98.92715,231.270017 98.92715,225.432836 C98.92715,219.595655 94.1810481,214.865672 88.3256373,214.865672M17.6655625,116.238806 C7.90718362,116.238806 0,124.123696 0,133.852952 C0,143.577797 7.90718362,151.462687 17.6655625,151.462687 C27.4239414,151.462687 35.331125,143.577797 35.331125,133.852952 C35.331125,124.123696 27.4239414,116.238806 17.6655625,116.238806M180.186475,112.716418 C170.433871,112.716418 162.523175,120.601308 162.523175,130.330564 C162.523175,140.055409 170.433871,147.940299 180.186475,147.940299 C189.943604,147.940299 197.8543,140.055409 197.8543,130.330564 C197.8543,120.601308 189.943604,112.716418 180.186475,112.716418M239.894118,45.170986 L282.776959,45.1709859 L282.776959,63.8942535 L239.894118,63.8942535 L239.894118,104.40507 C239.894118,124.823247 240.972673,126.780451 251.145666,126.780451 L253.001174,126.780451 C262.953117,126.780451 264.046554,124.770747 264.046554,106.053746 L264.046554,99.9894648 L284.426299,99.9894648 L284.426299,110.587606 C284.426299,139.540191 277.772511,146.534141 250.527164,146.534141 L247.228483,146.534141 C220.272791,146.534141 214.77252,139.9545 214.77252,106.672 L214.77252,63.8942535 L201.165465,63.8942535 L201.165465,45.1709859 L214.77252,45.170986 L214.77252,19.4104225 L239.894118,19.4104225 ZM318.496605,45.5306504 L341.82905,125.320038 L365.161495,45.5306504 L365.26667,45.1709859 L365.641397,45.1709859 L391,45.170986 L391.693801,45.170986 L391.474322,45.8291572 L358.487522,144.74972 L358.373533,145.091549 L324.459897,145.091549 L324.345908,144.74972 L291.359107,45.8291571 L291.139628,45.1709859 L318.39143,45.1709859 Z"/></svg>
+</div>
+
+<!-- ── "NO SIGNAL" interlude ──────────────────────────────────────────
+     Shown for ~2:46 between the end of the 12:14 movie and the next
+     :15-minute slot start. JS animates the canvas every rAF. -->
+<div id="static" aria-hidden="true">
+  <canvas></canvas>
+  <div class="static-label">
+    <div>NO SIGNAL</div>
+    <div class="static-sub"><span id="staticCountdown">UP NEXT IN —</span></div>
+  </div>
+</div>
+
+<!-- ── OFF AIR (outside 11:00–23:00 local) ────────────────────────── -->
+<div id="offair" aria-hidden="true">
+  <div class="offair-title">OFF AIR</div>
+  <div class="offair-sub" id="offairNext">CHANNEL RESUMES AT 11:00 AM</div>
+</div>
+
+<!-- ── GUIDE button — toggles the EPG overlay ─────────────────────── -->
+<button id="guide-button" type="button" aria-label="Open TV guide">GUIDE</button>
+
+<!-- ── TV GUIDE overlay ──────────────────────────────────────────────
+     White gridlines on dark, Eurostile throughout. Masthead +
+     live clock at top, 7-day × 5-slot grid in the middle, current
+     program description at the bottom. Built and refreshed by JS. -->
+<div id="guide" role="dialog" aria-modal="true" aria-label="TV guide">
+  <button class="guide-close" id="guideClose" aria-label="Close guide">×</button>
+  <div class="guide-mast">
+    <div class="guide-logo">INTERDEPENDENT TV</div>
+    <div class="guide-clock">
+      <div class="day" id="guideDay">—</div>
+      <div class="date" id="guideDate">—</div>
+      <div class="time" id="guideTime">—:—</div>
+    </div>
+  </div>
+  <div class="guide-grid-wrap">
+    <div class="guide-grid" id="guideGrid"></div>
+  </div>
+  <div class="guide-desc">
+    <div>
+      <div class="desc-title" id="guideDescTitle">TEARS OF STEEL</div>
+      <div class="desc-body" id="guideDescBody">Open-source 4K sci-fi short — a fractured science team races to save humanity from its own machines.</div>
+    </div>
+    <div class="desc-tag" id="guideDescTag">NOW PLAYING · 12:14</div>
+  </div>
 </div>
 
 </body>
