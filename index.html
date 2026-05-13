@@ -480,7 +480,13 @@ body.no-fs .logo.show{pointer-events:none}
   text-transform:uppercase;opacity:.6;
 }
 
-/* ── GUIDE button (toggle pill, bottom-left) ─────────────────────── */
+/* ── GUIDE button (toggle pill, bottom-left) ─────────────────────────
+   ALWAYS visible — no idle-fade, no state gating. The guide is an
+   information surface (what's on now, what's next); users need
+   access during ON AIR, OFF AIR, AND cold-start equally. The
+   watermark/FS toggle is the only chrome that fades on idle, so
+   the picture stays clean during active watching without ever
+   locking the schedule away from a touch user. */
 #guide-button{
   position:fixed;
   bottom:max(env(safe-area-inset-bottom,0px), clamp(14px,3vh,28px));
@@ -493,10 +499,8 @@ body.no-fs .logo.show{pointer-events:none}
   font:700 12px/1 "Eurostile",sans-serif;
   letter-spacing:.32em;text-transform:uppercase;
   padding:11px 18px 10px;border-radius:999px;
-  opacity:0;transform:translateY(8px);
-  transition:opacity .4s ease, transform .4s ease, background .15s ease, border-color .15s ease;
+  transition:background .15s ease, border-color .15s ease;
 }
-#guide-button.show{opacity:1;transform:translateY(0)}
 #guide-button:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.8)}
 
 /* (FS toggle now lives inside the IV watermark as the big white
@@ -1119,15 +1123,14 @@ customElements.whenDefined('mux-video').then(function(){
     // AIR badge — pre-show GUIDE access would feel premature.
     // During the between-show interlude (#static) and OFF AIR
     // (#offair), the centered IV logo is the brand mark, so we
-    // suppress the corner watermark (would be a duplicate) and
-    // the GUIDE pill (the user is in an info/wait state, not a
-    // browse-the-schedule state).
+    // suppress the corner watermark (would be a duplicate). The
+    // GUIDE pill stays put regardless — it's an info affordance,
+    // not chrome, and mobile users need it always reachable.
     const centerLogoShowing =
       !channelLive
       || staticEl.classList.contains('on')
       || offairEl.classList.contains('on');
     const shouldShow = on && !centerLogoShowing;
-    if (guideBtn) guideBtn.classList.toggle('show', shouldShow);
     watermark.classList.toggle('show', shouldShow);
   }
   // Idle-hide delay. Touch devices (phones, tablets) get a quicker
@@ -1241,13 +1244,12 @@ customElements.whenDefined('mux-video').then(function(){
     staticEl.classList.toggle('on', which === 'static');
     offairEl.classList.toggle('on', which === 'offair');
     if (which === 'static') startNoise(); else stopNoise();
-    // Re-evaluate watermark visibility: it's shown only on the
-    // movie surface (cold-start, #static, and #offair each
-    // display the centered IV logo, which would clash with a
-    // corner watermark). Mirrors the GUIDE pill's current show
-    // state — both pills + the watermark cycle in lockstep via
-    // pingControls.
-    const wantShown = guideBtn.classList.contains('show');
+    // Re-evaluate watermark visibility on every surface change.
+    // The watermark is hidden on the static / offair surfaces
+    // (their centered IV logo would clash with the corner one);
+    // when we return to 'movie', we restore whatever idle-fade
+    // state the watermark was in before the surface switch.
+    const wantShown = watermark.classList.contains('show');
     showAllControls(wantShown);
   }
 
@@ -1656,7 +1658,9 @@ customElements.whenDefined('mux-video').then(function(){
     mv.volume = 0.65;
 
     applyState();
-    guideBtn.classList.add('show');
+    // GUIDE button is always visible now (CSS) — no toggle needed
+    // here. channelLive flips so the watermark becomes eligible
+    // for idle-reveal via pingControls() below.
     channelLive = true;
     syncFsIcon();
     pingControls();
@@ -1898,13 +1902,17 @@ customElements.whenDefined('mux-video').then(function(){
     <button class="guide-logo" id="guideLogoBack" type="button" aria-label="Back to TV">
       <span class="guide-tip" aria-hidden="true">Back to TV</span>
       <svg viewBox="-1 -1 394 238" fill-rule="evenodd" role="img" aria-label="INTERDEPENDENT TV"><path fill="#fff" d="M72.4265993,181.599151 C66.4590298,181.599151 61.6302421,176.771465 61.6302421,170.837972 C61.6302421,164.895874 66.4590298,160.07249 72.4265993,160.07249 C78.3985826,160.07249 83.2229564,164.895874 83.2229564,170.837972 C83.2229564,176.771465 78.3985826,181.599151 72.4265993,181.599151 M91.860925,171.461871 C91.860925,160.132729 83.1567482,151.462687 73.0577845,151.462687 C61.6964503,151.462687 52.9966875,160.132729 52.9966875,171.461871 C52.9966875,181.538913 61.6964503,190.208955 73.0577845,190.208955 C83.1567482,190.208955 91.860925,181.538913 91.860925,171.461871M24.7317875,73.9701493 C24.7317875,114.823555 57.9498633,147.940299 99.5404822,147.940299 C139.904437,147.940299 173.122512,114.823555 173.122512,73.9701493 C173.122512,33.1167433 139.904437,0 99.5404822,0 C57.9498633,0 24.7317875,33.1167433 24.7317875,73.9701493 ZM127.194217,164.849451 C123.67483,164.849451 120.831581,162.010133 120.831581,158.511688 C120.831581,155.009017 123.67483,152.169699 127.194217,152.169699 C130.70927,152.169699 133.552519,155.009017 133.552519,158.511688 C133.552519,162.010133 130.70927,164.849451 127.194217,164.849451 M127.194217,147.940299 C121.338684,147.940299 116.592712,152.66827 116.592712,158.511688 C116.592712,164.346655 121.338684,169.074627 127.194217,169.074627 C133.045415,169.074627 137.791387,164.346655 137.791387,158.511688 C137.791387,152.66827 133.045415,147.940299 127.194217,147.940299M107.7622,183.164179 C102.884091,183.164179 98.92715,187.105962 98.92715,191.972361 C98.92715,196.834336 102.884091,200.776119 107.7622,200.776119 C112.640309,200.776119 116.592712,196.834336 116.592712,191.972361 C116.592712,187.105962 112.640309,183.164179 107.7622,183.164179M88.3256373,214.865672 C82.4745768,214.865672 77.728475,219.595655 77.728475,225.432836 C77.728475,231.270017 82.4745768,236 88.3256373,236 C94.1810481,236 98.92715,231.270017 98.92715,225.432836 C98.92715,219.595655 94.1810481,214.865672 88.3256373,214.865672M17.6655625,116.238806 C7.90718362,116.238806 0,124.123696 0,133.852952 C0,143.577797 7.90718362,151.462687 17.6655625,151.462687 C27.4239414,151.462687 35.331125,143.577797 35.331125,133.852952 C35.331125,124.123696 27.4239414,116.238806 17.6655625,116.238806M180.186475,112.716418 C170.433871,112.716418 162.523175,120.601308 162.523175,130.330564 C162.523175,140.055409 170.433871,147.940299 180.186475,147.940299 C189.943604,147.940299 197.8543,140.055409 197.8543,130.330564 C197.8543,120.601308 189.943604,112.716418 180.186475,112.716418M239.894118,45.170986 L282.776959,45.1709859 L282.776959,63.8942535 L239.894118,63.8942535 L239.894118,104.40507 C239.894118,124.823247 240.972673,126.780451 251.145666,126.780451 L253.001174,126.780451 C262.953117,126.780451 264.046554,124.770747 264.046554,106.053746 L264.046554,99.9894648 L284.426299,99.9894648 L284.426299,110.587606 C284.426299,139.540191 277.772511,146.534141 250.527164,146.534141 L247.228483,146.534141 C220.272791,146.534141 214.77252,139.9545 214.77252,106.672 L214.77252,63.8942535 L201.165465,63.8942535 L201.165465,45.1709859 L214.77252,45.170986 L214.77252,19.4104225 L239.894118,19.4104225 ZM318.496605,45.5306504 L341.82905,125.320038 L365.161495,45.5306504 L365.26667,45.1709859 L365.641397,45.1709859 L391,45.170986 L391.693801,45.170986 L391.474322,45.8291572 L358.487522,144.74972 L358.373533,145.091549 L324.459897,145.091549 L324.345908,144.74972 L291.359107,45.8291571 L291.139628,45.1709859 L318.39143,45.1709859 Z"/>
-        <!-- Left-pointing chevron inside the big white disc.
-             Stroke 8 / 394 ≈ 6px on screen at the desktop max width.
-             Center is the disc center (cx=99.54, cy=73.97). -->
+        <!-- Right-pointing play triangle inside the big white disc.
+             "Returning to the channel" === "returning to playback",
+             so the icon mirrors the intro page's PUSH PLAY triangle
+             (outline-only, miter joins, butt caps) — same drawing
+             language end-to-end. Stroke 8 / 394 ≈ 6px on screen at
+             the desktop max width. Centered on the disc center
+             (cx=99.54, cy=73.97). -->
         <g class="guide-back-icon" transform="translate(99.54 73.97)">
-          <polyline points="15 -25 -25 0 15 25"
-                    fill="none" stroke="#000" stroke-width="8"
-                    stroke-linejoin="round" stroke-linecap="round"/>
+          <path d="M -18,-22 L 22,0 L -18,22 Z"
+                fill="none" stroke="#000" stroke-width="8"
+                stroke-linejoin="miter" stroke-linecap="butt"/>
         </g>
       </svg>
     </button>
