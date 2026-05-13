@@ -110,7 +110,10 @@ mux-video{
   height:100dvh;
   background:#000;
   display:grid;place-items:center;
-  cursor:pointer;
+  /* Default cursor on the snow; the PUSH PLAY button has its own
+     pointer cursor as the only click target. Clicks elsewhere on
+     the cold-start screen are intentionally inert. */
+  cursor:default;
   user-select:none;-webkit-user-select:none;
   transition:opacity .6s ease;
   overflow:hidden;
@@ -180,22 +183,33 @@ mux-video{
   50%    {opacity:.3}
 }
 
-/* Cold-start play icon — sits in the live-badge slot the
-   interlude uses for "LIVE IN mm:ss" text. White outline play
-   triangle, ~22px nominal, thin non-scaling stroke. */
-.cta-play{
+/* Cold-start CTA — pill-shaped button that replaces the interlude
+   "LIVE IN mm:ss" with "PUSH PLAY" + outline play triangle. Shares
+   the .live-badge positioning + .live-dot pulse with the interlude.
+   This is the ONE click target that starts the channel; FS and
+   GUIDE pills don't trigger activation. */
+.intro-cta{
   appearance:none;background:transparent;border:none;
-  color:#fff;cursor:pointer;padding:0;
-  width:clamp(20px,3vw,28px);height:clamp(20px,3vw,28px);
-  display:flex;align-items:center;justify-content:center;
+  color:#fff;cursor:pointer;
+  padding:6px 4px 6px 0;
+  font-family:inherit;
+}
+.intro-cta .play-icon{
+  width:clamp(18px,2.2vw,24px);height:auto;display:block;
+  margin-left:4px;
   filter:drop-shadow(0 0 8px rgba(255,255,255,.2));
   transition:transform .15s ease, filter .15s ease;
 }
-.cta-play svg{width:100%;height:auto;display:block}
-.cta-play:hover{
-  transform:scale(1.12);
-  filter:drop-shadow(0 0 10px rgba(255,255,255,.5));
+.intro-cta:hover .play-icon,
+.intro-cta:focus-visible .play-icon{
+  transform:scale(1.15);
+  filter:drop-shadow(0 0 10px rgba(255,255,255,.6));
 }
+.intro-cta:hover .live-label,
+.intro-cta:focus-visible .live-label{
+  text-shadow:0 0 12px rgba(255,255,255,.45), 0 0 12px rgba(0,0,0,.8);
+}
+.intro-cta:focus-visible{outline:none}
 
 /* Activated → fade out the centerpiece logo + the cta badge so
    the intro video has the screen to itself. */
@@ -506,15 +520,30 @@ mux-video{
 .guide-row-label{
   font-weight:700;letter-spacing:.22em;text-transform:uppercase;
   background:#000;
-  position:sticky;left:0;z-index:1;
+  /* !important here is intentional: this column MUST stay pinned
+     to the left edge of the scroll container regardless of any
+     future cell-state rule (e.g. `.today` background) that might
+     shadow `position`. Sticky cells in grids are still finicky in
+     some engines, so we lock the three properties hard. */
+  position:sticky !important;
+  left:0 !important;
+  z-index:1;
 }
 /* Top-left corner: needs to win both stickys. */
 .guide-header.corner{
-  left:0;z-index:3;background:#0a1830;
+  left:0 !important;z-index:3;background:#0a1830;
+  position:sticky !important;
 }
 .guide-row-label.today{
   background:#1a0000;
   color:#ff5a5a;
+  /* Re-assert sticky for the "today" variant — same specificity
+     as `.guide-row-label` plus one extra class, so without the
+     re-assert the longhand `background` override would never
+     touch `position`, but cascade engines have surprised us
+     before. Belt + braces. */
+  position:sticky !important;
+  left:0 !important;
 }
 /* Today's label shows two lines: the day-of-week + the calendar
    date ("TUE" / "MAY 12"). Sub-line is smaller and slightly
@@ -606,26 +635,24 @@ mux-video{
   opacity:.8;
 }
 
-/* WATCH button — closes the guide and returns to the TV page. Sits
-   at the SAME bottom-left position the GUIDE pill occupies on the
-   TV page (the GUIDE pill is behind the guide overlay when the
-   guide is open, so visually one pill swaps for the other based on
-   which mode you're in). Identical pill chrome. */
+/* Close button — circle X in the top-right of the guide. The
+   masthead has a clamp(72px,8vw,108px) padding-right so the
+   day/date/time cluster never slides under this hit area. */
 .guide-close{
-  position:fixed;
-  bottom:max(env(safe-area-inset-bottom,0px), clamp(14px,3vh,28px));
-  left:max(env(safe-area-inset-left,0px),  clamp(14px,3vw,28px));
+  position:absolute;
+  top:clamp(14px,2.4vh,24px);right:clamp(14px,2vw,24px);
   z-index:26; /* above #guide (z:25) */
-  appearance:none;border:1px solid rgba(255,255,255,.35);
-  background:rgba(0,0,0,.45);
+  appearance:none;background:rgba(0,0,0,.45);
   backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,.4);
   color:#fff;cursor:pointer;
-  font:700 12px/1 "Eurostile",sans-serif;
-  letter-spacing:.32em;text-transform:uppercase;
-  padding:11px 18px 10px;border-radius:999px;
-  transition:background .15s ease, border-color .15s ease;
+  width:36px;height:36px;border-radius:50%;
+  display:grid;place-items:center;
+  font:400 22px/1 "Eurostile",sans-serif;
+  line-height:.85;
+  transition:background .15s ease, border-color .15s ease, transform .15s ease;
 }
-.guide-close:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.8)}
+.guide-close:hover{background:rgba(255,255,255,.12);border-color:#fff;transform:rotate(90deg)}
 
 /* Mobile: tighter padding, smaller font scales. Columns stay 48
    wide (full schedule) but each column is narrower so swiping
@@ -694,20 +721,21 @@ mux-video{
   <div class="intro-logo" aria-hidden="true">
     <svg viewBox="-1 -1 394 238" fill-rule="evenodd" role="img" aria-label="INTERDEPENDENT TV"><path fill="#fff" d="M72.4265993,181.599151 C66.4590298,181.599151 61.6302421,176.771465 61.6302421,170.837972 C61.6302421,164.895874 66.4590298,160.07249 72.4265993,160.07249 C78.3985826,160.07249 83.2229564,164.895874 83.2229564,170.837972 C83.2229564,176.771465 78.3985826,181.599151 72.4265993,181.599151 M91.860925,171.461871 C91.860925,160.132729 83.1567482,151.462687 73.0577845,151.462687 C61.6964503,151.462687 52.9966875,160.132729 52.9966875,171.461871 C52.9966875,181.538913 61.6964503,190.208955 73.0577845,190.208955 C83.1567482,190.208955 91.860925,181.538913 91.860925,171.461871M24.7317875,73.9701493 C24.7317875,114.823555 57.9498633,147.940299 99.5404822,147.940299 C139.904437,147.940299 173.122512,114.823555 173.122512,73.9701493 C173.122512,33.1167433 139.904437,0 99.5404822,0 C57.9498633,0 24.7317875,33.1167433 24.7317875,73.9701493 ZM127.194217,164.849451 C123.67483,164.849451 120.831581,162.010133 120.831581,158.511688 C120.831581,155.009017 123.67483,152.169699 127.194217,152.169699 C130.70927,152.169699 133.552519,155.009017 133.552519,158.511688 C133.552519,162.010133 130.70927,164.849451 127.194217,164.849451 M127.194217,147.940299 C121.338684,147.940299 116.592712,152.66827 116.592712,158.511688 C116.592712,164.346655 121.338684,169.074627 127.194217,169.074627 C133.045415,169.074627 137.791387,164.346655 137.791387,158.511688 C137.791387,152.66827 133.045415,147.940299 127.194217,147.940299M107.7622,183.164179 C102.884091,183.164179 98.92715,187.105962 98.92715,191.972361 C98.92715,196.834336 102.884091,200.776119 107.7622,200.776119 C112.640309,200.776119 116.592712,196.834336 116.592712,191.972361 C116.592712,187.105962 112.640309,183.164179 107.7622,183.164179M88.3256373,214.865672 C82.4745768,214.865672 77.728475,219.595655 77.728475,225.432836 C77.728475,231.270017 82.4745768,236 88.3256373,236 C94.1810481,236 98.92715,231.270017 98.92715,225.432836 C98.92715,219.595655 94.1810481,214.865672 88.3256373,214.865672M17.6655625,116.238806 C7.90718362,116.238806 0,124.123696 0,133.852952 C0,143.577797 7.90718362,151.462687 17.6655625,151.462687 C27.4239414,151.462687 35.331125,143.577797 35.331125,133.852952 C35.331125,124.123696 27.4239414,116.238806 17.6655625,116.238806M180.186475,112.716418 C170.433871,112.716418 162.523175,120.601308 162.523175,130.330564 C162.523175,140.055409 170.433871,147.940299 180.186475,147.940299 C189.943604,147.940299 197.8543,140.055409 197.8543,130.330564 C197.8543,120.601308 189.943604,112.716418 180.186475,112.716418M239.894118,45.170986 L282.776959,45.1709859 L282.776959,63.8942535 L239.894118,63.8942535 L239.894118,104.40507 C239.894118,124.823247 240.972673,126.780451 251.145666,126.780451 L253.001174,126.780451 C262.953117,126.780451 264.046554,124.770747 264.046554,106.053746 L264.046554,99.9894648 L284.426299,99.9894648 L284.426299,110.587606 C284.426299,139.540191 277.772511,146.534141 250.527164,146.534141 L247.228483,146.534141 C220.272791,146.534141 214.77252,139.9545 214.77252,106.672 L214.77252,63.8942535 L201.165465,63.8942535 L201.165465,45.1709859 L214.77252,45.170986 L214.77252,19.4104225 L239.894118,19.4104225 ZM318.496605,45.5306504 L341.82905,125.320038 L365.161495,45.5306504 L365.26667,45.1709859 L365.641397,45.1709859 L391,45.170986 L391.693801,45.170986 L391.474322,45.8291572 L358.487522,144.74972 L358.373533,145.091549 L324.459897,145.091549 L324.345908,144.74972 L291.359107,45.8291571 L291.139628,45.1709859 L318.39143,45.1709859 Z"/></svg>
   </div>
-  <!-- Top-right "PLAY" badge — pulsing red dot + outline play
-       triangle. The triangle is the explicit click target, but
-       activate() also fires on any other intro-overlay click. -->
-  <div class="intro-cta live-badge" aria-hidden="false">
-    <div class="live-dot"></div>
-    <button id="playButton" class="cta-play" type="button" aria-label="Play to begin">
-      <svg viewBox="0 0 14 14" aria-hidden="true">
-        <path fill="none" stroke="currentColor" stroke-width="2"
-              stroke-linejoin="miter" stroke-linecap="butt"
-              vector-effect="non-scaling-stroke"
-              d="M2 1 L13 7 L2 13 Z"/>
-      </svg>
-    </button>
-  </div>
+  <!-- "PUSH PLAY" CTA — pulsing red dot + label + outline play
+       triangle. This button is the ONLY click target that starts
+       the channel; FS and GUIDE buttons function normally but
+       don't trigger activation. -->
+  <button id="playButton" class="intro-cta live-badge" type="button"
+          aria-label="Push play to begin the channel">
+    <span class="live-dot"></span>
+    <span class="live-label">PUSH PLAY</span>
+    <svg viewBox="0 0 14 14" class="play-icon" aria-hidden="true">
+      <path fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linejoin="miter" stroke-linecap="butt"
+            vector-effect="non-scaling-stroke"
+            d="M2 1 L13 7 L2 13 Z"/>
+    </svg>
+  </button>
   <!-- The intro animation video — covers everything once activated. -->
   <video id="introVideo" class="intro-video"
          playsinline preload="auto" muted
@@ -907,7 +935,10 @@ customElements.whenDefined('mux-video').then(function(){
     watermark.classList.toggle('show', on && !centerLogoShowing);
   }
   function pingControls(){
-    if (!channelLive) return;
+    // Not gated on channelLive — FS and GUIDE need to be discoverable
+    // from the cold-start too. showAllControls() internally keeps the
+    // bottom-right watermark suppressed until the movie surface is
+    // actually showing, so the brand-mark redundancy is still avoided.
     showAllControls(true);
     clearTimeout(hideTimer);
     hideTimer = setTimeout(function(){ showAllControls(false); }, 5000);
@@ -917,72 +948,75 @@ customElements.whenDefined('mux-video').then(function(){
   document.addEventListener('keydown',    pingControls);
   fsBtn.addEventListener('click', function(e){
     e.stopPropagation();
-    // First-click entry point: if the user hasn't activated yet,
-    // the FS button click IS the activation (full sequence:
-    // fullscreen + audio gate + intro animation + live channel).
-    // After activation, it's a normal FS toggle.
-    if (!userActivated) {
-      activate(e);
-    } else {
-      toggleFullscreen();
-      pingControls();
-    }
+    // FS button is JUST a fullscreen toggle in every state. It does
+    // NOT start the channel — only the PUSH PLAY button does that.
+    toggleFullscreen();
+    pingControls();
   });
 
+  // Hide the FS button entirely on platforms whose Fullscreen API
+  // doesn't apply to non-<video> elements (iOS Safari, iPhone
+  // Chrome). The button would otherwise look interactive but be a
+  // no-op — worse UX than not having it at all.
+  const fsApiAvailable =
+    (typeof document.documentElement.requestFullscreen === 'function') ||
+    (typeof document.documentElement.webkitRequestFullscreen === 'function');
+  if (!fsApiAvailable) {
+    fsBtn.style.display = 'none';
+  }
 
-  // ── Noise renderer (shared) ──────────────────────────────────────
-  // Two surfaces use canvas analog snow, both at the V1 dim factor
-  // (24%) so the brand identity reads the same across:
-  //   - #introNoise   (cold-start backdrop, pre-click)
-  //   - #static       (between-show interlude, mid-channel)
-  // Half-resolution buffers redrawn at ~15fps so the CPU cost stays
-  // well under 1% on a midrange laptop. `intensity` scales the
-  // per-channel value (1 = bright; .24 = V1 cinema dim).
-  function makeNoiseRenderer(cnv, intensity){
+
+  // ── Noise renderer (V1) ──────────────────────────────────────────
+  // Port of the original index.html cold-start snow: half-resolution
+  // canvas of `Math.random() * 60` greyscale pixels, redrawn every
+  // 66ms via setTimeout. ImageData is freshly allocated each frame
+  // (V1 did it that way and the GC cost is negligible — ~32 KB at
+  // 15fps). Canvas dimensions follow window size; resizes on window
+  // resize so the texture stays at the right density. Both the
+  // cold-start (#introNoise) and the between-show interlude (#static
+  // > canvas) use the same renderer so the brand identity reads the
+  // same across both states.
+  function makeNoiseRenderer(cnv){
     const ctx = cnv.getContext('2d');
-    let img = null;
+    let alive = false;
     let timer = 0;
-    let alive = true;
-    function ensureSize(){
-      const w = Math.max(1, (cnv.clientWidth  || innerWidth)  >> 1);
-      const h = Math.max(1, (cnv.clientHeight || innerHeight) >> 1);
-      if (cnv.width !== w || cnv.height !== h) {
-        cnv.width = w; cnv.height = h;
-        img = ctx.createImageData(w, h);
-      } else if (!img) {
-        img = ctx.createImageData(w, h);
-      }
+    function resize(){
+      cnv.width  = Math.max(1, innerWidth  >> 1);
+      cnv.height = Math.max(1, innerHeight >> 1);
     }
-    function draw(){
+    function tick(){
       if (!alive) return;
-      ensureSize();
-      const p = img.data;
-      const scale = 255 * intensity;
-      for (let i = p.length - 4; i >= 0; i -= 4) {
-        const v = (Math.random() * scale) | 0;
+      const w = cnv.width, h = cnv.height;
+      const d = ctx.createImageData(w, h);
+      const p = d.data;
+      let i = p.length;
+      while (i) {
+        i -= 4;
+        const v = (Math.random() * 60) | 0;
         p[i] = p[i+1] = p[i+2] = v;
         p[i+3] = 255;
       }
-      ctx.putImageData(img, 0, 0);
-      timer = setTimeout(draw, 66); // ~15fps, V1 cadence
+      ctx.putImageData(d, 0, 0);
+      timer = setTimeout(tick, 66);
     }
+    resize();
+    window.addEventListener('resize', resize);
     return {
-      start(){ alive = true; if (!timer) draw(); },
+      start(){ if (!alive) { alive = true; tick(); } },
       stop() { alive = false; clearTimeout(timer); timer = 0; },
     };
   }
 
-  // Between-show interlude — dim CRT snow, matching the cold-start
-  // intro backdrop. The brand identity is the same across both
-  // states; only the centerpiece (play triangle vs IV logo) and
-  // the top-right badge ("PLAY" vs "LIVE IN") differ.
-  const staticNoise = makeNoiseRenderer(canvas, .24);
+  // Between-show interlude — same V1 snow as the cold-start.
+  const staticNoise = makeNoiseRenderer(canvas);
   function startNoise(){ staticNoise.start(); }
   function stopNoise(){  staticNoise.stop();  }
 
-  // Intro cold-start — dim CRT texture behind the play triangle.
+  // Cold-start backdrop — same V1 snow, always running on the intro
+  // overlay until the user clicks PUSH PLAY (the intro video then
+  // covers it).
   const introNoiseCanvas = document.getElementById('introNoise');
-  const introNoise = introNoiseCanvas ? makeNoiseRenderer(introNoiseCanvas, .24) : null;
+  const introNoise = introNoiseCanvas ? makeNoiseRenderer(introNoiseCanvas) : null;
   if (introNoise) introNoise.start();
 
   // ── Channel state machine ────────────────────────────────────────
@@ -1218,10 +1252,26 @@ customElements.whenDefined('mux-video').then(function(){
     // wider current-slot column as seconds tick).
     updateNowLine();
 
+    // Description strip changes with channel state so users don't
+    // see "TEARS OF STEEL · NOW PLAYING" between airings.
     const live = getSlotInfo();
-    if (live.offAir)      guideDescTag.textContent = 'CHANNEL OFF AIR';
-    else if (live.inShow) guideDescTag.textContent = 'NOW PLAYING · ' + SHOW.duration;
-    else                  guideDescTag.textContent = 'NO SIGNAL · NEXT SLOT';
+    if (live.offAir) {
+      guideDescTitle.textContent = 'CHANNEL OFF AIR';
+      guideDescBody.textContent  = 'Programming returns at 11:00 AM local. The lineup below shows the day.';
+      guideDescTag.textContent   = 'OFF AIR';
+    } else if (live.inShow) {
+      guideDescTitle.textContent = SHOW.title;
+      guideDescBody.textContent  = SHOW.description;
+      guideDescTag.textContent   = 'NOW PLAYING · ' + SHOW.duration;
+    } else {
+      // Between-show interlude — show countdown like the badge does.
+      const secs = Math.max(0, Math.ceil((live.nextSlotStart - Date.now()) / 1000));
+      const mm = String(Math.floor(secs / 60)).padStart(2, '0');
+      const ss = String(secs % 60).padStart(2, '0');
+      guideDescTitle.textContent = 'BETWEEN SHOWS';
+      guideDescBody.textContent  = SHOW.title + ' returns in ' + mm + ':' + ss + ' — see the lineup below for what airs next.';
+      guideDescTag.textContent   = 'LIVE IN ' + mm + ':' + ss;
+    }
   }
 
   let guideTick = 0;
@@ -1257,14 +1307,10 @@ customElements.whenDefined('mux-video').then(function(){
     clearInterval(guideTick); guideTick = 0;
   }
   guideBtn.addEventListener('click', openGuide);
-  guideClose.addEventListener('click', function(e){
-    closeGuide();
-    // First-click entry point: if the user opened the guide before
-    // activating and clicks WATCH to come back, that click IS the
-    // activation. Fires fullscreen, audio, intro animation,
-    // live channel — same flow as the play button or FS button.
-    if (!userActivated) activate(e);
-  });
+  // Close button — JUST closes the guide. Does NOT trigger channel
+  // activation; user returns to whatever state they came from
+  // (cold-start if pre-activation, or live channel if mid-show).
+  guideClose.addEventListener('click', closeGuide);
   guideEl.addEventListener('click', function(e){
     // Click on the overlay backdrop (not on its children) closes.
     if (e.target === guideEl) closeGuide();
@@ -1375,21 +1421,21 @@ customElements.whenDefined('mux-video').then(function(){
     }, 700);
   }
 
-  // Reveal the 3 corner controls (FS top-left, GUIDE bottom-left,
-  // IV watermark bottom-right) right away so they're visible on
-  // the cold-start screen too. The 5s idle auto-hide cycle stays
-  // off until intro.ended (channelLive flag) so the controls
-  // don't fade while the user is just looking at the cold start.
-  showAllControls(true);
   syncFsIcon();
 
-  // Click target: the intro overlay (full-screen black surface
-  // with the play button). Click anywhere — on the button or the
-  // surrounding black — triggers activate(). Keyboard (Enter/Space)
-  // also activates for accessibility.
-  intro.addEventListener('click', activate);
-  intro.addEventListener('touchstart', activate, { passive: true });
-  intro.addEventListener('keydown', onActivateKey);
+  // The ONLY click target that activates the channel is the
+  // PUSH PLAY button. Native <button> handles Enter / Space /
+  // touch tap for free. Clicks elsewhere on the cold-start screen
+  // do nothing (cursor is default on the snow, pointer on the
+  // button — clear affordance).
+  const playButton = document.getElementById('playButton');
+  if (playButton) playButton.addEventListener('click', activate);
+
+  // FS + GUIDE pills start hidden. They reveal on any user activity
+  // (mousemove / touchstart / keydown) and fade after 5s idle.
+  // First-visit discovery: ping once at page load so they appear
+  // briefly so users know they exist, then auto-hide kicks in.
+  pingControls();
 
   introVideo.addEventListener('ended', finish);
   introVideo.addEventListener('error', finish);
@@ -1456,7 +1502,7 @@ customElements.whenDefined('mux-video').then(function(){
      live clock at top, 7-day × 5-slot grid in the middle, current
      program description at the bottom. Built and refreshed by JS. -->
 <div id="guide" role="dialog" aria-modal="true" aria-label="TV guide">
-  <button class="guide-close" id="guideClose" type="button" aria-label="Close guide and return to channel">WATCH</button>
+  <button class="guide-close" id="guideClose" type="button" aria-label="Close guide">×</button>
   <div class="guide-mast">
     <!-- Channel mark: identical SVG to the bottom-right watermark,
          so the brand reads the same in both places. Scales down on
