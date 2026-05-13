@@ -120,24 +120,31 @@ mux-video{
 }
 .intro.done{opacity:0;pointer-events:none}
 
-/* Pre-rendered intro animation. object-fit:contain so the 16:9
-   source letterboxes gracefully on any aspect ratio. */
+/* Pre-rendered intro animation. Hidden pre-click (opacity:0) so it
+   doesn't paint its solid black background over the snow canvas;
+   the canvas + vignette + IV logo + PUSH PLAY badge all need to
+   show through. On .activated, fades in over 350ms to take the
+   screen for the catalyst animation. object-fit:contain so the
+   16:9 source letterboxes gracefully on any aspect ratio. */
 .intro-video{
   position:absolute;inset:0;
   width:100%;height:100%;
   object-fit:contain;
   background:#000;
   pointer-events:none;
+  opacity:0;
+  transition:opacity .35s ease;
 }
+.intro.activated .intro-video{opacity:1}
 
-/* Dim CRT static behind the play triangle (V1 cold-start). 24%
-   intensity so it reads as texture and doesn't fight the
-   triangle. Half-res buffer scaled up with pixelated rendering. */
+/* V1 cold-start snow — half-res canvas of *60 greyscale noise. No
+   opacity override here so it renders at native brightness; the
+   *60 baked into the renderer is the only dimming, matching V1
+   verbatim and matching the interlude canvas. */
 .intro-noise{
   position:absolute;inset:0;z-index:0;
   width:100%;height:100%;
   image-rendering:pixelated;
-  opacity:.65;
   pointer-events:none;
 }
 .intro-vignette{
@@ -307,7 +314,9 @@ mux-video{
   position:absolute;inset:0;
   width:100%;height:100%;
   image-rendering:pixelated;
-  opacity:.85;
+  /* Native opacity — *60 in the renderer does the dimming; this
+     matches the cold-start canvas exactly so the brand identity
+     reads the same across both screens. */
 }
 .static-vignette{
   position:absolute;inset:0;
