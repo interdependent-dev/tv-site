@@ -601,16 +601,43 @@ body.no-fs .logo.show{pointer-events:none}
   .guide-logo svg{width:clamp(56px,10vh,72px)}
 }
 
-/* Back-chevron overlay inside the big white disc — same opacity
-   pattern as the watermark's FS brackets. Stroke is in viewBox
-   units so it scales with the SVG. */
+/* Back-to-TV play triangle inside the big white disc. Baseline
+   opacity .5 (matches the FS-bracket pattern) plus a gentle fill
+   pulse — the interior fades from clear to ~half-opacity black
+   and back every 2.6s. The pulse is a discoverability hint: the
+   triangle looks like a play button momentarily so new viewers
+   register the affordance as "return to playback". On hover /
+   keyboard focus the path scales 1.15× with a soft white glow —
+   identical motion language to the intro PUSH PLAY CTA's hover
+   state. Stroke stays in viewBox units so it scales with the SVG. */
 .guide-back-icon{
   opacity:.5;
-  transition:opacity .12s ease;
+  transition:opacity .15s ease;
+}
+.guide-back-icon path{
+  /* Transform on the path (not the parent <g>) so the parent's
+     translate(99.54 73.97) attribute survives — a CSS transform
+     on the <g> would replace it. fill-box keeps the scale origin
+     at the path's own centroid; without it the scale would pivot
+     around (0,0) of the SVG and the triangle would drift off the
+     disc on hover. */
+  transform-box:fill-box;
+  transform-origin:center;
+  transition:transform .18s ease, filter .18s ease;
+  animation:guide-back-pulse 2.6s ease-in-out infinite;
+}
+@keyframes guide-back-pulse{
+  0%,100%{fill:rgba(0,0,0,0)}
+  50%    {fill:rgba(0,0,0,.5)}
 }
 .guide-logo:hover .guide-back-icon,
 .guide-logo:focus-visible .guide-back-icon{
   opacity:1;
+}
+.guide-logo:hover .guide-back-icon path,
+.guide-logo:focus-visible .guide-back-icon path{
+  transform:scale(1.15);
+  filter:drop-shadow(0 0 10px rgba(255,255,255,.6));
 }
 
 /* Instant tooltip pill — identical chrome to .logo-tip, positioned
@@ -1614,14 +1641,17 @@ customElements.whenDefined('mux-video').then(function(){
       guideDescBody.textContent  = SHOW.description;
       guideDescTag.textContent   = 'ON AIR · ' + SHOW.duration;
     } else {
-      // Between-show interlude — show countdown like the badge does.
+      // Between-show interlude. Prose stays static — viewers see WHAT
+      // is up next + WHEN it starts (their local time), and the
+      // BACK IN tag below carries the running countdown. One timer
+      // total; the prose doesn't tick.
       const secs = Math.max(0, Math.ceil((live.nextSlotStart - Date.now()) / 1000));
       const mm = String(Math.floor(secs / 60)).padStart(2, '0');
       const ss = String(secs % 60).padStart(2, '0');
+      const nextAt = fmtClock(new Date(live.nextSlotStart));
       guideDescTitle.textContent = 'BETWEEN SHOWS';
       guideDescBody.textContent  =
-        SHOW.title + ' returns in ' + mm + ':' + ss +
-        ' — see the lineup below for what airs next.';
+        SHOW.title + ' returns at ' + nextAt + '.';
       guideDescTag.textContent   = 'OFF AIR · BACK IN ' + mm + ':' + ss;
     }
   }
