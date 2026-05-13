@@ -589,48 +589,42 @@ body.no-fs .logo.show{pointer-events:none}
   .guide-logo svg{width:clamp(56px,10vh,72px)}
 }
 
-/* Netflix-style back-to-TV button — large circular pill that sits
-   BETWEEN the masthead IV mark and the day/date/time cluster, with
-   a left-pointing chevron+stem arrow inside. Visually points back
-   at the brand mark: "you came from INTERDEPENDENT.tv; this returns
-   you there." Dark translucent background + blurred backdrop +
-   thin white outline matches the GUIDE pill's chrome language. */
+/* Back-to-TV button — naked left-pointing arrow with a long stem.
+   No surrounding circle / pill — the arrow IS the affordance. The
+   stem extends well to the right of the arrowhead, visually
+   pointing the viewer back at the IV mark to its left. Stroke
+   uses currentColor so opacity/color hover transitions ride on
+   the button's text color. */
 .guide-back{
   appearance:none;
-  background:rgba(0,0,0,.45);
-  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
-  border:1px solid rgba(255,255,255,.4);
-  color:#fff;cursor:pointer;
-  width:clamp(48px,5vw,64px);
-  height:clamp(48px,5vw,64px);
-  border-radius:50%;
-  display:grid;place-items:center;
+  background:transparent;border:none;
+  padding:8px 12px;margin:0;
+  color:rgba(255,255,255,.7);
+  cursor:pointer;
+  display:flex;align-items:center;
   position:relative; /* anchor for the tooltip */
   flex-shrink:0;
-  transition:background .15s ease, border-color .15s ease, transform .15s ease;
+  transition:color .15s ease, transform .15s ease;
 }
 .guide-back:focus{outline:none}
 .guide-back:hover,
 .guide-back:focus-visible{
-  background:rgba(255,255,255,.12);
-  border-color:#fff;
-  transform:scale(1.06);
+  color:#fff;
+  transform:scale(1.05);
 }
 .guide-back svg{
-  width:50%;height:50%;
+  width:clamp(72px,8vw,108px);
+  height:auto;
   display:block;
-  /* stroke uses currentColor so the icon picks up the button's text
-     color — keeps the focus-glow trick (drop-shadow on focus-visible)
-     consistent with the rest of the chrome. */
   transition:filter .15s ease;
 }
 .guide-back:focus-visible svg{
-  filter:drop-shadow(0 0 6px rgba(255,255,255,.85));
+  filter:drop-shadow(0 0 8px rgba(255,255,255,.85));
 }
 /* Tooltip pill below the button — same chrome as .logo-tip. */
 .guide-back-tip{
   position:absolute;
-  top:calc(100% + 8px);
+  top:calc(100% + 6px);
   left:50%;
   transform:translateX(-50%);
   white-space:nowrap;
@@ -649,10 +643,11 @@ body.no-fs .logo.show{pointer-events:none}
 .guide-back:hover .guide-back-tip,
 .guide-back:focus-visible .guide-back-tip{opacity:1}
 @media (max-width:640px){
-  .guide-back{width:44px;height:44px}
+  .guide-back svg{width:clamp(56px,16vw,76px)}
 }
 @media (orientation:landscape) and (max-height:500px){
-  .guide-back{width:36px;height:36px;border-width:1px}
+  .guide-back{padding:6px 8px}
+  .guide-back svg{width:52px}
 }
 
 /* The masthead left group — IV mark + back button stay together,
@@ -2072,14 +2067,14 @@ customElements.whenDefined('mux-video').then(function(){
       </div>
       <button class="guide-back" id="guideBack" type="button"
               aria-label="Back to INTERDEPENDENT.tv">
-        <!-- Netflix-style left-pointing chevron with stem. 24×24
-             viewBox, stroke-width 2; the icon scales to half the
-             button width (~24px on desktop). Arrow points toward
-             the IV mark to its left — the visual hint that this
-             returns you to the channel home. -->
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M19 12 H5 M5 12 L12 5 M5 12 L12 19"
-                fill="none" stroke="currentColor" stroke-width="2"
+        <!-- Left-pointing arrow with a long stem. 72×20 viewBox so
+             the stem stretches well past a square — emphasizes the
+             "back" direction pointing at the IV mark to its left.
+             Stroke-width 2.2 reads as a solid line at the rendered
+             size; round caps/joins soften the corners. -->
+        <svg viewBox="0 0 72 20" aria-hidden="true">
+          <path d="M70 10 H4 M4 10 L14 2 M4 10 L14 18"
+                fill="none" stroke="currentColor" stroke-width="2.2"
                 stroke-linejoin="round" stroke-linecap="round"/>
         </svg>
         <span class="guide-back-tip" aria-hidden="true">Back to TV</span>
