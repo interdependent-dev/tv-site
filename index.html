@@ -190,11 +190,16 @@ mux-video{
   50%    {opacity:.3}
 }
 
-/* Cold-start CTA — pill-shaped button that replaces the interlude
-   "LIVE IN mm:ss" with "PUSH PLAY" + outline play triangle. Shares
-   the .live-badge positioning + .live-dot pulse with the interlude.
-   This is the ONE click target that starts the channel; FS and
-   GUIDE pills don't trigger activation. */
+/* Cold-start CTA — pill-shaped button that announces channel state.
+   Three modes:
+     on-air         → "ON AIR · PUSH PLAY" + red pulsing dot + play
+                      icon + clickable
+     between shows  → "OFF AIR · BACK IN mm:ss" + gray steady dot +
+                      no play icon + disabled
+     off-hours      → "OFF AIR · BACK AT 9:00 AM" + gray steady dot +
+                      no play icon + disabled
+   Shares the .live-badge positioning + .live-dot pulse with the
+   interlude. */
 .intro-cta{
   appearance:none;background:transparent;border:none;
   color:#fff;cursor:pointer;
@@ -217,6 +222,32 @@ mux-video{
   text-shadow:0 0 12px rgba(255,255,255,.45), 0 0 12px rgba(0,0,0,.8);
 }
 .intro-cta:focus-visible{outline:none}
+
+/* Off-air variant: gray steady dot, no play icon, no hover-grow,
+   default cursor, no interactive shimmer on hover. The button is
+   also `disabled` via JS so clicks don't bubble. */
+.intro-cta.off-air{cursor:default}
+.intro-cta.off-air .play-icon{display:none}
+.intro-cta.off-air .live-dot{
+  background:rgba(255,255,255,.5);
+  animation:none;
+  box-shadow:0 0 8px rgba(255,255,255,.15);
+}
+.intro-cta.off-air:hover .live-label,
+.intro-cta.off-air:focus-visible .live-label,
+.intro-cta.off-air:hover .play-icon,
+.intro-cta.off-air:focus-visible .play-icon{
+  text-shadow:none;transform:none;filter:none;
+}
+.intro-cta:disabled{cursor:default}
+
+/* The interlude badge is always "off-air" by definition — gray
+   dot, no pulse — to match the cold-start off-air state. */
+.static-cta .live-dot{
+  background:rgba(255,255,255,.5);
+  animation:none;
+  box-shadow:0 0 8px rgba(255,255,255,.15);
+}
 
 /* Activated → fade out the centerpiece logo + the cta badge so
    the intro video has the screen to itself. */
@@ -836,12 +867,61 @@ body.no-fs .logo.show{pointer-events:none}
 // ─────────────────────────────────────────────────────────────────────
 
 const CHANNEL = {
-  startHour: 11,   // 11:00 — first slot of the day starts at 11:00
-  endHour:   23,   // 23:00 — last slot starts at 22:45, ends at 23:00
-  slotSec:   900,  // 15 min per slot
-  showSec:   734,  // Tears of Steel: 12:14 = 734s
+  // The channel runs 6 AM – 9 PM Pacific (anchored to the
+  // America/Los_Angeles zone so PST↔PDT shifts are automatic
+  // — "6 AM PT" stays 6 AM PT year-round). Every viewer on
+  // Earth is on-air during the same UTC moments. Last slot of
+  // the day starts at 20:45 PT, ends at 21:00 PT.
+  startHour: 6,                       // 6 AM PT
+  endHour:   21,                      // 9 PM PT
+  slotSec:   900,                     // 15 min per slot
+  showSec:   734,                     // Tears of Steel: 12:14
+  timezone:  'America/Los_Angeles',
 };
 CHANNEL.staticSec = CHANNEL.slotSec - CHANNEL.showSec;
+
+// ── PT timezone helpers ────────────────────────────────────────────
+// Used everywhere we need to map between a UTC timestamp and the
+// channel's broadcast wall clock. Built on Intl.DateTimeFormat so
+// DST is handled by the runtime — no hardcoded offsets.
+const PT_DTF = new Intl.DateTimeFormat('en-US', {
+  timeZone: CHANNEL.timezone,
+  year: 'numeric', month: 'numeric', day: 'numeric',
+  hour: 'numeric', minute: 'numeric', second: 'numeric',
+  hour12: false,
+});
+
+// Components of `nowMs` as observed in PT.
+function ptParts(nowMs){
+  const parts = PT_DTF.formatToParts(new Date(nowMs));
+  const g = (t) => Number(parts.find(p => p.type === t).value);
+  return {
+    year:   g('year'),
+    month:  g('month'),               // 1-12
+    day:    g('day'),
+    hour:   g('hour') % 24,           // Some engines emit "24" for midnight
+    minute: g('minute'),
+    second: g('second'),
+  };
+}
+
+// Map a PT wall-clock (year/month/day/hour/minute/second) to its UTC
+// timestamp. Naïve `Date.UTC(...)` is off by the PT offset; we
+// converge by re-projecting through the formatter (2 iterations cover
+// every DST case including spring-forward / fall-back boundaries).
+function ptToUtc(year, month, day, hour, minute, second){
+  let ts = Date.UTC(year, month - 1, day, hour, minute, second);
+  for (let i = 0; i < 2; i++) {
+    const back = ptParts(ts);
+    const reqUTC = Date.UTC(year, month - 1, day, hour, minute, second);
+    const backUTC = Date.UTC(back.year, back.month - 1, back.day,
+                             back.hour, back.minute, back.second);
+    const drift = reqUTC - backUTC;
+    if (drift === 0) break;
+    ts += drift;
+  }
+  return ts;
+}
 
 const SHOW = {
   title: 'TEARS OF STEEL',
@@ -854,24 +934,34 @@ const SHOW = {
 
 // ── Wall-clock slot math ────────────────────────────────────────────
 // Returns the current slot state for a given (or now) timestamp.
+// All boundaries are evaluated in PT — the channel's broadcast zone —
+// so every viewer worldwide is on-air during the same UTC moments.
 function getSlotInfo(now) {
   now = now || Date.now();
-  const d = new Date(now);
-  const hour = d.getHours();
+  const pt = ptParts(now);
 
-  // Off-air outside CHANNEL.startHour ≤ hour < CHANNEL.endHour
-  if (hour < CHANNEL.startHour || hour >= CHANNEL.endHour) {
-    const next = new Date(d);
-    next.setHours(CHANNEL.startHour, 0, 0, 0);
-    if (next.getTime() <= now) next.setDate(next.getDate() + 1);
-    return { offAir: true, nextOnAir: next.getTime() };
+  // Off-air outside CHANNEL.startHour ≤ PT-hour < CHANNEL.endHour
+  if (pt.hour < CHANNEL.startHour || pt.hour >= CHANNEL.endHour) {
+    let next;
+    if (pt.hour < CHANNEL.startHour) {
+      // Same calendar day in PT, later this morning.
+      next = ptToUtc(pt.year, pt.month, pt.day, CHANNEL.startHour, 0, 0);
+    } else {
+      // Tomorrow's 6 AM PT. Advance the PT calendar day via a UTC-
+      // based shift; if that lands the wrong side of a DST seam,
+      // ptToUtc's iterative refinement corrects it.
+      const t = new Date(Date.UTC(pt.year, pt.month - 1, pt.day + 1));
+      next = ptToUtc(
+        t.getUTCFullYear(), t.getUTCMonth() + 1, t.getUTCDate(),
+        CHANNEL.startHour, 0, 0
+      );
+    }
+    return { offAir: true, nextOnAir: next };
   }
 
-  // Round down to the quarter hour
-  const slotMin = Math.floor(d.getMinutes() / 15) * 15;
-  const slotStart = new Date(
-    d.getFullYear(), d.getMonth(), d.getDate(), hour, slotMin, 0, 0
-  ).getTime();
+  // On-air. Slot boundaries are at PT :00 / :15 / :30 / :45.
+  const slotMin = Math.floor(pt.minute / 15) * 15;
+  const slotStart = ptToUtc(pt.year, pt.month, pt.day, pt.hour, slotMin, 0);
   const tInSlot = (now - slotStart) / 1000;
   const inShow = tInSlot < CHANNEL.showSec;
 
@@ -1126,6 +1216,9 @@ customElements.whenDefined('mux-video').then(function(){
       const t = new Date(info.nextOnAir);
       offairNext.textContent =
         'CHANNEL RESUMES AT ' + fmtClock(t).toUpperCase();
+      // 6 AM PT lands at different local times across timezones,
+      // so fmtClock above formats `t` in the viewer's local — they
+      // see when the channel comes back ON THEIR clock.
       showSurface('offair');
       scheduleNext(info.nextOnAir - Date.now());
       return;
@@ -1175,7 +1268,7 @@ customElements.whenDefined('mux-video').then(function(){
     const secs = Math.max(0, Math.ceil((info.nextSlotStart - Date.now()) / 1000));
     const mm = String(Math.floor(secs / 60)).padStart(2, '0');
     const ss = String(secs % 60).padStart(2, '0');
-    staticCountdown.textContent = 'LIVE IN ' + mm + ':' + ss;
+    staticCountdown.textContent = 'OFF AIR · BACK IN ' + mm + ':' + ss;
   }, 1000);
 
   // ── EPG (TV Guide overlay) ───────────────────────────────────────
@@ -1187,15 +1280,23 @@ customElements.whenDefined('mux-video').then(function(){
   // structure is rebuilt only when the slot index changes (so
   // scroll position survives ticks).
   const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-  const SLOTS_PER_DAY = (CHANNEL.endHour - CHANNEL.startHour) * 4; // 48
+  // 60 slots per PT day: (21 - 6) * 4 = 60.
+  const SLOTS_PER_DAY = (CHANNEL.endHour - CHANNEL.startHour) * 4;
 
+  // Returns the PT hour + minute for the col-th slot of the day
+  // (col 0 = 6:00 AM PT, col 1 = 6:15 AM PT, ...).
   function slotForCol(col){
     const totalMin = CHANNEL.startHour * 60 + col * 15;
     return { hour: Math.floor(totalMin / 60), minute: totalMin % 60 };
   }
+
+  // Returns the slot index (0..SLOTS_PER_DAY-1) for the given moment,
+  // or -1 if outside channel hours. Boundaries evaluated in PT.
   function nowSlotCol(d){
-    if (d.getHours() < CHANNEL.startHour || d.getHours() >= CHANNEL.endHour) return -1;
-    return (d.getHours() - CHANNEL.startHour) * 4 + Math.floor(d.getMinutes() / 15);
+    const nowMs = d instanceof Date ? d.getTime() : (typeof d === 'number' ? d : Date.now());
+    const pt = ptParts(nowMs);
+    if (pt.hour < CHANNEL.startHour || pt.hour >= CHANNEL.endHour) return -1;
+    return (pt.hour - CHANNEL.startHour) * 4 + Math.floor(pt.minute / 15);
   }
 
   // Column widths: current slot is 200px (wider, so the red
@@ -1226,9 +1327,17 @@ customElements.whenDefined('mux-video').then(function(){
     corner.textContent = '';
     guideGrid.appendChild(corner);
 
+    // Build slot column labels. The slot's start time is computed
+    // in PT (the channel's broadcast clock), converted to a UTC
+    // timestamp, then formatted in the viewer's local time — so an
+    // East-Coast viewer sees a 5 PM PT slot labeled "8 PM", a Tokyo
+    // viewer sees the same slot labeled "10 AM" (next day), etc.
+    const ptToday = ptParts(Date.now());
     for (let c = 0; c < SLOTS_PER_DAY; c++) {
       const s = slotForCol(c);
-      const t = new Date(now.getFullYear(), now.getMonth(), now.getDate(), s.hour, s.minute);
+      const slotTS = ptToUtc(ptToday.year, ptToday.month, ptToday.day,
+                             s.hour, s.minute, 0);
+      const t = new Date(slotTS);
       const h = document.createElement('div');
       h.className = 'guide-header';
       h.textContent = fmtSlot(t).toUpperCase();
@@ -1336,21 +1445,27 @@ customElements.whenDefined('mux-video').then(function(){
     // see "TEARS OF STEEL · NOW PLAYING" between airings.
     const live = getSlotInfo();
     if (live.offAir) {
+      const t = new Date(live.nextOnAir);
       guideDescTitle.textContent = 'CHANNEL OFF AIR';
-      guideDescBody.textContent  = 'Programming returns at 11:00 AM local. The lineup below shows the day.';
-      guideDescTag.textContent   = 'OFF AIR';
+      guideDescBody.textContent  =
+        'Programming returns at ' + fmtClock(t) +
+        ' (the next 6:00 AM Pacific). The lineup below shows the day.';
+      guideDescTag.textContent   =
+        'OFF AIR · BACK AT ' + fmtClock(t).toUpperCase();
     } else if (live.inShow) {
       guideDescTitle.textContent = SHOW.title;
       guideDescBody.textContent  = SHOW.description;
-      guideDescTag.textContent   = 'NOW PLAYING · ' + SHOW.duration;
+      guideDescTag.textContent   = 'ON AIR · ' + SHOW.duration;
     } else {
       // Between-show interlude — show countdown like the badge does.
       const secs = Math.max(0, Math.ceil((live.nextSlotStart - Date.now()) / 1000));
       const mm = String(Math.floor(secs / 60)).padStart(2, '0');
       const ss = String(secs % 60).padStart(2, '0');
       guideDescTitle.textContent = 'BETWEEN SHOWS';
-      guideDescBody.textContent  = SHOW.title + ' returns in ' + mm + ':' + ss + ' — see the lineup below for what airs next.';
-      guideDescTag.textContent   = 'LIVE IN ' + mm + ':' + ss;
+      guideDescBody.textContent  =
+        SHOW.title + ' returns in ' + mm + ':' + ss +
+        ' — see the lineup below for what airs next.';
+      guideDescTag.textContent   = 'OFF AIR · BACK IN ' + mm + ':' + ss;
     }
   }
 
@@ -1446,6 +1561,9 @@ customElements.whenDefined('mux-video').then(function(){
   function activate(e){
     if (userActivated) return;
     userActivated = true;
+
+    // The cold-start ticker is done now; we're past the badge.
+    if (typeof stopColdStartTicker === 'function') stopColdStartTicker();
 
     // Stop the cold-start noise — the intro video covers it now.
     if (introNoise) introNoise.stop();
@@ -1592,6 +1710,58 @@ customElements.whenDefined('mux-video').then(function(){
   const playButton = document.getElementById('playButton');
   if (playButton) playButton.addEventListener('click', activate);
 
+  // ── Cold-start CTA state ─────────────────────────────────────────
+  // The badge speaks three different states based on the wall-clock
+  // channel state, computed once per second until the user activates:
+  //
+  //   on-air         → "ON AIR · PUSH PLAY"      + red pulse + play
+  //                    icon + clickable
+  //   between shows  → "OFF AIR · BACK IN mm:ss" + gray dot   + no
+  //                    play icon + disabled
+  //   off-hours      → "OFF AIR · BACK AT 9:00 AM" (viewer's local
+  //                    time of the next 6 AM PT) + gray dot + no
+  //                    icon + disabled
+  //
+  // When the timer hits 0 the state machine fires and the badge
+  // flips to "ON AIR · PUSH PLAY" without any page reload.
+  const ctaLabel = playButton && playButton.querySelector('.live-label');
+  const ctaIcon  = playButton && playButton.querySelector('.play-icon');
+  const localTimeFmt = new Intl.DateTimeFormat([], {
+    hour: 'numeric', minute: '2-digit', hour12: true,
+  });
+  let coldStartTick = 0;
+  function updateColdStartCTA(){
+    if (!playButton || userActivated) return;
+    const info = getSlotInfo();
+    if (info.offAir) {
+      const t = new Date(info.nextOnAir);
+      ctaLabel.textContent =
+        'OFF AIR · BACK AT ' + localTimeFmt.format(t).toUpperCase();
+      playButton.classList.add('off-air');
+      playButton.disabled = true;
+    } else if (info.inShow) {
+      ctaLabel.textContent = 'ON AIR · PUSH PLAY';
+      playButton.classList.remove('off-air');
+      playButton.disabled = false;
+    } else {
+      const secs = Math.max(0, Math.ceil((info.nextSlotStart - Date.now()) / 1000));
+      const mm = String(Math.floor(secs / 60)).padStart(2, '0');
+      const ss = String(secs % 60).padStart(2, '0');
+      ctaLabel.textContent = 'OFF AIR · BACK IN ' + mm + ':' + ss;
+      playButton.classList.add('off-air');
+      playButton.disabled = true;
+    }
+  }
+  function startColdStartTicker(){
+    if (coldStartTick) clearInterval(coldStartTick);
+    updateColdStartCTA();
+    coldStartTick = setInterval(updateColdStartCTA, 1000);
+  }
+  function stopColdStartTicker(){
+    if (coldStartTick) { clearInterval(coldStartTick); coldStartTick = 0; }
+  }
+  startColdStartTicker();
+
   // FS + GUIDE pills start hidden. They reveal on any user activity
   // (mousemove / touchstart / keydown) and fade after 5s idle.
   // First-visit discovery: ping once at page load so they appear
@@ -1648,7 +1818,7 @@ customElements.whenDefined('mux-video').then(function(){
   </div>
   <div class="static-cta live-badge">
     <div class="live-dot"></div>
-    <span class="live-label" id="staticCountdown">LIVE IN —:—</span>
+    <span class="live-label" id="staticCountdown">OFF AIR · BACK IN —:—</span>
   </div>
 </div>
 
