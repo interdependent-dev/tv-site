@@ -566,24 +566,12 @@ body.no-fs .logo.show{pointer-events:none}
   border-bottom:1px solid rgba(255,255,255,.5);
   gap:16px;flex-wrap:wrap;
 }
-/* Masthead IV mark — doubles as the "Back to TV" CTA. Mirrors the
-   `.logo` watermark pattern: the whole IV mark is a <button>, the
-   big white disc carries a subtle action icon (left-pointing
-   chevron) that hints at the affordance, and clicking it closes
-   the guide. Position:relative so the .guide-tip can anchor below
-   it. Button reset removes the native chrome. */
+/* Masthead IV mark — pure brand decoration. The back-to-TV action
+   lives in the dedicated `.guide-back` button to the right of the
+   mark (Netflix-style); the logo is no longer interactive here. */
 .guide-logo{
-  display:flex;align-items:flex-end;
-  position:relative;
-  appearance:none;background:transparent;border:none;padding:0;margin:0;
-  color:inherit;font:inherit;cursor:pointer;
+  display:flex;align-items:center;
   line-height:0; /* eat any inline-baseline gap under the SVG */
-}
-/* No outline ring — same reasoning as the watermark. Focus is
-   communicated via a soft drop-shadow on the chevron icon. */
-.guide-logo:focus{outline:none}
-.guide-logo:focus-visible .guide-back-icon{
-  filter:drop-shadow(0 0 5px rgba(255,255,255,.85));
 }
 .guide-logo svg{
   width:clamp(110px,12vw,160px);
@@ -601,52 +589,50 @@ body.no-fs .logo.show{pointer-events:none}
   .guide-logo svg{width:clamp(56px,10vh,72px)}
 }
 
-/* Back-to-TV play triangle inside the big white disc. Baseline
-   opacity .5 (matches the FS-bracket pattern) plus a gentle fill
-   pulse — the interior fades from clear to ~half-opacity black
-   and back every 2.6s. The pulse is a discoverability hint: the
-   triangle looks like a play button momentarily so new viewers
-   register the affordance as "return to playback". On hover /
-   keyboard focus the path scales 1.15× with a soft white glow —
-   identical motion language to the intro PUSH PLAY CTA's hover
-   state. Stroke stays in viewBox units so it scales with the SVG. */
-.guide-back-icon{
-  opacity:.5;
-  transition:opacity .15s ease;
+/* Netflix-style back-to-TV button — large circular pill that sits
+   BETWEEN the masthead IV mark and the day/date/time cluster, with
+   a left-pointing chevron+stem arrow inside. Visually points back
+   at the brand mark: "you came from INTERDEPENDENT.tv; this returns
+   you there." Dark translucent background + blurred backdrop +
+   thin white outline matches the GUIDE pill's chrome language. */
+.guide-back{
+  appearance:none;
+  background:rgba(0,0,0,.45);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,.4);
+  color:#fff;cursor:pointer;
+  width:clamp(48px,5vw,64px);
+  height:clamp(48px,5vw,64px);
+  border-radius:50%;
+  display:grid;place-items:center;
+  position:relative; /* anchor for the tooltip */
+  flex-shrink:0;
+  transition:background .15s ease, border-color .15s ease, transform .15s ease;
 }
-.guide-back-icon path{
-  /* Transform on the path (not the parent <g>) so the parent's
-     translate(99.54 73.97) attribute survives — a CSS transform
-     on the <g> would replace it. fill-box keeps the scale origin
-     at the path's own centroid; without it the scale would pivot
-     around (0,0) of the SVG and the triangle would drift off the
-     disc on hover. */
-  transform-box:fill-box;
-  transform-origin:center;
-  transition:transform .18s ease, filter .18s ease;
-  animation:guide-back-pulse 2.6s ease-in-out infinite;
+.guide-back:focus{outline:none}
+.guide-back:hover,
+.guide-back:focus-visible{
+  background:rgba(255,255,255,.12);
+  border-color:#fff;
+  transform:scale(1.06);
 }
-@keyframes guide-back-pulse{
-  0%,100%{fill:rgba(0,0,0,0)}
-  50%    {fill:rgba(0,0,0,.5)}
+.guide-back svg{
+  width:50%;height:50%;
+  display:block;
+  /* stroke uses currentColor so the icon picks up the button's text
+     color — keeps the focus-glow trick (drop-shadow on focus-visible)
+     consistent with the rest of the chrome. */
+  transition:filter .15s ease;
 }
-.guide-logo:hover .guide-back-icon,
-.guide-logo:focus-visible .guide-back-icon{
-  opacity:1;
+.guide-back:focus-visible svg{
+  filter:drop-shadow(0 0 6px rgba(255,255,255,.85));
 }
-.guide-logo:hover .guide-back-icon path,
-.guide-logo:focus-visible .guide-back-icon path{
-  transform:scale(1.15);
-  filter:drop-shadow(0 0 10px rgba(255,255,255,.6));
-}
-
-/* Instant tooltip pill — identical chrome to .logo-tip, positioned
-   below-right of the masthead mark so it never overflows the
-   viewport edge. */
-.guide-tip{
+/* Tooltip pill below the button — same chrome as .logo-tip. */
+.guide-back-tip{
   position:absolute;
   top:calc(100% + 8px);
-  left:0;
+  left:50%;
+  transform:translateX(-50%);
   white-space:nowrap;
   font:700 11px/1 "Eurostile",sans-serif;
   letter-spacing:.22em;text-transform:uppercase;
@@ -660,8 +646,28 @@ body.no-fs .logo.show{pointer-events:none}
   pointer-events:none;
   transition:opacity .12s ease;
 }
-.guide-logo:hover .guide-tip,
-.guide-logo:focus-visible .guide-tip{opacity:1}
+.guide-back:hover .guide-back-tip,
+.guide-back:focus-visible .guide-back-tip{opacity:1}
+@media (max-width:640px){
+  .guide-back{width:44px;height:44px}
+}
+@media (orientation:landscape) and (max-height:500px){
+  .guide-back{width:36px;height:36px;border-width:1px}
+}
+
+/* The masthead left group — IV mark + back button stay together,
+   the clock floats off to the right via flex auto-margin. */
+.guide-mast-left{
+  display:flex;align-items:center;
+  gap:clamp(14px,2.5vw,28px);
+}
+@media (orientation:landscape) and (max-height:500px){
+  .guide-mast-left{gap:10px}
+}
+
+/* (The masthead's "Back to TV" tooltip moved onto the dedicated
+   `.guide-back` button — see `.guide-back-tip` above.) */
+
 /* Day · Date · Time on one line — wire-service ticker layout.
    Each segment carries its own letter-spacing; a thin · separator
    sits between them via the gap. Aligned to the right edge of the
@@ -1166,7 +1172,7 @@ customElements.whenDefined('mux-video').then(function(){
   const guideBtn   = document.getElementById('guide-button');
   const watermark  = document.getElementById('logoFs');
   const guideEl    = document.getElementById('guide');
-  const guideLogoBack = document.getElementById('guideLogoBack');
+  const guideBack = document.getElementById('guideBack');
   const guideGrid  = document.getElementById('guideGrid');
   const guideDay   = document.getElementById('guideDay');
   const guideDate  = document.getElementById('guideDate');
@@ -1689,14 +1695,16 @@ customElements.whenDefined('mux-video').then(function(){
     clearInterval(guideTick); guideTick = 0;
   }
   guideBtn.addEventListener('click', openGuide);
-  // Masthead IV mark IS the close affordance. Clicking it closes
-  // the guide and returns the viewer to whatever state they came
-  // from (cold-start if pre-activation, or the live channel if
-  // mid-show). `.blur()` after the click prevents the focus-ring
-  // halo from lingering on the brand mark once the guide is gone.
-  guideLogoBack.addEventListener('click', function(){
+  // Netflix-style back-to-TV button sits between the masthead IV
+  // mark and the day/date/time cluster, arrow pointing at the
+  // brand. Clicking it closes the guide and returns the viewer to
+  // whatever state they came from (cold-start if pre-activation,
+  // or the live channel if mid-show). `.blur()` after the click
+  // prevents the focus-ring halo from lingering once the guide
+  // is gone.
+  guideBack.addEventListener('click', function(){
     closeGuide();
-    guideLogoBack.blur();
+    guideBack.blur();
   });
   guideEl.addEventListener('click', function(e){
     // Click on the overlay backdrop (not on its children) closes.
@@ -2054,34 +2062,29 @@ customElements.whenDefined('mux-video').then(function(){
      program description at the bottom. Built and refreshed by JS. -->
 <div id="guide" role="dialog" aria-modal="true" aria-label="TV guide">
   <div class="guide-mast">
-    <!-- Channel mark — doubles as the "Back to TV" CTA. The whole
-         IV mark is now a <button>; clicking it (or the keyboard
-         activation when focused) closes the guide and returns to
-         the channel. A subtle left-pointing chevron is overlaid
-         inside the big white disc, mirroring how the watermark's
-         fullscreen brackets sit in the bottom-right corner.
-         Identical pattern: brand mark = action. -->
-    <button class="guide-logo" id="guideLogoBack" type="button" aria-label="Back to TV">
-      <span class="guide-tip" aria-hidden="true">Back to TV</span>
-      <svg viewBox="-1 -1 394 238" fill-rule="evenodd" role="img" aria-label="INTERDEPENDENT TV"><path fill="#fff" d="M72.4265993,181.599151 C66.4590298,181.599151 61.6302421,176.771465 61.6302421,170.837972 C61.6302421,164.895874 66.4590298,160.07249 72.4265993,160.07249 C78.3985826,160.07249 83.2229564,164.895874 83.2229564,170.837972 C83.2229564,176.771465 78.3985826,181.599151 72.4265993,181.599151 M91.860925,171.461871 C91.860925,160.132729 83.1567482,151.462687 73.0577845,151.462687 C61.6964503,151.462687 52.9966875,160.132729 52.9966875,171.461871 C52.9966875,181.538913 61.6964503,190.208955 73.0577845,190.208955 C83.1567482,190.208955 91.860925,181.538913 91.860925,171.461871M24.7317875,73.9701493 C24.7317875,114.823555 57.9498633,147.940299 99.5404822,147.940299 C139.904437,147.940299 173.122512,114.823555 173.122512,73.9701493 C173.122512,33.1167433 139.904437,0 99.5404822,0 C57.9498633,0 24.7317875,33.1167433 24.7317875,73.9701493 ZM127.194217,164.849451 C123.67483,164.849451 120.831581,162.010133 120.831581,158.511688 C120.831581,155.009017 123.67483,152.169699 127.194217,152.169699 C130.70927,152.169699 133.552519,155.009017 133.552519,158.511688 C133.552519,162.010133 130.70927,164.849451 127.194217,164.849451 M127.194217,147.940299 C121.338684,147.940299 116.592712,152.66827 116.592712,158.511688 C116.592712,164.346655 121.338684,169.074627 127.194217,169.074627 C133.045415,169.074627 137.791387,164.346655 137.791387,158.511688 C137.791387,152.66827 133.045415,147.940299 127.194217,147.940299M107.7622,183.164179 C102.884091,183.164179 98.92715,187.105962 98.92715,191.972361 C98.92715,196.834336 102.884091,200.776119 107.7622,200.776119 C112.640309,200.776119 116.592712,196.834336 116.592712,191.972361 C116.592712,187.105962 112.640309,183.164179 107.7622,183.164179M88.3256373,214.865672 C82.4745768,214.865672 77.728475,219.595655 77.728475,225.432836 C77.728475,231.270017 82.4745768,236 88.3256373,236 C94.1810481,236 98.92715,231.270017 98.92715,225.432836 C98.92715,219.595655 94.1810481,214.865672 88.3256373,214.865672M17.6655625,116.238806 C7.90718362,116.238806 0,124.123696 0,133.852952 C0,143.577797 7.90718362,151.462687 17.6655625,151.462687 C27.4239414,151.462687 35.331125,143.577797 35.331125,133.852952 C35.331125,124.123696 27.4239414,116.238806 17.6655625,116.238806M180.186475,112.716418 C170.433871,112.716418 162.523175,120.601308 162.523175,130.330564 C162.523175,140.055409 170.433871,147.940299 180.186475,147.940299 C189.943604,147.940299 197.8543,140.055409 197.8543,130.330564 C197.8543,120.601308 189.943604,112.716418 180.186475,112.716418M239.894118,45.170986 L282.776959,45.1709859 L282.776959,63.8942535 L239.894118,63.8942535 L239.894118,104.40507 C239.894118,124.823247 240.972673,126.780451 251.145666,126.780451 L253.001174,126.780451 C262.953117,126.780451 264.046554,124.770747 264.046554,106.053746 L264.046554,99.9894648 L284.426299,99.9894648 L284.426299,110.587606 C284.426299,139.540191 277.772511,146.534141 250.527164,146.534141 L247.228483,146.534141 C220.272791,146.534141 214.77252,139.9545 214.77252,106.672 L214.77252,63.8942535 L201.165465,63.8942535 L201.165465,45.1709859 L214.77252,45.170986 L214.77252,19.4104225 L239.894118,19.4104225 ZM318.496605,45.5306504 L341.82905,125.320038 L365.161495,45.5306504 L365.26667,45.1709859 L365.641397,45.1709859 L391,45.170986 L391.693801,45.170986 L391.474322,45.8291572 L358.487522,144.74972 L358.373533,145.091549 L324.459897,145.091549 L324.345908,144.74972 L291.359107,45.8291571 L291.139628,45.1709859 L318.39143,45.1709859 Z"/>
-        <!-- Right-pointing play triangle inside the big white disc.
-             "Returning to the channel" === "returning to playback",
-             so the icon mirrors the intro page's PUSH PLAY triangle
-             (outline-only, miter joins, butt caps) — same drawing
-             language end-to-end. Sized to match the watermark's
-             fullscreen-bracket envelope: vertical extent ±28 (56
-             tall), horizontal extent ±26 (slightly narrower so the
-             triangle's aspect tracks the intro PUSH PLAY icon's
-             11×12 ratio). Centered on the disc center
-             (cx=99.54, cy=73.97). Stroke 8 — same as the FS
-             brackets — so the visual weight matches. -->
-        <g class="guide-back-icon" transform="translate(99.54 73.97)">
-          <path d="M -26,-28 L 26,0 L -26,28 Z"
-                fill="none" stroke="#000" stroke-width="8"
-                stroke-linejoin="miter" stroke-linecap="butt"/>
-        </g>
-      </svg>
-    </button>
+    <!-- Left group: brand mark + back-to-TV button. The IV mark is
+         decorative; the dedicated back arrow to its right (Netflix
+         style) is the affordance, visually pointing at the brand:
+         "you came from INTERDEPENDENT.tv — this returns you there." -->
+    <div class="guide-mast-left">
+      <div class="guide-logo">
+        <svg viewBox="-1 -1 394 238" fill-rule="evenodd" role="img" aria-label="INTERDEPENDENT TV"><path fill="#fff" d="M72.4265993,181.599151 C66.4590298,181.599151 61.6302421,176.771465 61.6302421,170.837972 C61.6302421,164.895874 66.4590298,160.07249 72.4265993,160.07249 C78.3985826,160.07249 83.2229564,164.895874 83.2229564,170.837972 C83.2229564,176.771465 78.3985826,181.599151 72.4265993,181.599151 M91.860925,171.461871 C91.860925,160.132729 83.1567482,151.462687 73.0577845,151.462687 C61.6964503,151.462687 52.9966875,160.132729 52.9966875,171.461871 C52.9966875,181.538913 61.6964503,190.208955 73.0577845,190.208955 C83.1567482,190.208955 91.860925,181.538913 91.860925,171.461871M24.7317875,73.9701493 C24.7317875,114.823555 57.9498633,147.940299 99.5404822,147.940299 C139.904437,147.940299 173.122512,114.823555 173.122512,73.9701493 C173.122512,33.1167433 139.904437,0 99.5404822,0 C57.9498633,0 24.7317875,33.1167433 24.7317875,73.9701493 ZM127.194217,164.849451 C123.67483,164.849451 120.831581,162.010133 120.831581,158.511688 C120.831581,155.009017 123.67483,152.169699 127.194217,152.169699 C130.70927,152.169699 133.552519,155.009017 133.552519,158.511688 C133.552519,162.010133 130.70927,164.849451 127.194217,164.849451 M127.194217,147.940299 C121.338684,147.940299 116.592712,152.66827 116.592712,158.511688 C116.592712,164.346655 121.338684,169.074627 127.194217,169.074627 C133.045415,169.074627 137.791387,164.346655 137.791387,158.511688 C137.791387,152.66827 133.045415,147.940299 127.194217,147.940299M107.7622,183.164179 C102.884091,183.164179 98.92715,187.105962 98.92715,191.972361 C98.92715,196.834336 102.884091,200.776119 107.7622,200.776119 C112.640309,200.776119 116.592712,196.834336 116.592712,191.972361 C116.592712,187.105962 112.640309,183.164179 107.7622,183.164179M88.3256373,214.865672 C82.4745768,214.865672 77.728475,219.595655 77.728475,225.432836 C77.728475,231.270017 82.4745768,236 88.3256373,236 C94.1810481,236 98.92715,231.270017 98.92715,225.432836 C98.92715,219.595655 94.1810481,214.865672 88.3256373,214.865672M17.6655625,116.238806 C7.90718362,116.238806 0,124.123696 0,133.852952 C0,143.577797 7.90718362,151.462687 17.6655625,151.462687 C27.4239414,151.462687 35.331125,143.577797 35.331125,133.852952 C35.331125,124.123696 27.4239414,116.238806 17.6655625,116.238806M180.186475,112.716418 C170.433871,112.716418 162.523175,120.601308 162.523175,130.330564 C162.523175,140.055409 170.433871,147.940299 180.186475,147.940299 C189.943604,147.940299 197.8543,140.055409 197.8543,130.330564 C197.8543,120.601308 189.943604,112.716418 180.186475,112.716418M239.894118,45.170986 L282.776959,45.1709859 L282.776959,63.8942535 L239.894118,63.8942535 L239.894118,104.40507 C239.894118,124.823247 240.972673,126.780451 251.145666,126.780451 L253.001174,126.780451 C262.953117,126.780451 264.046554,124.770747 264.046554,106.053746 L264.046554,99.9894648 L284.426299,99.9894648 L284.426299,110.587606 C284.426299,139.540191 277.772511,146.534141 250.527164,146.534141 L247.228483,146.534141 C220.272791,146.534141 214.77252,139.9545 214.77252,106.672 L214.77252,63.8942535 L201.165465,63.8942535 L201.165465,45.1709859 L214.77252,45.170986 L214.77252,19.4104225 L239.894118,19.4104225 ZM318.496605,45.5306504 L341.82905,125.320038 L365.161495,45.5306504 L365.26667,45.1709859 L365.641397,45.1709859 L391,45.170986 L391.693801,45.170986 L391.474322,45.8291572 L358.487522,144.74972 L358.373533,145.091549 L324.459897,145.091549 L324.345908,144.74972 L291.359107,45.8291571 L291.139628,45.1709859 L318.39143,45.1709859 Z"/></svg>
+      </div>
+      <button class="guide-back" id="guideBack" type="button"
+              aria-label="Back to INTERDEPENDENT.tv">
+        <!-- Netflix-style left-pointing chevron with stem. 24×24
+             viewBox, stroke-width 2; the icon scales to half the
+             button width (~24px on desktop). Arrow points toward
+             the IV mark to its left — the visual hint that this
+             returns you to the channel home. -->
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M19 12 H5 M5 12 L12 5 M5 12 L12 19"
+                fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linejoin="round" stroke-linecap="round"/>
+        </svg>
+        <span class="guide-back-tip" aria-hidden="true">Back to TV</span>
+      </button>
+    </div>
     <div class="guide-clock">
       <div class="day" id="guideDay">—</div>
       <div class="date" id="guideDate">—</div>
