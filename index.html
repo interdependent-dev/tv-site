@@ -3,14 +3,38 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#000">
+
+<!-- Browser-chrome theming. The address bar / status bar / tab
+     surround can't be removed in mobile Safari, Chrome, Firefox, etc.,
+     but each respects a `theme-color` hint and paints the chrome to
+     match. Explicit media variants force the same #000000 regardless
+     of OS theme so the chrome never flips white on a light-mode
+     device. Coverage:
+       Safari iOS 15+         → top URL bar
+       Chrome Android         → URL bar + status bar
+       Firefox Android        → status bar
+       Edge Android / Brave   → URL bar
+       Safari macOS 15+       → window toolbar
+       Edge desktop (PWA)     → title bar
+     The two `apple-mobile-web-app-*` tags only kick in when the page
+     is "Add to Home Screen"-installed; `black-translucent` lets the
+     status bar overlay the canvas. The `msapplication-TileColor` is
+     legacy Windows pin-tile support — harmless on modern browsers. -->
+<meta name="theme-color" content="#000000">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="msapplication-TileColor" content="#000000">
+<meta name="msapplication-navbutton-color" content="#000000">
+<meta name="format-detection" content="telephone=no">
+
 <meta name="description" content="INTERDEPENDENT TV">
 <meta property="og:title" content="INTERDEPENDENT TV">
 <meta property="og:description" content="INTERDEPENDENT TV">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://interdependent.tv">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>INTERDEPENDENT TV</title>
 
 <!-- ── Network hints ───────────────────────────────────────────────
@@ -481,12 +505,18 @@ body.no-fs .logo.show{pointer-events:none}
 }
 
 /* ── GUIDE button (toggle pill, bottom-left) ─────────────────────────
-   ALWAYS visible — no idle-fade, no state gating. The guide is an
-   information surface (what's on now, what's next); users need
-   access during ON AIR, OFF AIR, AND cold-start equally. The
-   watermark/FS toggle is the only chrome that fades on idle, so
-   the picture stays clean during active watching without ever
-   locking the schedule away from a touch user. */
+   Timing:
+   1. Page load: hidden (opacity 0). Cold-start IV logo + ON/OFF AIR
+      badge animate in alone — clean brand moment.
+   2. ~8s after load: fades in. (Logo + badge animations settle by
+      ~3s; the 5s pause gives the user time to read the badge before
+      a second affordance appears.)
+   3. PUSH PLAY clicked: fades back out. The intro flourish should
+      not have a corner pill competing with it.
+   4. Channel-live (`finish()`): fades back in. Stays put through
+      ON AIR, between-show interludes, OFF AIR — the schedule is
+      always one tap away, on mobile and desktop alike.
+   Watermark / FS toggle is the only chrome that does idle-fading. */
 #guide-button{
   position:fixed;
   bottom:max(env(safe-area-inset-bottom,0px), clamp(14px,3vh,28px));
@@ -499,8 +529,10 @@ body.no-fs .logo.show{pointer-events:none}
   font:700 12px/1 "Eurostile",sans-serif;
   letter-spacing:.32em;text-transform:uppercase;
   padding:11px 18px 10px;border-radius:999px;
-  transition:background .15s ease, border-color .15s ease;
+  opacity:0;
+  transition:opacity 1s ease, background .15s ease, border-color .15s ease;
 }
+#guide-button.show{opacity:1}
 #guide-button:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.8)}
 
 /* (FS toggle now lives inside the IV watermark as the big white
@@ -529,10 +561,10 @@ body.no-fs .logo.show{pointer-events:none}
 #guide.on{display:flex;opacity:1;transform:translateY(0)}
 
 .guide-mast{
-  display:flex;align-items:flex-end;justify-content:space-between;
-  padding-bottom:clamp(12px,2vh,20px);
+  display:flex;align-items:center;justify-content:space-between;
+  padding-bottom:clamp(8px,1.4vh,14px);
   border-bottom:1px solid rgba(255,255,255,.5);
-  gap:24px;flex-wrap:wrap;
+  gap:16px;flex-wrap:wrap;
 }
 /* Masthead IV mark — doubles as the "Back to TV" CTA. Mirrors the
    `.logo` watermark pattern: the whole IV mark is a <button>, the
@@ -554,12 +586,19 @@ body.no-fs .logo.show{pointer-events:none}
   filter:drop-shadow(0 0 5px rgba(255,255,255,.85));
 }
 .guide-logo svg{
-  width:clamp(180px,22vw,300px);
+  width:clamp(110px,12vw,160px);
   height:auto;display:block;
   filter:drop-shadow(0 0 18px rgba(180,200,255,.18));
 }
 @media (max-width:640px){
-  .guide-logo svg{width:clamp(90px,28vw,140px)}
+  .guide-logo svg{width:clamp(70px,16vw,96px)}
+}
+/* Mobile landscape — viewport height is the constraint. Shrink the
+   masthead aggressively so the schedule grid gets at least three
+   rows above the description strip. Triggered by short viewports
+   regardless of pointer type. */
+@media (orientation:landscape) and (max-height:500px){
+  .guide-logo svg{width:clamp(56px,10vh,72px)}
 }
 
 /* Back-chevron overlay inside the big white disc — same opacity
@@ -596,28 +635,49 @@ body.no-fs .logo.show{pointer-events:none}
 }
 .guide-logo:hover .guide-tip,
 .guide-logo:focus-visible .guide-tip{opacity:1}
+/* Day · Date · Time on one line — wire-service ticker layout.
+   Each segment carries its own letter-spacing; a thin · separator
+   sits between them via the gap. Aligned to the right edge of the
+   masthead so it baselines with the bottom of the IV mark on tall
+   viewports and centers cleanly on short ones. */
 .guide-clock{
-  text-align:right;
+  display:flex;flex-direction:row;align-items:baseline;
+  gap:14px;flex-wrap:nowrap;
   font-family:"Eurostile",sans-serif;
+  text-align:right;
+}
+.guide-clock > *{position:relative}
+.guide-clock > *:not(:last-child)::after{
+  content:"·";
+  position:absolute;
+  right:-10px;top:0;
+  opacity:.4;
+  pointer-events:none;
 }
 .guide-clock .day{
   font-weight:700;
-  font-size:clamp(13px,1.6vw,18px);
-  letter-spacing:.32em;text-transform:uppercase;
+  font-size:clamp(12px,1.2vw,14px);
+  letter-spacing:.26em;text-transform:uppercase;
   opacity:.95;
 }
 .guide-clock .date{
   font-weight:400;
-  font-size:clamp(11px,1.2vw,13px);
-  letter-spacing:.22em;text-transform:uppercase;
-  opacity:.6;margin-top:4px;
+  font-size:clamp(11px,1.1vw,13px);
+  letter-spacing:.18em;text-transform:uppercase;
+  opacity:.7;
 }
 .guide-clock .time{
   font-weight:700;
-  font-size:clamp(22px,3vw,32px);
-  letter-spacing:.1em;
-  margin-top:6px;
+  font-size:clamp(14px,1.6vw,18px);
+  letter-spacing:.08em;
   color:#fff;
+}
+@media (orientation:landscape) and (max-height:500px){
+  .guide-clock{gap:10px}
+  .guide-clock > *:not(:last-child)::after{right:-7px}
+  .guide-clock .day,
+  .guide-clock .date{font-size:10px;letter-spacing:.16em}
+  .guide-clock .time{font-size:12px;letter-spacing:.06em}
 }
 
 /* Grid: rows = days, cols = ALL 48 time slots of the channel day
@@ -792,8 +852,44 @@ body.no-fs .logo.show{pointer-events:none}
 @media (max-width:640px){
   #guide{padding:18px 16px}
   .guide-grid{grid-template-columns:54px repeat(48,108px)}
-  .guide-mast{gap:12px}
+  .guide-mast{gap:12px;padding-bottom:8px}
   .guide-desc{grid-template-columns:1fr;gap:8px}
+}
+
+/* Mobile landscape — viewport height is the constraint. Squeeze
+   every chrome surrounding the grid so the schedule itself gets
+   at least three rows visible without scrolling. Reduces #guide
+   padding, masthead bottom-padding, description strip padding +
+   font scale, grid cell min-height + row-label font, and the gap
+   between masthead → desc → grid. */
+@media (orientation:landscape) and (max-height:500px){
+  #guide{padding:10px 14px}
+  .guide-mast{
+    padding-bottom:6px;
+    gap:10px;
+    flex-wrap:nowrap;
+  }
+  .guide-desc{
+    margin-top:6px;
+    padding:6px 10px;
+    gap:8px;
+    grid-template-columns:1fr auto;
+  }
+  .guide-desc .desc-title{font-size:13px}
+  .guide-desc .desc-body{font-size:10px;margin-top:1px;line-height:1.35}
+  .guide-desc .desc-tag{font-size:8px;letter-spacing:.22em;padding:5px 8px 3px}
+  .guide-grid-wrap{margin-top:6px}
+  .guide-grid{grid-template-columns:46px repeat(48,92px)}
+  .guide-header,
+  .guide-cell{
+    padding:4px 8px;
+    font-size:10px;
+    min-height:30px;
+  }
+  .guide-cell .title{font-size:11px}
+  .guide-cell .meta{font-size:8px;margin-top:1px}
+  .guide-row-label{font-size:10px;letter-spacing:.14em}
+  .guide-row-label .label-date{font-size:8px;margin-top:1px}
 }
 </style>
 </head>
@@ -1605,8 +1701,9 @@ customElements.whenDefined('mux-video').then(function(){
     });
   }
 
-  let userActivated = false;
-  let finished      = false;
+  let userActivated     = false;
+  let finished          = false;
+  let guideRevealTimer  = 0; // set in bootstrap; cleared in activate
 
   function activate(e){
     if (userActivated) return;
@@ -1617,6 +1714,12 @@ customElements.whenDefined('mux-video').then(function(){
 
     // Stop the cold-start noise — the intro video covers it now.
     if (introNoise) introNoise.stop();
+
+    // Cancel the pending GUIDE-pill reveal (it would otherwise fire
+    // mid-intro-flourish) and hide it if it has already faded in.
+    // The pill will come back when the channel goes live (finish()).
+    if (guideRevealTimer) { clearTimeout(guideRevealTimer); guideRevealTimer = 0; }
+    guideBtn.classList.remove('show');
 
     // (1) Fullscreen — gesture-required, sync inside the click.
     enterFullscreen();
@@ -1658,9 +1761,11 @@ customElements.whenDefined('mux-video').then(function(){
     mv.volume = 0.65;
 
     applyState();
-    // GUIDE button is always visible now (CSS) — no toggle needed
-    // here. channelLive flips so the watermark becomes eligible
-    // for idle-reveal via pingControls() below.
+    // Channel is live → restore the GUIDE pill (it was hidden when
+    // PUSH PLAY fired to keep the intro flourish clean). It then
+    // stays visible through ON AIR, between-show interludes, and
+    // OFF AIR — never re-hidden after this point.
+    guideBtn.classList.add('show');
     channelLive = true;
     syncFsIcon();
     pingControls();
@@ -1814,10 +1919,21 @@ customElements.whenDefined('mux-video').then(function(){
   }
   startColdStartTicker();
 
-  // FS + GUIDE pills start hidden. They reveal on any user activity
-  // (mousemove / touchstart / keydown) and fade after 5s idle.
-  // First-visit discovery: ping once at page load so they appear
-  // briefly so users know they exist, then auto-hide kicks in.
+  // GUIDE pill reveal during cold-start. The IV logo + ON/OFF AIR
+  // badge finish their entrance animations by ~3s (logo: .3s delay
+  // + 2.5s fade; badge: 1s delay + 2s fade). Wait another 5s after
+  // that for the user to absorb the brand moment, then fade in the
+  // GUIDE pill. If the user has already pushed PLAY by then, skip:
+  // the intro flourish should not get a corner pill on top of it.
+  // `finish()` re-adds `.show` after the channel goes live.
+  guideRevealTimer = setTimeout(function(){
+    if (!userActivated) guideBtn.classList.add('show');
+    guideRevealTimer = 0;
+  }, 8000);
+
+  // Watermark idle-reveal: first-visit discovery ping so the FS hint
+  // appears briefly under the cursor before fading out. The watermark
+  // is the only chrome that participates in idle-fade now.
   pingControls();
 
   introVideo.addEventListener('ended', finish);
