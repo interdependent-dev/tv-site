@@ -258,7 +258,14 @@ mux-video{
   line-height:0; /* eat any inline-baseline gap under the SVG */
 }
 .logo.show{pointer-events:auto}
-.logo:focus-visible{outline:2px solid rgba(255,255,255,.8);outline-offset:6px;border-radius:6px}
+/* No outline ring — a 2px white halo around the whole watermark
+   read as a visual bug, especially when ESC returned focus from
+   fullscreen and triggered :focus-visible. Replaced with a subtle
+   inner glow on just the FS icon below. */
+.logo:focus{outline:none}
+.logo:focus-visible .logo-fs-icon{
+  filter:drop-shadow(0 0 5px rgba(255,255,255,.85));
+}
 
 .logo svg{
   width:min(20vw,120px);height:auto;
@@ -958,8 +965,18 @@ customElements.whenDefined('mux-video').then(function(){
    // hides the .logo-fs-icon (and changes the cursor) while in FS,
    // so the watermark reads as the clean logo — the user has
    // "entered" the channel.
+  //
+   // Also blur the watermark when leaving FS: browsers return focus
+   // to the element that initiated fullscreen after an ESC exit,
+   // and because ESC is a keyboard event the resulting focus
+   // qualifies as :focus-visible — leaving a stranded glow on the
+   // watermark every time the user backs out of FS.
   function syncFsIcon(){
-    document.body.classList.toggle('in-fs', isFullscreen());
+    const inFs = isFullscreen();
+    document.body.classList.toggle('in-fs', inFs);
+    if (!inFs && document.activeElement === watermark) {
+      watermark.blur();
+    }
   }
   document.addEventListener('fullscreenchange', syncFsIcon);
   document.addEventListener('webkitfullscreenchange', syncFsIcon);
@@ -1007,6 +1024,10 @@ customElements.whenDefined('mux-video').then(function(){
     e.stopPropagation();
     toggleFullscreen();
     pingControls();
+    // Drop focus immediately so the next ESC (or subsequent
+    // keyboard event) doesn't leave the watermark in a
+    // :focus-visible state with a visible halo.
+    watermark.blur();
   });
 
   // Feature-gate for iOS — Fullscreen API doesn't apply to non-
