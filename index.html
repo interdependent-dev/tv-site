@@ -1059,8 +1059,10 @@ customElements.whenDefined('mux-video').then(function(){
     // Re-evaluate watermark visibility: it's shown only on the
     // movie surface (cold-start, #static, and #offair each
     // display the centered IV logo, which would clash with a
-    // corner watermark).
-    const wantShown = fsBtn.classList.contains('show');
+    // corner watermark). Mirrors the GUIDE pill's current show
+    // state — both pills + the watermark cycle in lockstep via
+    // pingControls.
+    const wantShown = guideBtn.classList.contains('show');
     showAllControls(wantShown);
   }
 
