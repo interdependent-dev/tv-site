@@ -307,34 +307,9 @@ body.pre-active{cursor:pointer}
 #fs-button.in-fs .fs-icon-enter{display:none}
 #fs-button.in-fs .fs-icon-exit{display:block}
 
-/* ── MUTE button — Video.js v10 <media-mute-button>. ──────────────
-   Mirrors the FS pill on the opposite top corner. v10 wires its
-   own click handler that toggles muted on the player state; we
-   only style + provide the two icons (volume-off / volume-on) and
-   toggle visibility based on the data-muted attribute v10 reflects
-   onto the element. */
-button#mute-btn{
-  position:fixed;
-  right:max(env(safe-area-inset-right,0px), clamp(14px,3vw,28px));
-  top:max(env(safe-area-inset-top,0px), clamp(14px,3vh,28px));
-  z-index:6;
-  appearance:none;border:1px solid rgba(255,255,255,.35);
-  background:rgba(0,0,0,.45);
-  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
-  color:#fff;cursor:pointer;
-  width:44px;height:44px;border-radius:50%;
-  display:grid;place-items:center;
-  opacity:0;transform:translateY(-8px);pointer-events:none;
-  transition:opacity .35s ease, transform .35s ease, background .15s ease, border-color .15s ease;
-}
-button#mute-btn.show{opacity:1;transform:translateY(0);pointer-events:auto}
-button#mute-btn:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.8)}
-button#mute-btn svg{width:18px;height:18px;display:block}
-/* Default (not muted) → speaker icon. Muted state (data-muted on the
-   element, set by v10) → speaker-with-slash icon. */
-button#mute-btn .icon-muted{display:none}
-button#mute-btn[data-muted] .icon-on{display:none}
-button#mute-btn[data-muted] .icon-muted{display:block}
+/* (Mute/unmute button removed — users control audio via their
+   device volume; the channel starts at a slightly above-average
+   volume of 0.65 once the user activates the first click.) */
 
 /* ── TV GUIDE overlay ─────────────────────────────────────────────
    White gridlines on near-black, retro cable-EPG layout. Masthead +
@@ -407,14 +382,18 @@ button#mute-btn[data-muted] .icon-muted{display:block}
    scrolling through the schedule; time-header row is sticky-top
    for the same reason on vertical scroll. */
 .guide-grid-wrap{
+  /* Block-level scroll container — NOT a flex container. A previous
+     `display:flex; flex-direction:column` here was making the grid
+     a flex item, which constrained its width and broke the
+     scrolling/sticky relationship `position:sticky` depends on.
+     Removed: the grid sizes from its own template, the wrap
+     scrolls when content overflows, sticky cells stick to the
+     wrap's left edge. */
   flex:1;
-  display:flex;flex-direction:column;
   margin-top:clamp(10px,2vh,18px);
   overflow:auto;
   border:1px solid rgba(255,255,255,.5);
   border-radius:2px;
-  /* Pre-paint a dark fill behind sticky cells so content underneath
-     doesn't bleed through the semi-transparent header/label bg. */
   background:#000;
 }
 .guide-grid{
@@ -453,6 +432,17 @@ button#mute-btn[data-muted] .icon-muted{display:block}
 .guide-row-label.today{
   background:#1a0000;
   color:#ff5a5a;
+}
+/* Today's label shows two lines: the day-of-week + the calendar
+   date ("TUE" / "MAY 12"). Sub-line is smaller and slightly
+   dimmer for hierarchy. */
+.guide-row-label .label-date{
+  font-size:clamp(9px,1vw,10px);
+  font-weight:400;
+  letter-spacing:.08em;
+  opacity:.75;
+  margin-top:4px;
+  text-transform:uppercase;
 }
 /* (Removed a stale `.guide-cell { position: relative }` rule that
    was overriding the sticky positioning on `.guide-row-label` —
@@ -533,17 +523,26 @@ button#mute-btn[data-muted] .icon-muted{display:block}
   opacity:.8;
 }
 
-/* Close button */
+/* WATCH button — closes the guide and returns to the TV page. Sits
+   at the SAME bottom-left position the GUIDE pill occupies on the
+   TV page (the GUIDE pill is behind the guide overlay when the
+   guide is open, so visually one pill swaps for the other based on
+   which mode you're in). Identical pill chrome. */
 .guide-close{
-  position:absolute;top:clamp(14px,2.4vh,24px);right:clamp(14px,2vw,24px);
-  appearance:none;background:transparent;border:1px solid rgba(255,255,255,.4);
+  position:fixed;
+  bottom:max(env(safe-area-inset-bottom,0px), clamp(14px,3vh,28px));
+  left:max(env(safe-area-inset-left,0px),  clamp(14px,3vw,28px));
+  z-index:26; /* above #guide (z:25) */
+  appearance:none;border:1px solid rgba(255,255,255,.35);
+  background:rgba(0,0,0,.45);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
   color:#fff;cursor:pointer;
-  width:36px;height:36px;border-radius:50%;
-  display:grid;place-items:center;
-  font:700 16px/1 "Eurostile",sans-serif;
+  font:700 12px/1 "Eurostile",sans-serif;
+  letter-spacing:.32em;text-transform:uppercase;
+  padding:11px 18px 10px;border-radius:999px;
   transition:background .15s ease, border-color .15s ease;
 }
-.guide-close:hover{background:rgba(255,255,255,.12);border-color:#fff}
+.guide-close:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.8)}
 
 /* Mobile: tighter padding, smaller font scales. Columns stay 48
    wide (full schedule) but each column is narrower so swiping
@@ -594,26 +593,6 @@ button#mute-btn[data-muted] .icon-muted{display:block}
     ></mux-video>
   </media-container>
 
-  <!-- Mute / unmute toggle. v10 ships <media-mute-button> only via
-       /dist/define/ui/mute-button.js, which jsdelivr 503's
-       intermittently (no /cdn/ entry point for it on the beta).
-       A plain <button> with a JS handler that toggles mv.muted on
-       the v10 <mux-video> media element gives us the same behavior
-       with zero extra import. The data-muted attribute is synced
-       via a 'volumechange' listener so the icon flip is automatic
-       regardless of how the state was toggled. -->
-  <button id="mute-btn" type="button" aria-label="Toggle sound">
-    <svg class="icon-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-      <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
-      <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
-    </svg>
-    <svg class="icon-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-      <line x1="23" y1="9" x2="17" y2="15"/>
-      <line x1="17" y1="9" x2="23" y2="15"/>
-    </svg>
-  </button>
 </video-player>
 
 <!-- Intro overlay — no play button. The intro video autoplays the
@@ -746,7 +725,6 @@ customElements.whenDefined('mux-video').then(function(){
   const staticCountdown = document.getElementById('staticCountdown');
   const guideBtn   = document.getElementById('guide-button');
   const fsBtn      = document.getElementById('fs-button');
-  const muteBtn    = document.getElementById('mute-btn');
   const watermark  = document.querySelector('.logo');
   const guideEl    = document.getElementById('guide');
   const guideClose = document.getElementById('guideClose');
@@ -809,7 +787,7 @@ customElements.whenDefined('mux-video').then(function(){
   let channelLive = false;
   let hideTimer   = 0;
   function showAllControls(on){
-    [fsBtn, muteBtn, guideBtn, watermark].forEach(function(el){
+    [fsBtn, guideBtn, watermark].forEach(function(el){
       if (!el) return;
       el.classList.toggle('show', on);
     });
@@ -829,27 +807,6 @@ customElements.whenDefined('mux-video').then(function(){
     pingControls();
   });
 
-  // ── Mute button (custom; toggles the v10 <mux-video>'s muted) ─────
-  function syncMuteIcon(){
-    // "Effectively muted" if either muted=true or volume=0. The
-    // icon reflects audibility, not the muted attribute alone.
-    const effectivelyMuted = mv.muted || mv.volume === 0;
-    muteBtn.toggleAttribute('data-muted', effectivelyMuted);
-  }
-  muteBtn.addEventListener('click', function(e){
-    e.stopPropagation();
-    if (mv.muted || mv.volume === 0) {
-      mv.muted = false;
-      // Restore a sensible volume; 0.5 matches the post-intro default.
-      if (mv.volume === 0) mv.volume = 0.5;
-    } else {
-      mv.muted = true;
-    }
-    syncMuteIcon();
-    pingControls();
-  });
-  mv.addEventListener('volumechange', syncMuteIcon);
-  syncMuteIcon(); // initial
 
   // ── TV static canvas ──────────────────────────────────────────────
   // 240×135 ImageData of Math.random() noise, redrawn each rAF.
@@ -1010,7 +967,19 @@ customElements.whenDefined('mux-video').then(function(){
       const isToday = r === 0;
       const label = document.createElement('div');
       label.className = 'guide-cell guide-row-label' + (isToday ? ' today' : '');
-      label.textContent = DAYS_SHORT[dow];
+      if (isToday) {
+        // Today gets the date inline so the user sees "TUE · MAY 12"
+        // and knows which week-day belongs to which calendar date.
+        const dateRow = document.createElement('div');
+        dateRow.className = 'label-date';
+        dateRow.textContent = MONTHS[now.getMonth()] + ' ' + now.getDate();
+        const dowRow = document.createElement('div');
+        dowRow.textContent = DAYS_SHORT[dow];
+        label.appendChild(dowRow);
+        label.appendChild(dateRow);
+      } else {
+        label.textContent = DAYS_SHORT[dow];
+      }
       guideGrid.appendChild(label);
       for (let c = 0; c < SLOTS_PER_DAY; c++) {
         const cell = document.createElement('div');
@@ -1106,14 +1075,20 @@ customElements.whenDefined('mux-video').then(function(){
     updateGuideClockAndNow();
     guideEl.classList.add('on');
 
-    // Center the current slot horizontally on open.
-    requestAnimationFrame(function(){
+    // Pin the current slot to the LEFT of the visible grid, right
+    // after the sticky day-label column. Past slots are reachable
+    // by scrolling left (toward 11:00 AM), future slots by
+    // scrolling right (toward 10:45 PM). Uses setTimeout(0) rather
+    // than requestAnimationFrame because hidden tabs throttle rAF
+    // to ~500ms intervals; the macrotask queue fires reliably.
+    setTimeout(function(){
+      const wrap = document.querySelector('.guide-grid-wrap');
       const nowCell = guideGrid.querySelector('.guide-cell.now');
-      if (nowCell && nowCell.scrollIntoView) {
-        try { nowCell.scrollIntoView({ inline: 'center', block: 'nearest' }); }
-        catch (_) {}
-      }
-    });
+      const labelCol = guideGrid.querySelector('.guide-row-label');
+      if (!wrap || !nowCell) return;
+      const labelW = labelCol ? labelCol.offsetWidth : 0;
+      wrap.scrollLeft = Math.max(0, nowCell.offsetLeft - labelW);
+    }, 0);
 
     clearInterval(guideTick);
     guideTick = setInterval(updateGuideClockAndNow, 1000);
@@ -1199,12 +1174,9 @@ customElements.whenDefined('mux-video').then(function(){
     document.removeEventListener('touchstart', activate, true);
     document.removeEventListener('keydown', onActivateKey, true);
 
-    // Helper: was the click target one of the on-screen controls
-    // that have their own handlers (FS toggle, mute toggle)? If so,
-    // let them do their thing; we only run the generic "first
-    // click" side effects when the click is on bare page surface.
-    const onFsBtn   = e && fsBtn.contains(e.target);
-    const onMuteBtn = e && muteBtn.contains(e.target);
+    // Helper: was the click target the FS button? If so, its own
+    // handler does the toggle — don't double-fire enterFullscreen.
+    const onFsBtn = e && fsBtn.contains(e.target);
 
     if (!onFsBtn) enterFullscreen();
 
@@ -1214,12 +1186,12 @@ customElements.whenDefined('mux-video').then(function(){
       introVideo.volume = 0.85;
     }
 
-    // Open audio gate for the movie. Skip if click target was the
-    // mute button — its own handler decides muted/volume.
-    if (!onMuteBtn) {
-      mv.muted = false;
-      mv.volume = introVideo.ended ? 0.5 : 0;
-    }
+    // Open audio gate for the movie. Volume 0.65 = slightly above
+    // average; users control loudness with their device controls
+    // from there. Hold silent if the intro is still going so the
+    // movie audio doesn't bleed under the intro.
+    mv.muted = false;
+    mv.volume = introVideo.ended ? 0.65 : 0;
   }
   function onActivateKey(e){
     if (e.key === 'Enter' || e.key === ' ') {
@@ -1233,9 +1205,10 @@ customElements.whenDefined('mux-video').then(function(){
     finished = true;
 
     // If the user has already clicked, the movie's audio gate is
-    // open — ramp to listening volume. Otherwise leave it muted
-    // and wait for them to click.
-    if (userActivated) mv.volume = 0.5;
+    // open — ramp to listening volume (0.65 = slightly above
+    // average; users adjust via device controls). Otherwise leave
+    // it muted and wait for the first click.
+    if (userActivated) mv.volume = 0.65;
 
     applyState();
     guideBtn.classList.add('show');
@@ -1320,7 +1293,7 @@ customElements.whenDefined('mux-video').then(function(){
      live clock at top, 7-day × 5-slot grid in the middle, current
      program description at the bottom. Built and refreshed by JS. -->
 <div id="guide" role="dialog" aria-modal="true" aria-label="TV guide">
-  <button class="guide-close" id="guideClose" aria-label="Close guide">×</button>
+  <button class="guide-close" id="guideClose" type="button" aria-label="Close guide and return to channel">WATCH</button>
   <div class="guide-mast">
     <!-- Channel mark: identical SVG to the bottom-right watermark,
          so the brand reads the same in both places. Scales down on
