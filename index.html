@@ -90,6 +90,17 @@
 }
 
 *{margin:0;box-sizing:border-box}
+html{
+  /* Force dark-mode browser chrome regardless of the viewer's OS
+     theme. `color-scheme:dark` tells the browser the page is dark
+     so it'll match its native UI bits (scrollbars, default form
+     controls, autofill highlights, native dialogs, and on macOS
+     Safari the toolbar tint) to a dark palette. Pairs with the
+     mobile `theme-color` meta tags up top that recolor the URL
+     bar / status bar on Chrome / Safari iOS / Firefox Android /
+     Edge mobile / PWA installs. */
+  color-scheme:dark;
+}
 html,body{
   height:100%;width:100%;
   background:#000;color:#fff;
@@ -725,7 +736,7 @@ body.no-fs .logo.show{pointer-events:none}
    echoes the iconic cover treatment without copying it. */
 .guide-wordmark{
   display:flex;flex-direction:column;align-items:flex-start;
-  line-height:1;
+  line-height:1;gap:5px;
   flex-shrink:0;
 }
 .guide-wordmark span{
@@ -737,6 +748,20 @@ body.no-fs .logo.show{pointer-events:none}
   color:rgba(255,255,255,.95);
   padding-bottom:5px;
   border-bottom:2px solid #ff0000;
+}
+/* "Pacific Time" sub-label under the GUIDE wordmark — makes the
+   schedule's timezone explicit so non-PT viewers know the slot
+   labels are PT, not their local. (Their wall clock still shows
+   in the masthead clock to the right; the two intentionally
+   differ for non-PT viewers.) */
+.guide-wordmark-zone{
+  font-family:"Eurostile",sans-serif;
+  font-style:normal;
+  font-weight:400;
+  font-size:clamp(8px,.85vw,10px);
+  letter-spacing:.28em;
+  text-transform:uppercase;
+  color:rgba(255,255,255,.6);
 }
 @media (orientation:landscape) and (max-height:500px){
   .guide-wordmark span{font-size:10px;letter-spacing:.22em;padding-bottom:3px;border-bottom-width:1.5px}
@@ -2671,6 +2696,7 @@ customElements.whenDefined('mux-video').then(function(){
            says "tv GUIDE" without doubling up the "TV". -->
       <div class="guide-wordmark" aria-hidden="true">
         <span>Guide</span>
+        <em class="guide-wordmark-zone">Pacific Time</em>
       </div>
       <!-- Back-to-channel CTA. Classic TV-broadcast phrasing ("we
            now return you to our regularly scheduled programming")
