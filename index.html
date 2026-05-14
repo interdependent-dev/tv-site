@@ -771,6 +771,11 @@ body.no-fs .logo.show{pointer-events:none}
   font-size:clamp(14px,1.6vw,18px);
   letter-spacing:.08em;
   color:#fff;
+  /* Tabular figures so the seconds digits don't shift the layout
+     each tick — proportional Eurostile would otherwise jitter
+     the whole right-aligned cluster. */
+  font-variant-numeric:tabular-nums;
+  font-feature-settings:"tnum";
 }
 @media (orientation:landscape) and (max-height:500px){
   .guide-clock{gap:10px}
@@ -907,8 +912,28 @@ body.no-fs .logo.show{pointer-events:none}
    the wash + the soft blurred channel still come through, just
    enough hint to remind the viewer the channel is live. One cell
    per broadcast hour. */
-.guide-cell{flex:0 0 180px;background:rgba(0,0,0,.35)}
+.guide-cell{flex:0 0 180px;background:rgba(0,0,0,.35);cursor:default}
 .guide-cell.now-col{flex:0 0 240px}
+/* Hover preview — only on mouse devices (touch sticks :hover after
+   a tap). Subtle background lightening + cursor:pointer so cells
+   feel selectable. The JS paired with this updates the description
+   strip below as the cursor moves through the grid. */
+@media (hover: hover){
+  .guide-cell{cursor:pointer}
+  .guide-cell:hover{
+    background:rgba(255,255,255,.07);
+  }
+  .guide-cell:hover .title{
+    color:#fff;
+  }
+  .guide-cell.guide-end-cell:hover{
+    background:rgba(0,0,0,.78);
+  }
+  /* "now" cell stays in its red wash even on hover. */
+  .guide-cell.now:hover{
+    background:linear-gradient(90deg, rgba(255,0,0,.4), rgba(255,0,0,.18));
+  }
+}
 .guide-cell .title{
   font-weight:700;font-size:clamp(11px,1.2vw,13px);
   letter-spacing:.04em;
@@ -1308,6 +1333,25 @@ function fmtClock(d){
   }
   const hh = h24 < 10 ? '0' + h24 : h24;
   return hh + ':' + mm;
+}
+// fmtClockSeconds: like fmtClock but with seconds — used for the
+// TV-Guide masthead clock, which ticks visibly. 12-hour locales:
+// "5:24:07 PM". 24-hour locales: "17:24:07". Tabular-num styling
+// (see .guide-clock .time CSS) keeps the digits from jittering as
+// the seconds advance.
+function fmtClockSeconds(d){
+  const h24 = d.getHours();
+  const m   = d.getMinutes();
+  const s   = d.getSeconds();
+  const mm  = m < 10 ? '0' + m : m;
+  const ss  = s < 10 ? '0' + s : s;
+  if (USE_HOUR12) {
+    const ampm = h24 >= 12 ? 'PM' : 'AM';
+    const h    = h24 % 12 || 12;
+    return h + ':' + mm + ':' + ss + ' ' + ampm;
+  }
+  const hh = h24 < 10 ? '0' + h24 : h24;
+  return hh + ':' + mm + ':' + ss;
 }
 // fmtSlot: column-header form. 12-hour locales: "6:00 A" / "1:00 P"
 // (compact single-letter AM/PM with a space). 24-hour locales:
@@ -1754,9 +1798,11 @@ customElements.whenDefined('mux-video').then(function(){
       }
       // Trailing END-OF-DAY cell — matches the header marker above.
       // Visually closes each day so the table doesn't just stop
-      // mid-air at 8:45p. Subtle, dim, no clickable affordance.
+      // mid-air at 8:45p. data-row carries the row index so hover
+      // can render the right day in the description strip.
       const endCell = document.createElement('div');
       endCell.className = 'guide-cell guide-end-cell';
+      endCell.dataset.row = String(r);
       if (!isToday) endCell.style.opacity = '.65';
       endCell.innerHTML =
         '<div class="title">Off air</div>' +
@@ -1783,7 +1829,7 @@ customElements.whenDefined('mux-video').then(function(){
     const todayDow = now.getDay();
     guideDay.textContent  = DAYS_LONG[todayDow];
     guideDate.textContent = MONTHS[now.getMonth()] + ' ' + now.getDate() + ', ' + now.getFullYear();
-    guideTime.textContent = fmtClock(now);
+    guideTime.textContent = fmtClockSeconds(now);
 
     const col = nowSlotCol(now);
     // Slot rolled over → rebuild grid so the wider column moves.
@@ -1802,15 +1848,64 @@ customElements.whenDefined('mux-video').then(function(){
       if (nowCell) nowCell.classList.add('now');
     }
 
-    // Description strip changes with channel state so users don't
-    // see "TEARS OF STEEL · NOW PLAYING" between airings.
+    renderGuideDesc();
+  }
+
+  // Description strip — re-rendered every clock-tick AND whenever
+  // the hovered cell changes. If the user is hovering a cell in the
+  // schedule, the strip shows that cell's context (show + airing
+  // day/time, or off-air for the end-of-day cell). Otherwise it
+  // reflects the live channel state.
+  let hoveredSlot = null; // {row, col, isOffAir} | null
+
+  function renderGuideDesc(){
+    if (hoveredSlot) {
+      const now0 = new Date();
+      const rowDate = new Date(now0);
+      rowDate.setDate(now0.getDate() + hoveredSlot.row);
+      const dow  = DAYS_SHORT[rowDate.getDay()];
+      const date = MONTHS[rowDate.getMonth()] + ' ' + rowDate.getDate();
+      if (hoveredSlot.isOffAir) {
+        // Hovering the END-of-day cell on any row. Compute the PT
+        // broadcast-end and next-morning-resume times in viewer-
+        // local format, same as the schedule headers.
+        const endTS = ptToUtc(rowDate.getFullYear(),
+          rowDate.getMonth() + 1, rowDate.getDate(),
+          CHANNEL.endHour, 0, 0);
+        const resumeTS = ptToUtc(rowDate.getFullYear(),
+          rowDate.getMonth() + 1, rowDate.getDate() + 1,
+          CHANNEL.startHour, 0, 0);
+        const offStart = fmtSlot(new Date(endTS)).toUpperCase();
+        const offEnd   = fmtSlot(new Date(resumeTS)).toUpperCase();
+        guideDescTitle.textContent = 'OFF AIR';
+        guideDescBody.textContent  =
+          'No programming scheduled overnight from ' + offStart +
+          ' until ' + offEnd + ' the next morning. Browse another ' +
+          'day below.';
+        guideDescTag.textContent   =
+          dow + ' · ' + date + ' · ' + offStart + ' – ' + offEnd;
+        return;
+      }
+      // Regular slot — TEARS OF STEEL plays at the indicated hour.
+      // Compute the slot's local time. Build a Date at the PT hour
+      // (slotForCol returns PT hour:minute) then format in viewer's
+      // local for header-consistent display.
+      const s = slotForCol(hoveredSlot.col);
+      const slotTS = ptToUtc(rowDate.getFullYear(),
+                             rowDate.getMonth() + 1, rowDate.getDate(),
+                             s.hour, s.minute, 0);
+      const slotLocal = fmtSlot(new Date(slotTS)).toUpperCase();
+      guideDescTitle.textContent = SHOW.title;
+      guideDescBody.textContent  = SHOW.description;
+      guideDescTag.textContent   = dow + ' · ' + date + ' · ' + slotLocal;
+      return;
+    }
+
+    // No hover — show the live channel state (the previous default).
     const live = getSlotInfo();
     if (live.offAir) {
       const t = new Date(live.nextOnAir);
       guideDescTitle.textContent = 'CHANNEL OFF AIR';
-      // Use fmtSlot (single-letter A/P) for consistency with the
-      // schedule headers — viewers see the same time idiom every-
-      // where in the guide.
       guideDescBody.textContent  =
         'Programming returns at ' + fmtSlot(t) +
         ' (the next 6:00 A Pacific). See the lineup below for what airs next.';
@@ -1821,14 +1916,9 @@ customElements.whenDefined('mux-video').then(function(){
       guideDescBody.textContent  = SHOW.description;
       guideDescTag.textContent   = 'ON AIR · ' + SHOW.duration;
     } else {
-      // Between-show interlude. Prose stays static — viewers see WHAT
-      // is up next + WHEN it starts (their local time), and the
-      // BACK IN tag below carries the running countdown. One timer
-      // total; the prose doesn't tick.
       const secs = Math.max(0, Math.ceil((live.nextSlotStart - Date.now()) / 1000));
       const mm = String(Math.floor(secs / 60)).padStart(2, '0');
       const ss = String(secs % 60).padStart(2, '0');
-      // fmtSlot for single-letter A/P consistency with the headers.
       const nextAt = fmtSlot(new Date(live.nextSlotStart));
       guideDescTitle.textContent = 'BETWEEN SHOWS';
       guideDescBody.textContent  =
@@ -1866,6 +1956,30 @@ customElements.whenDefined('mux-video').then(function(){
     clearInterval(guideTick);
     guideTick = setInterval(updateGuideClockAndNow, 1000);
   }
+
+  // Hover-to-preview: any schedule cell, on hover, swaps the
+  // description strip to that slot's day / date / time. Event-
+  // delegated on the grid so we don't bind 450+ listeners
+  // (30 days × 15 hours). When the cursor leaves the grid entirely,
+  // hoveredSlot is cleared and the strip reverts to the live channel
+  // state on the next render. Hover styling (background tint) is
+  // gated to (hover: hover) so it doesn't stick on touch.
+  guideGrid.addEventListener('mouseover', function(e){
+    const cell = e.target.closest('.guide-cell');
+    if (!cell || !guideGrid.contains(cell)) return;
+    const isOffAir = cell.classList.contains('guide-end-cell');
+    hoveredSlot = {
+      row: parseInt(cell.dataset.row, 10),
+      col: isOffAir ? -1 : parseInt(cell.dataset.col, 10),
+      isOffAir: isOffAir,
+    };
+    renderGuideDesc();
+  });
+  guideGrid.addEventListener('mouseleave', function(){
+    hoveredSlot = null;
+    renderGuideDesc();
+  });
+
   function closeGuide(){
     guideEl.classList.remove('on');
     clearInterval(guideTick); guideTick = 0;
