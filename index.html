@@ -1529,9 +1529,19 @@ function fmtClockSeconds(d){
 // fmtSlot: column-header form. 12-hour locales: "6:00 A" / "1:00 P"
 // (compact single-letter AM/PM with a space). 24-hour locales:
 // "06:00" / "18:00". Headers read naturally in the viewer's idiom.
+//
+// IMPORTANT: this formats the Date's PT components, NOT the viewer's
+// local hour. The channel is PT-anchored — every slot in the
+// schedule is a Pacific Time moment. A viewer in Eastern (or
+// Tokyo, or London) should still see "2:45 P" for the 2:45 PM PT
+// slot, not their local conversion of it. Using Date.getHours()
+// here would render PT 2:45 PM as "5:45 P" in an ET browser, which
+// was the bug. The viewer's wall clock continues to display in
+// their local zone via fmtClock / fmtClockSeconds.
 function fmtSlot(d){
-  const h24 = d.getHours();
-  const m   = d.getMinutes();
+  const pt  = ptParts(d.getTime());
+  const h24 = pt.hour;
+  const m   = pt.minute;
   const mm  = m < 10 ? '0' + m : m;
   if (USE_HOUR12) {
     const ap = h24 >= 12 ? 'P' : 'A';
