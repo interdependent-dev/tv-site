@@ -1,0 +1,892 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>INTERDEPENDENT.tv — Guide preview</title>
+<style>
+/* ── Fonts (same as production) ───────────────────────────────────── */
+@font-face{
+  font-family:"Eurostile";
+  src:url("fonts/EurostileNextPro-Regular.ttf") format("truetype");
+  font-weight:400;font-style:normal;font-display:swap;
+}
+@font-face{
+  font-family:"Eurostile";
+  src:url("fonts/EurostileNextPro-Bold.ttf") format("truetype");
+  font-weight:700;font-style:normal;font-display:swap;
+}
+@font-face{
+  font-family:"Eurostile Wide";
+  src:url("fonts/EurostileNextPro-WideBold.ttf") format("truetype");
+  font-weight:700;font-style:normal;font-display:swap;
+}
+
+*{margin:0;box-sizing:border-box}
+html,body{
+  height:100%;width:100%;
+  background:#000;color:#fff;
+  font-family:"Eurostile",-apple-system,BlinkMacSystemFont,sans-serif;
+  -webkit-font-smoothing:antialiased;
+  -webkit-tap-highlight-color:transparent;
+  overflow:hidden;
+  overscroll-behavior:none;
+}
+
+/* ── The guide surface (always visible in this preview) ───────────── */
+#guide{
+  position:fixed;inset:0;
+  background:rgba(0,0,0,.82);
+  backdrop-filter:blur(40px) saturate(.5);
+  -webkit-backdrop-filter:blur(40px) saturate(.5);
+  display:flex;
+  flex-direction:column;
+  padding:clamp(16px,3.5vh,32px) clamp(16px,3vw,40px);
+  font-family:"Eurostile",sans-serif;
+  overflow:hidden;
+}
+
+/* ── Masthead ─────────────────────────────────────────────────────── */
+.guide-mast{
+  display:flex;align-items:center;justify-content:space-between;
+  padding-bottom:clamp(8px,1.4vh,14px);
+  border-bottom:1px solid rgba(255,255,255,.5);
+  gap:16px;flex-wrap:wrap;
+}
+.guide-mast-left{
+  display:flex;align-items:center;
+  gap:clamp(14px,2.5vw,28px);
+  flex-wrap:wrap;
+}
+.guide-logo{display:flex;align-items:center;line-height:0}
+.guide-logo svg{
+  width:clamp(110px,12vw,160px);height:auto;display:block;
+  filter:drop-shadow(0 0 18px rgba(180,200,255,.18));
+}
+.guide-wordmark{display:flex;flex-direction:column;align-items:flex-start;line-height:1}
+.guide-wordmark span{
+  font-family:"Eurostile Wide","Eurostile",sans-serif;
+  font-weight:700;font-size:clamp(11px,1.1vw,13px);
+  letter-spacing:.32em;text-transform:uppercase;
+  color:rgba(255,255,255,.95);padding-bottom:5px;
+  border-bottom:2px solid #ff0000;
+}
+.guide-back{
+  appearance:none;background:rgba(0,0,0,.45);
+  backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,.4);
+  color:#fff;cursor:pointer;
+  font:700 11px/1.1 "Eurostile",sans-serif;
+  letter-spacing:.24em;text-transform:uppercase;
+  padding:10px 18px 9px;border-radius:999px;white-space:nowrap;
+  transition:background .15s ease, border-color .15s ease, transform .15s ease;
+}
+@media (hover: hover){
+  .guide-back:hover{
+    background:rgba(255,255,255,.12);border-color:#fff;
+    transform:scale(1.03);
+  }
+}
+.guide-clock{
+  display:flex;flex-direction:row;align-items:baseline;
+  gap:14px;flex-wrap:nowrap;
+  text-align:right;
+}
+.guide-clock > *{position:relative}
+.guide-clock > *:not(:last-child)::after{
+  content:"·";position:absolute;right:-10px;top:0;
+  opacity:.4;pointer-events:none;
+}
+.guide-clock .day{
+  font-weight:700;font-size:clamp(12px,1.2vw,14px);
+  letter-spacing:.26em;text-transform:uppercase;
+  opacity:.95;
+}
+.guide-clock .date{
+  font-weight:400;font-size:clamp(11px,1.1vw,13px);
+  letter-spacing:.18em;text-transform:uppercase;
+  opacity:.7;
+}
+.guide-clock .time{
+  font-weight:700;font-size:clamp(14px,1.6vw,18px);
+  letter-spacing:.08em;color:#fff;
+  font-variant-numeric:tabular-nums;
+  font-feature-settings:"tnum";
+}
+
+/* ── COMING ATTRACTIONS banner ────────────────────────────────────── */
+.coming-banner{
+  margin-top:clamp(10px,2vh,18px);
+  border:1px solid rgba(255,255,255,.4);
+  padding:14px 20px;
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  gap:24px;align-items:center;
+  background:linear-gradient(90deg, rgba(255,0,0,.10), rgba(0,0,0,.4));
+  cursor:pointer;
+  transition:border-color .15s ease, background .15s ease;
+}
+@media (hover: hover){
+  .coming-banner:hover{border-color:#fff}
+}
+.coming-banner .label{
+  font:700 11px/1 "Eurostile",sans-serif;
+  letter-spacing:.32em;text-transform:uppercase;
+  color:#ff5a5a;white-space:nowrap;
+}
+.coming-banner .headline{
+  font-family:"Eurostile Wide","Eurostile",sans-serif;
+  font-weight:700;font-size:clamp(16px,1.8vw,22px);
+  letter-spacing:.04em;text-transform:uppercase;
+}
+.coming-banner .meta{
+  font-size:11px;letter-spacing:.22em;text-transform:uppercase;
+  color:rgba(255,255,255,.7);margin-top:4px;
+}
+.coming-banner .cta{
+  appearance:none;border:1px solid #fff;background:transparent;
+  color:#fff;cursor:pointer;
+  font:700 11px/1 "Eurostile",sans-serif;
+  letter-spacing:.24em;text-transform:uppercase;
+  padding:10px 16px 9px;border-radius:999px;
+}
+
+/* ── Featured "What's On" description strip ───────────────────────── */
+.guide-desc{
+  margin-top:clamp(10px,2vh,18px);
+  border:1px solid rgba(255,255,255,.5);
+  padding:clamp(10px,1.6vh,16px) clamp(12px,1.4vw,20px);
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:18px;align-items:center;
+}
+.guide-desc .desc-stamp{
+  font:700 10px/1 "Eurostile",sans-serif;
+  letter-spacing:.32em;text-transform:uppercase;
+  color:#ff5a5a;margin-bottom:6px;
+}
+.guide-desc .desc-title{
+  font-family:"Eurostile Wide","Eurostile",sans-serif;
+  font-weight:700;letter-spacing:.04em;
+  font-size:clamp(16px,2vw,22px);text-transform:uppercase;
+}
+.guide-desc .desc-tagline{
+  font-style:italic;font-size:13px;color:rgba(255,255,255,.78);
+  margin-top:4px;letter-spacing:.02em;
+}
+.guide-desc .desc-body{
+  font-size:clamp(11px,1.2vw,14px);
+  opacity:.75;margin-top:6px;line-height:1.45;max-width:62ch;
+}
+.guide-desc .desc-tag{
+  font-size:clamp(9px,1vw,11px);
+  letter-spacing:.32em;text-transform:uppercase;
+  border:1px solid rgba(255,255,255,.5);
+  padding:8px 12px 6px;
+  opacity:.8;white-space:nowrap;
+}
+
+/* ── Scrolling grid ───────────────────────────────────────────────── */
+.guide-grid-wrap{
+  flex:1;
+  margin-top:clamp(10px,2vh,18px);
+  overflow:auto;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  border:1px solid rgba(255,255,255,.35);
+  border-radius:2px;
+  position:relative;
+}
+.guide-grid{position:relative;min-width:max-content}
+.guide-row{display:flex;min-width:max-content}
+
+/* Section row */
+.guide-row-sections{position:sticky;top:0;z-index:4}
+.guide-section{
+  background:rgba(8,8,12,.92);
+  color:rgba(255,255,255,.7);
+  font:700 clamp(10px,1.1vw,12px)/1 "Eurostile",sans-serif;
+  letter-spacing:.32em;text-transform:uppercase;
+  padding:clamp(6px,1.2vh,12px) clamp(8px,1.2vw,16px);
+  border-right:1px solid rgba(255,255,255,.25);
+  border-bottom:1px solid rgba(255,255,255,.35);
+  display:flex;align-items:center;box-sizing:border-box;
+}
+.guide-section-morning  {flex:0 0 calc(6 * var(--hour-w))}
+.guide-section-afternoon{flex:0 0 calc(6 * var(--hour-w))}
+.guide-section-evening  {flex:0 0 calc(3 * var(--hour-w))}
+.guide-section-corner{
+  flex:0 0 clamp(118px,13vw,168px);
+  position:sticky;left:0;top:0;
+  background:rgba(8,8,12,.97);
+  border-right:1px solid rgba(255,255,255,.25);
+  border-bottom:1px solid rgba(255,255,255,.35);
+  z-index:5;
+}
+.guide-section-end{
+  flex:0 0 clamp(140px,16vw,200px);
+  background:rgba(0,0,0,.65);
+  border-bottom:1px solid rgba(255,255,255,.35);
+}
+
+/* Hour header row */
+.guide-row-head{position:sticky;top:0;z-index:3}
+.guide-cell,
+.guide-header,
+.guide-row-label,
+.guide-corner{
+  border-right:1px solid rgba(255,255,255,.25);
+  border-bottom:1px solid rgba(255,255,255,.25);
+  padding:clamp(8px,1.4vh,14px) clamp(8px,1.2vw,16px);
+  font-size:clamp(11px,1.2vw,13px);
+  display:flex;flex-direction:column;justify-content:center;
+  min-height:46px;
+  box-sizing:border-box;
+}
+.guide-header{
+  flex:0 0 var(--hour-w);
+  background:rgba(8,8,12,.92);
+  text-transform:uppercase;letter-spacing:.18em;
+  font-weight:700;font-size:clamp(10px,1.1vw,12px);
+  opacity:.95;
+}
+.guide-row-label{
+  flex:0 0 clamp(118px,13vw,168px);
+  position:sticky;left:0;z-index:2;
+  background:rgba(8,8,12,.94);
+  font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+}
+.guide-corner{
+  flex:0 0 clamp(118px,13vw,168px);
+  position:sticky;left:0;top:0;z-index:4;
+  background:rgba(8,8,12,.97);
+}
+.guide-row-label.today{
+  background:
+    linear-gradient(rgba(255,0,0,.22), rgba(255,0,0,.22)),
+    rgba(8,8,12,.94);
+  color:#ff5a5a;
+}
+.guide-row-label .label-dow{font-size:clamp(11px,1.2vw,13px)}
+.guide-row-label .label-date{
+  font-size:clamp(9px,1vw,10px);
+  font-weight:400;letter-spacing:.08em;
+  opacity:.7;margin-top:3px;text-transform:uppercase;
+}
+.guide-row-label.today .label-date{opacity:.85}
+
+/* Cells (the new sub-brand styling) */
+.guide-cell{
+  flex:0 0 var(--hour-w);
+  background:rgba(0,0,0,.35);
+  cursor:default;
+  position:relative;
+}
+@media (hover: hover){
+  .guide-cell{cursor:pointer}
+  .guide-cell:hover{background:rgba(255,255,255,.07)}
+  .guide-cell:hover .title{color:#fff}
+}
+.guide-cell .sub-brand{
+  font:700 9px/1 "Eurostile",sans-serif;
+  letter-spacing:.26em;text-transform:uppercase;
+  color:#ff5a5a;
+  margin-bottom:4px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.guide-cell .title{
+  font-weight:700;font-size:clamp(11px,1.2vw,13px);
+  letter-spacing:.04em;text-transform:uppercase;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.guide-cell .meta{
+  font-size:clamp(9px,1vw,11px);
+  opacity:.55;margin-top:3px;letter-spacing:.06em;
+  text-transform:uppercase;
+}
+.guide-cell.now{
+  background:linear-gradient(90deg, rgba(255,0,0,.32), rgba(255,0,0,.12));
+  color:#fff;
+  box-shadow:inset 0 0 0 2px #ff0000;
+}
+.guide-cell.now .title{color:#fff}
+.guide-cell .badge{
+  position:absolute;top:6px;right:6px;
+  font:700 8px/1 "Eurostile",sans-serif;
+  letter-spacing:.18em;text-transform:uppercase;
+  background:#ff0000;color:#fff;padding:3px 5px 2px;
+  border-radius:2px;
+}
+.guide-cell.section-end,
+.guide-header.section-end{border-right:2px solid rgba(255,255,255,.45)}
+
+/* End-of-day cell */
+.guide-cell.guide-end-cell,
+.guide-header.guide-end-cell{
+  flex:0 0 clamp(140px,16vw,200px);
+  background:rgba(0,0,0,.65);
+  border-right:none;
+}
+.guide-header.guide-end-cell{
+  color:rgba(255,255,255,.55);
+  align-items:flex-start;gap:2px;
+  padding-top:clamp(6px,1vh,10px);
+}
+.guide-header.guide-end-cell .end-time{
+  font-size:clamp(10px,1.1vw,12px);
+  letter-spacing:.18em;color:rgba(255,255,255,.95);font-weight:700;
+  margin-left:calc(-1 * clamp(8px,1.2vw,16px));padding-left:0;
+}
+.guide-header.guide-end-cell .end-label{
+  font-size:clamp(9px,1vw,11px);letter-spacing:.32em;
+  color:rgba(255,255,255,.6);font-weight:700;
+}
+.guide-cell.guide-end-cell .title{
+  font-weight:700;color:rgba(255,255,255,.75);
+  text-transform:uppercase;letter-spacing:.18em;
+  font-size:clamp(10px,1.1vw,12px);
+}
+.guide-cell.guide-end-cell .meta{
+  opacity:.5;text-transform:none;letter-spacing:.06em;
+}
+
+/* ── Magazine boilerplate footer ──────────────────────────────────── */
+.guide-boilerplate{
+  margin-top:clamp(8px,1.4vh,14px);
+  padding:10px 8px 4px;
+  font-size:10px;
+  letter-spacing:.06em;
+  color:rgba(255,255,255,.4);
+  text-align:center;
+  border-top:1px solid rgba(255,255,255,.15);
+  line-height:1.5;
+}
+
+/* ── Hour-cell width variable ─────────────────────────────────────── */
+:root{
+  --hour-w:180px;
+}
+@media (max-width:640px){:root{--hour-w:140px}}
+@media (orientation:landscape) and (max-height:500px){:root{--hour-w:120px}}
+
+
+/* ─────────────────────────────────────────────────────────────────── */
+/* ── DETAIL SHEET (the magazine-spread modal) ─────────────────────── */
+/* ─────────────────────────────────────────────────────────────────── */
+.detail-backdrop{
+  position:fixed;inset:0;z-index:50;
+  background:rgba(0,0,0,.55);
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  opacity:0;pointer-events:none;
+  transition:opacity .25s ease;
+}
+.detail-backdrop.open{opacity:1;pointer-events:auto}
+.detail-sheet{
+  position:fixed;
+  top:0;right:0;bottom:0;
+  width:60%;max-width:760px;
+  z-index:51;
+  background:rgba(0,0,0,.94);
+  border-left:1px solid rgba(255,255,255,.3);
+  transform:translateX(100%);
+  transition:transform .35s cubic-bezier(.2,.7,.2,1);
+  overflow-y:auto;
+  padding:32px 36px 40px;
+  display:flex;flex-direction:column;gap:18px;
+}
+.detail-sheet.open{transform:translateX(0)}
+@media (max-width:768px){
+  .detail-sheet{
+    width:100%;max-width:none;
+    top:auto;left:0;
+    height:90vh;
+    border-left:none;
+    border-top:1px solid rgba(255,255,255,.3);
+    transform:translateY(100%);
+  }
+  .detail-sheet.open{transform:translateY(0)}
+}
+.detail-sheet .close-row{
+  display:flex;align-items:center;justify-content:space-between;
+}
+.detail-sheet .back-pill{
+  appearance:none;background:transparent;
+  border:1px solid rgba(255,255,255,.4);color:#fff;cursor:pointer;
+  font:700 11px/1 "Eurostile",sans-serif;
+  letter-spacing:.24em;text-transform:uppercase;
+  padding:9px 14px 8px;border-radius:999px;
+}
+.detail-sheet .stamp{
+  font-family:"Eurostile Wide","Eurostile",sans-serif;
+  font-weight:700;font-size:14px;letter-spacing:.32em;text-transform:uppercase;
+  color:#fff;display:inline-block;padding-bottom:6px;
+  border-bottom:2px solid #ff0000;align-self:flex-start;
+}
+.detail-sheet .title{
+  font-family:"Eurostile Wide","Eurostile",sans-serif;
+  font-weight:700;font-size:clamp(28px,4vw,46px);
+  letter-spacing:.02em;text-transform:uppercase;line-height:1.05;
+}
+.detail-sheet .tagline{
+  font-style:italic;font-size:clamp(14px,1.6vw,18px);
+  color:#ff5a5a;letter-spacing:.04em;line-height:1.4;
+}
+.detail-sheet .hero{
+  width:100%;aspect-ratio:16/9;
+  background:linear-gradient(135deg,#1a0a0a 0%, #3a0808 40%, #0a0a0a 100%);
+  border:1px solid rgba(255,255,255,.2);
+  position:relative;display:grid;place-items:center;
+  color:rgba(255,255,255,.3);font-size:11px;letter-spacing:.4em;
+}
+.detail-sheet .hero::before{
+  content:"";position:absolute;inset:0;
+  background:radial-gradient(circle at 30% 40%, rgba(255,0,0,.18), transparent 60%);
+}
+.detail-sheet .synopsis{
+  font-size:15px;line-height:1.55;color:rgba(255,255,255,.88);
+}
+.detail-sheet .synopsis::first-letter{
+  font-family:"Eurostile Wide","Eurostile",sans-serif;
+  font-size:48px;float:left;line-height:.9;
+  padding:4px 8px 0 0;color:#ff0000;
+}
+.detail-sheet .meta-stripe{
+  font:700 11px/1.4 "Eurostile",sans-serif;
+  letter-spacing:.24em;text-transform:uppercase;
+  color:rgba(255,255,255,.7);
+  border-top:1px solid rgba(255,255,255,.25);
+  border-bottom:1px solid rgba(255,255,255,.25);
+  padding:12px 0;
+  display:flex;flex-wrap:wrap;gap:14px;
+}
+.detail-sheet .meta-stripe .live-pip{
+  display:inline-flex;align-items:center;gap:6px;color:#ff0000;
+}
+.detail-sheet .meta-stripe .live-pip::before{
+  content:"";width:8px;height:8px;border-radius:50%;background:#ff0000;
+  box-shadow:0 0 8px rgba(255,0,0,.6);
+}
+.detail-sheet .airings{
+  font-size:13px;color:rgba(255,255,255,.7);line-height:1.6;
+}
+.detail-sheet .airings strong{
+  color:#fff;letter-spacing:.06em;text-transform:uppercase;
+  font-weight:700;font-size:11px;display:block;margin-bottom:4px;
+}
+.detail-sheet .actions{
+  display:flex;flex-wrap:wrap;gap:10px;
+}
+.detail-sheet .btn{
+  appearance:none;border:1px solid #fff;cursor:pointer;
+  font:700 11px/1 "Eurostile",sans-serif;
+  letter-spacing:.24em;text-transform:uppercase;
+  padding:13px 20px 12px;border-radius:999px;
+  text-decoration:none;display:inline-block;
+}
+.detail-sheet .btn-primary{
+  background:#ff0000;border-color:#ff0000;color:#fff;
+}
+.detail-sheet .btn-ghost{background:transparent;color:#fff}
+.detail-sheet .credits{
+  font-size:13px;color:rgba(255,255,255,.7);line-height:1.6;
+  border-top:1px solid rgba(255,255,255,.25);padding-top:14px;
+}
+.detail-sheet .credits strong{
+  color:#fff;letter-spacing:.06em;text-transform:uppercase;
+  font-weight:700;font-size:11px;display:block;margin-bottom:6px;
+}
+
+</style>
+</head>
+<body>
+
+<div id="guide">
+
+  <!-- ── Masthead ──────────────────────────────────────────────────── -->
+  <div class="guide-mast">
+    <div class="guide-mast-left">
+      <div class="guide-logo">
+        <svg viewBox="-1 -1 394 238" fill-rule="evenodd" role="img" aria-label="INTERDEPENDENT TV"><path fill="#fff" d="M72.4265993,181.599151 C66.4590298,181.599151 61.6302421,176.771465 61.6302421,170.837972 C61.6302421,164.895874 66.4590298,160.07249 72.4265993,160.07249 C78.3985826,160.07249 83.2229564,164.895874 83.2229564,170.837972 C83.2229564,176.771465 78.3985826,181.599151 72.4265993,181.599151 M91.860925,171.461871 C91.860925,160.132729 83.1567482,151.462687 73.0577845,151.462687 C61.6964503,151.462687 52.9966875,160.132729 52.9966875,171.461871 C52.9966875,181.538913 61.6964503,190.208955 73.0577845,190.208955 C83.1567482,190.208955 91.860925,181.538913 91.860925,171.461871M24.7317875,73.9701493 C24.7317875,114.823555 57.9498633,147.940299 99.5404822,147.940299 C139.904437,147.940299 173.122512,114.823555 173.122512,73.9701493 C173.122512,33.1167433 139.904437,0 99.5404822,0 C57.9498633,0 24.7317875,33.1167433 24.7317875,73.9701493 ZM127.194217,164.849451 C123.67483,164.849451 120.831581,162.010133 120.831581,158.511688 C120.831581,155.009017 123.67483,152.169699 127.194217,152.169699 C130.70927,152.169699 133.552519,155.009017 133.552519,158.511688 C133.552519,162.010133 130.70927,164.849451 127.194217,164.849451 M127.194217,147.940299 C121.338684,147.940299 116.592712,152.66827 116.592712,158.511688 C116.592712,164.346655 121.338684,169.074627 127.194217,169.074627 C133.045415,169.074627 137.791387,164.346655 137.791387,158.511688 C137.791387,152.66827 133.045415,147.940299 127.194217,147.940299M107.7622,183.164179 C102.884091,183.164179 98.92715,187.105962 98.92715,191.972361 C98.92715,196.834336 102.884091,200.776119 107.7622,200.776119 C112.640309,200.776119 116.592712,196.834336 116.592712,191.972361 C116.592712,187.105962 112.640309,183.164179 107.7622,183.164179M88.3256373,214.865672 C82.4745768,214.865672 77.728475,219.595655 77.728475,225.432836 C77.728475,231.270017 82.4745768,236 88.3256373,236 C94.1810481,236 98.92715,231.270017 98.92715,225.432836 C98.92715,219.595655 94.1810481,214.865672 88.3256373,214.865672M17.6655625,116.238806 C7.90718362,116.238806 0,124.123696 0,133.852952 C0,143.577797 7.90718362,151.462687 17.6655625,151.462687 C27.4239414,151.462687 35.331125,143.577797 35.331125,133.852952 C35.331125,124.123696 27.4239414,116.238806 17.6655625,116.238806M180.186475,112.716418 C170.433871,112.716418 162.523175,120.601308 162.523175,130.330564 C162.523175,140.055409 170.433871,147.940299 180.186475,147.940299 C189.943604,147.940299 197.8543,140.055409 197.8543,130.330564 C197.8543,120.601308 189.943604,112.716418 180.186475,112.716418M239.894118,45.170986 L282.776959,45.1709859 L282.776959,63.8942535 L239.894118,63.8942535 L239.894118,104.40507 C239.894118,124.823247 240.972673,126.780451 251.145666,126.780451 L253.001174,126.780451 C262.953117,126.780451 264.046554,124.770747 264.046554,106.053746 L264.046554,99.9894648 L284.426299,99.9894648 L284.426299,110.587606 C284.426299,139.540191 277.772511,146.534141 250.527164,146.534141 L247.228483,146.534141 C220.272791,146.534141 214.77252,139.9545 214.77252,106.672 L214.77252,63.8942535 L201.165465,63.8942535 L201.165465,45.1709859 L214.77252,45.170986 L214.77252,19.4104225 L239.894118,19.4104225 ZM318.496605,45.5306504 L341.82905,125.320038 L365.161495,45.5306504 L365.26667,45.1709859 L365.641397,45.1709859 L391,45.170986 L391.693801,45.170986 L391.474322,45.8291572 L358.487522,144.74972 L358.373533,145.091549 L324.459897,145.091549 L324.345908,144.74972 L291.359107,45.8291571 L291.139628,45.1709859 L318.39143,45.1709859 Z"/></svg>
+      </div>
+      <div class="guide-wordmark"><span>Guide</span></div>
+      <button class="guide-back" type="button">Back to our regularly scheduled programming</button>
+    </div>
+    <div class="guide-clock">
+      <div class="day" id="guideDay">—</div>
+      <div class="date" id="guideDate">—</div>
+      <div class="time" id="guideTime">—:—:—</div>
+    </div>
+  </div>
+
+  <!-- ── COMING ATTRACTIONS banner ─────────────────────────────────── -->
+  <div class="coming-banner" id="comingBanner">
+    <span class="label">Coming Attractions</span>
+    <div>
+      <div class="headline">Opening Night Conversation</div>
+      <div class="meta">Standing Room Only® · Live · THU JUN 12 · 7:00 P</div>
+    </div>
+    <button class="cta">RSVP</button>
+  </div>
+
+  <!-- ── Featured / What's On strip ────────────────────────────────── -->
+  <div class="guide-desc">
+    <div>
+      <div class="desc-stamp" id="descStamp">Open Source Theater</div>
+      <div class="desc-title" id="descTitle">Tears of Steel — Sci-fi Short</div>
+      <div class="desc-tagline" id="descTagline">"Machines wrote the future. Humans ripped it back."</div>
+      <div class="desc-body" id="descBody">Open-source 4K sci-fi short — a fractured science team races to undo a future that was never theirs to write. Directed by Ian Hubert · Blender Foundation, 2012.</div>
+    </div>
+    <div class="desc-tag" id="descTag">On Air · (12 min.) (2012)</div>
+  </div>
+
+  <!-- ── Schedule grid ─────────────────────────────────────────────── -->
+  <div class="guide-grid-wrap" id="gridWrap">
+    <div class="guide-grid" id="guideGrid"></div>
+  </div>
+
+  <!-- ── Magazine boilerplate ──────────────────────────────────────── -->
+  <div class="guide-boilerplate">
+    INTERDEPENDENT.tv · Programming in Pacific Time unless noted ·
+    Captioning available where indicated · Live events at Plots IRL with parallel stream ·
+    © 2026 INTERDEPENDENT Ventures
+  </div>
+
+</div>
+
+<!-- ── DETAIL SHEET ─────────────────────────────────────────────────── -->
+<div class="detail-backdrop" id="detailBackdrop"></div>
+<div class="detail-sheet" id="detailSheet" role="dialog" aria-modal="true" aria-label="Show detail">
+  <div class="close-row">
+    <button class="back-pill" id="detailBack" type="button">← Back to guide</button>
+  </div>
+  <span class="stamp" id="dsStamp">Standing Room Only®</span>
+  <h1 class="title" id="dsTitle">Opening Night Conversation</h1>
+  <p class="tagline" id="dsTagline">"Live. In the room. Or on your screen."</p>
+  <div class="hero" id="dsHero">HERO IMAGE / STILL FROM THE EVENT</div>
+  <p class="synopsis" id="dsSynopsis"></p>
+  <div class="meta-stripe" id="dsMeta"></div>
+  <div class="airings" id="dsAirings"><strong>Airings</strong><span id="dsAiringsText"></span></div>
+  <div class="actions" id="dsActions"></div>
+  <div class="credits" id="dsCredits"></div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────
+// MOCK LINEUP — sample shows across the sub-brand taxonomy
+// ─────────────────────────────────────────────────────────────────────
+const LINEUP = {
+  tearsOfSteel: {
+    subBrand: 'Open Source Theater',
+    title: 'Tears of Steel — Sci-fi Short',
+    meta: '(12 min.) (2012)',
+    tagline: '"Machines wrote the future. Humans ripped it back."',
+    synopsis: 'A fractured science team in a near-future Amsterdam races to undo a robot uprising they kicked off themselves. Open-source 4K filmmaking from the Blender Foundation — a benchmark for what independent visual storytelling can achieve when the tools are free.',
+    metaItems: ['(12 min.)', '(2012)', 'NR', 'Captioned'],
+    airings: 'THU MAY 14; multiple slots · FRI MAY 15; 9:00 A, 5:00 P · SAT MAY 16; 7:00 P',
+    credits: 'Directed by Ian Hubert · Produced by the Blender Foundation · Cinematography by Ton Roosendaal',
+    isLive: false,
+  },
+  sintel: {
+    subBrand: 'Open Source Theater',
+    title: 'Sintel — Animation',
+    meta: '(15 min.) (2010)',
+    tagline: '"She raised a dragon. She lost a dragon. She is going to find him."',
+    synopsis: 'A young woman traverses a brutal landscape in search of her lost dragon companion. Another Blender Foundation showpiece — a fully open-source animation that quietly redefined what a small team could ship.',
+    metaItems: ['(15 min.)', '(2010)', 'NR', 'Captioned'],
+    airings: 'FRI MAY 15; 4:00 P · MON MAY 18; 2:00 P · WED MAY 20; 8:00 P',
+    credits: 'Directed by Colin Levy · Produced by the Blender Foundation',
+    isLive: false,
+  },
+  openingNight: {
+    subBrand: 'Standing Room Only®',
+    title: 'Opening Night Conversation',
+    meta: '(90 min.) · Live · 7:00 P',
+    tagline: '"Live. In the room. Or on your screen."',
+    synopsis: 'A live conversation with the directors of TEARS OF STEEL, broadcast from the venue floor in San Francisco. Limited seats in the room — unlimited seats on the stream. Audience Q&A from both rooms. The whole evening is filmed for the archive and rebroadcast the next morning.',
+    metaItems: ['(90 min.)', '(2026)', 'NR', 'LIVE', 'Captioned'],
+    airings: 'THU JUN 12; 7:00 P (Live) · FRI JUN 13; 11:00 A (Encore) · SUN JUN 15; 6:00 P (Encore)',
+    credits: 'Hosted by INTERDEPENDENT.tv · In conversation with Ian Hubert, Ton Roosendaal',
+    isLive: true,
+    ticketUrl: 'https://plots.com/events/opening-night',
+    streamUrl: 'https://interdependent.tv/live/opening-night',
+    badge: 'Live',
+  },
+  theProject: {
+    subBrand: 'Avant-Première',
+    title: 'The Project (Cast & Crew Cut)',
+    meta: '(78 min.) · Invite',
+    tagline: '"Before the world sees it."',
+    synopsis: 'Industry + press screening of a feature in its final cut — one week ahead of the public premiere. By invitation only; standing room at the back.',
+    metaItems: ['(78 min.)', '(2026)', 'NR', 'INVITE-ONLY'],
+    airings: 'THU MAY 14; 8:00 P (Avant-première)',
+    credits: 'Directed by …',
+    isLive: false,
+    badge: 'Premiere',
+  },
+  onLocation: {
+    subBrand: 'On Location',
+    title: 'Behind the Scenes — Set Day 14',
+    meta: '(45 min.) · Live',
+    tagline: '"Where the work actually happens."',
+    synopsis: 'Live from the set of an INTERDEPENDENT production. Crew at work, reset breaks, between-takes interviews. Watch a feature get made in real time.',
+    metaItems: ['(45 min.)', '(2026)', 'NR', 'LIVE'],
+    airings: 'EVERY WEEKDAY; 6:00 A (Pacific) · Encores nightly',
+    credits: 'Produced by INTERDEPENDENT.tv',
+    isLive: true,
+  },
+  offAir: {
+    subBrand: 'Off Air',
+    title: 'Off Air',
+    meta: 'Resumes 6:00 A',
+    tagline: '"The lights stay on. The picture rests."',
+    synopsis: 'No programming scheduled overnight. The channel returns at 6:00 A Pacific. In the meantime — browse the next day\'s lineup below.',
+    metaItems: ['9:00 P – 6:00 A', 'NR'],
+    airings: 'Every night · 9:00 P to 6:00 A Pacific',
+    credits: '',
+    isLive: false,
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────
+// SCHEDULE — assigns a LINEUP key to (row, col) tuples. Anything not
+// listed defaults to TearsOfSteel (the channel's "always on" show).
+// row 0 = today, col 0 = 6:00 A PT.
+// ─────────────────────────────────────────────────────────────────────
+const SCHEDULE = {
+  // Today
+  '0,9':  'sintel',         // today 3 PM
+  '0,12': 'openingNight',   // today 6 PM (live)
+  '0,13': 'theProject',     // today 7 PM (premiere)
+  '0,14': 'onLocation',     // today 8 PM (live)
+  // Tomorrow
+  '1,2':  'sintel',         // tomorrow 8 AM
+  '1,12': 'openingNight',
+  // Saturday
+  '2,13': 'theProject',
+  '2,14': 'sintel',
+};
+
+// ─────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────
+const DAYS_LONG  = ['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'];
+const MONTHS     = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+const SLOTS      = 15;          // 6 AM through 8 PM
+const ROWS       = 30;
+const SECTION_END = new Set([5, 11]);
+
+function fmtHour(hour24){
+  const ampm = hour24 >= 12 ? 'P' : 'A';
+  const h = hour24 % 12 || 12;
+  return h + ':00 ' + ampm;
+}
+function fmtClockSeconds(d){
+  let h = d.getHours();
+  const m = d.getMinutes(), s = d.getSeconds();
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  const mm = m < 10 ? '0' + m : m;
+  const ss = s < 10 ? '0' + s : s;
+  return h + ':' + mm + ':' + ss + ' ' + ampm;
+}
+function programFor(row, col){
+  return LINEUP[SCHEDULE[row + ',' + col] || 'tearsOfSteel'];
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Build the schedule grid
+// ─────────────────────────────────────────────────────────────────────
+function buildGrid(){
+  const grid = document.getElementById('guideGrid');
+  grid.innerHTML = '';
+
+  // Section row
+  const secRow = document.createElement('div');
+  secRow.className = 'guide-row guide-row-sections';
+  secRow.innerHTML =
+    '<div class="guide-section-corner"></div>' +
+    '<div class="guide-section guide-section-morning">Morning</div>' +
+    '<div class="guide-section guide-section-afternoon">Afternoon</div>' +
+    '<div class="guide-section guide-section-evening">Evening</div>' +
+    '<div class="guide-section-end"></div>';
+  grid.appendChild(secRow);
+
+  // Hour-header row
+  const headRow = document.createElement('div');
+  headRow.className = 'guide-row guide-row-head';
+  let headHTML = '<div class="guide-corner"></div>';
+  for (let c = 0; c < SLOTS; c++) {
+    headHTML += '<div class="guide-header' + (SECTION_END.has(c) ? ' section-end' : '') + '">' + fmtHour(6 + c) + '</div>';
+  }
+  headHTML += '<div class="guide-header guide-end-cell"><div class="end-time">9:00 P</div><div class="end-label">Off Air</div></div>';
+  headRow.innerHTML = headHTML;
+  grid.appendChild(headRow);
+
+  // Day rows
+  const now = new Date();
+  for (let r = 0; r < ROWS; r++) {
+    const date = new Date(now);
+    date.setDate(now.getDate() + r);
+    const isToday = r === 0;
+
+    const row = document.createElement('div');
+    row.className = 'guide-row';
+
+    // Day label
+    const label = document.createElement('div');
+    label.className = 'guide-row-label' + (isToday ? ' today' : '');
+    label.innerHTML =
+      '<div class="label-dow">' + DAYS_LONG[date.getDay()] + '</div>' +
+      '<div class="label-date">' + MONTHS[date.getMonth()] + ' ' + date.getDate() + '</div>';
+    row.appendChild(label);
+
+    // Hour cells
+    for (let c = 0; c < SLOTS; c++) {
+      const prog = programFor(r, c);
+      const cell = document.createElement('div');
+      cell.className = 'guide-cell' +
+        (SECTION_END.has(c) ? ' section-end' : '') +
+        // Mark "now" — anything on today at the 8 AM..hour roughly
+        (isToday && c === now.getHours() - 6 ? ' now' : '');
+      cell.dataset.programId = SCHEDULE[r + ',' + c] || 'tearsOfSteel';
+      cell.dataset.row = r;
+      cell.dataset.col = c;
+      if (!isToday) cell.style.opacity = '.65';
+      let html = '';
+      if (prog.badge) html += '<span class="badge">' + prog.badge + '</span>';
+      html += '<div class="sub-brand">' + prog.subBrand + '</div>';
+      html += '<div class="title">' + prog.title + '</div>';
+      html += '<div class="meta">' + prog.meta + '</div>';
+      cell.innerHTML = html;
+      row.appendChild(cell);
+    }
+
+    // Off-air end cell
+    const endCell = document.createElement('div');
+    endCell.className = 'guide-cell guide-end-cell';
+    endCell.dataset.programId = 'offAir';
+    endCell.dataset.row = r;
+    if (!isToday) endCell.style.opacity = '.65';
+    endCell.innerHTML =
+      '<div class="title">Off Air</div>' +
+      '<div class="meta">Resumes 6:00 A</div>';
+    row.appendChild(endCell);
+
+    grid.appendChild(row);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Clock (just for the masthead)
+// ─────────────────────────────────────────────────────────────────────
+function tickClock(){
+  const now = new Date();
+  document.getElementById('guideDay').textContent  = DAYS_LONG[now.getDay()];
+  document.getElementById('guideDate').textContent = MONTHS[now.getMonth()] + ' ' + now.getDate() + ', ' + now.getFullYear();
+  document.getElementById('guideTime').textContent = fmtClockSeconds(now);
+}
+tickClock(); setInterval(tickClock, 1000);
+
+// ─────────────────────────────────────────────────────────────────────
+// Detail sheet open/close
+// ─────────────────────────────────────────────────────────────────────
+const sheet = document.getElementById('detailSheet');
+const backdrop = document.getElementById('detailBackdrop');
+
+function openDetail(programId){
+  const prog = LINEUP[programId] || LINEUP.tearsOfSteel;
+  document.getElementById('dsStamp').textContent = prog.subBrand;
+  document.getElementById('dsTitle').textContent = prog.title;
+  document.getElementById('dsTagline').textContent = prog.tagline;
+  document.getElementById('dsHero').textContent = 'HERO IMAGE — ' + prog.title.toUpperCase();
+  document.getElementById('dsSynopsis').textContent = prog.synopsis;
+
+  // Meta stripe
+  const meta = document.getElementById('dsMeta');
+  meta.innerHTML = '';
+  prog.metaItems.forEach(function(m){
+    const s = document.createElement('span');
+    if (m === 'LIVE') s.className = 'live-pip';
+    s.textContent = m;
+    meta.appendChild(s);
+  });
+
+  document.getElementById('dsAiringsText').textContent = ' ' + prog.airings;
+
+  // Actions
+  const actions = document.getElementById('dsActions');
+  actions.innerHTML = '';
+  if (prog.ticketUrl) {
+    const a = document.createElement('a');
+    a.className = 'btn btn-primary';
+    a.href = prog.ticketUrl;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.textContent = 'Buy Tickets · Plots';
+    actions.appendChild(a);
+  }
+  if (prog.streamUrl) {
+    const a = document.createElement('a');
+    a.className = 'btn btn-ghost';
+    a.href = prog.streamUrl;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.textContent = 'Stream Live · RSVP to Hold';
+    actions.appendChild(a);
+  }
+  if (!prog.ticketUrl && !prog.streamUrl && !prog.isLive) {
+    // Generic "Watch Now" or "Set Reminder" affordance for non-live shows
+    const a = document.createElement('button');
+    a.className = 'btn btn-primary';
+    a.textContent = 'Watch When It Airs';
+    actions.appendChild(a);
+  }
+
+  document.getElementById('dsCredits').innerHTML =
+    '<strong>Cast & Crew</strong>' + prog.credits;
+
+  backdrop.classList.add('open');
+  sheet.classList.add('open');
+}
+function closeDetail(){
+  backdrop.classList.remove('open');
+  sheet.classList.remove('open');
+}
+
+document.getElementById('detailBack').addEventListener('click', closeDetail);
+backdrop.addEventListener('click', closeDetail);
+document.addEventListener('keydown', function(e){
+  if (e.key === 'Escape') closeDetail();
+});
+
+// Click any schedule cell to open its detail sheet
+document.getElementById('guideGrid').addEventListener('click', function(e){
+  const cell = e.target.closest('.guide-cell');
+  if (!cell) return;
+  openDetail(cell.dataset.programId);
+});
+
+// COMING ATTRACTIONS banner opens the OpeningNight detail
+document.getElementById('comingBanner').addEventListener('click', function(){
+  openDetail('openingNight');
+});
+
+// ─────────────────────────────────────────────────────────────────────
+// Build + auto-scroll
+// ─────────────────────────────────────────────────────────────────────
+buildGrid();
+// Scroll horizontally to the current hour
+const now = new Date();
+const hourCol = Math.max(0, Math.min(SLOTS - 1, now.getHours() - 6));
+setTimeout(function(){
+  const wrap = document.getElementById('gridWrap');
+  const nowCell = document.querySelector('.guide-cell.now');
+  const label = document.querySelector('.guide-row-label');
+  if (wrap && nowCell && label) {
+    wrap.scrollLeft = Math.max(0, nowCell.offsetLeft - label.offsetWidth);
+  }
+}, 0);
+</script>
+</body>
+</html>
