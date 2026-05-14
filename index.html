@@ -549,14 +549,14 @@ body.no-fs .logo.show{pointer-events:none}
    bottom. Slides in via opacity + tiny translate. */
 #guide{
   position:fixed;inset:0;z-index:25;
-  /* Translucent dark veil + heavy backdrop blur — the live channel
-     keeps playing behind the guide; the blur softens the picture
-     to a quiet color wash so the schedule reads clearly on top.
-     No blue gradient — off-brand. The wash is neutral, the only
-     accent colors are white (chrome) + red (today / now). */
-  background:rgba(0,0,0,.55);
-  backdrop-filter:blur(28px) saturate(.6);
-  -webkit-backdrop-filter:blur(28px) saturate(.6);
+  /* Mostly-opaque dark veil + heavy backdrop blur. The live channel
+     keeps playing behind the guide but is softened to a quiet hint
+     so the schedule reads as the focus, not a busy backdrop. No
+     blue gradient — off-brand. Only accent colors are white
+     (chrome) + red (today / now). */
+  background:rgba(0,0,0,.82);
+  backdrop-filter:blur(40px) saturate(.5);
+  -webkit-backdrop-filter:blur(40px) saturate(.5);
   display:none;
   flex-direction:column;
   padding:clamp(16px,3.5vh,32px) clamp(16px,3vw,40px);
@@ -620,7 +620,7 @@ body.no-fs .logo.show{pointer-events:none}
   transform:scale(1.05);
 }
 .guide-back svg{
-  width:clamp(64px,7vw,92px);
+  width:clamp(54px,6vw,78px);
   height:auto;
   display:block;
   transition:filter .15s ease;
@@ -650,11 +650,11 @@ body.no-fs .logo.show{pointer-events:none}
 .guide-back:hover .guide-back-tip,
 .guide-back:focus-visible .guide-back-tip{opacity:1}
 @media (max-width:640px){
-  .guide-back svg{width:clamp(52px,14vw,68px)}
+  .guide-back svg{width:clamp(44px,12vw,58px)}
 }
 @media (orientation:landscape) and (max-height:500px){
   .guide-back{padding:6px 8px}
-  .guide-back svg{width:46px}
+  .guide-back svg{width:40px}
 }
 
 /* The masthead left group — IV mark + back button stay together,
@@ -830,8 +830,10 @@ body.no-fs .logo.show{pointer-events:none}
 }
 .guide-row-label.today .label-date{opacity:.85}
 
-/* Cell content + state styling */
-.guide-cell{flex:0 0 130px;background:rgba(0,0,0,.2)}
+/* Cell content + state styling. Cells stay mostly translucent so
+   the wash + the soft blurred channel still come through, just
+   enough hint to remind the viewer the channel is live. */
+.guide-cell{flex:0 0 130px;background:rgba(0,0,0,.35)}
 .guide-cell.now-col{flex:0 0 200px}
 .guide-cell .title{
   font-weight:700;font-size:clamp(11px,1.2vw,13px);
@@ -2020,17 +2022,30 @@ customElements.whenDefined('mux-video').then(function(){
   }
   startColdStartTicker();
 
-  // GUIDE pill reveal during cold-start. The IV logo + ON/OFF AIR
-  // badge finish their entrance animations by ~3s (logo: .3s delay
-  // + 2.5s fade; badge: 1s delay + 2s fade). Wait another 5s after
-  // that for the user to absorb the brand moment, then fade in the
-  // GUIDE pill. If the user has already pushed PLAY by then, skip:
-  // the intro flourish should not get a corner pill on top of it.
-  // `finish()` re-adds `.show` after the channel goes live.
+  // GUIDE pill reveal during cold-start. Timing depends on the
+  // channel state at page load:
+  //
+  //   ON AIR (active program): the IV logo + PUSH PLAY badge finish
+  //   their entrance animations by ~3s; wait another 3s for the user
+  //   to absorb the brand moment, then fade the GUIDE pill in
+  //   (~6s total). PUSH PLAY is the visible CTA — GUIDE is a quiet
+  //   secondary affordance that shouldn't crowd the brand reveal.
+  //
+  //   OFF AIR (between shows / outside hours): there's nothing for
+  //   the viewer to do but check the schedule, so the GUIDE pill
+  //   appears together with everything else (~3s, settling alongside
+  //   the badge). It stays visible the entire wait — no one should
+  //   miss the schedule while the channel is dark.
+  //
+  // activate() clears this timer if the user clicks PUSH PLAY first.
+  // finish() re-adds `.show` after the channel goes live.
+  const coldStartInfo = getSlotInfo();
+  const isOnAirAtLoad = !coldStartInfo.offAir && coldStartInfo.inShow;
+  const REVEAL_DELAY_MS = isOnAirAtLoad ? 6000 : 3000;
   guideRevealTimer = setTimeout(function(){
     if (!userActivated) guideBtn.classList.add('show');
     guideRevealTimer = 0;
-  }, 8000);
+  }, REVEAL_DELAY_MS);
 
   // Watermark idle-reveal: first-visit discovery ping so the FS hint
   // appears briefly under the cursor before fading out. The watermark
@@ -2120,12 +2135,12 @@ customElements.whenDefined('mux-video').then(function(){
       <button class="guide-back" id="guideBack" type="button"
               aria-label="Back to INTERDEPENDENT.tv">
         <!-- Left-pointing arrow with a moderate-length stem.
-             48×20 viewBox — the stem is long enough to point
-             clearly at the IV mark to its left without dominating
-             the masthead. Stroke 2.5 reads as a solid line at
-             the rendered size; round caps/joins soften the corners. -->
-        <svg viewBox="0 0 48 20" aria-hidden="true">
-          <path d="M46 10 H4 M4 10 L12 3 M4 10 L12 17"
+             40×20 viewBox — stem is long enough to point clearly
+             at the IV mark to its left without dominating the
+             masthead. Stroke 2.5 reads as a solid line at the
+             rendered size; round caps/joins soften the corners. -->
+        <svg viewBox="0 0 40 20" aria-hidden="true">
+          <path d="M38 10 H4 M4 10 L12 3 M4 10 L12 17"
                 fill="none" stroke="currentColor" stroke-width="2.5"
                 stroke-linejoin="round" stroke-linecap="round"/>
         </svg>
