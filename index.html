@@ -97,6 +97,11 @@ html,body{
   -webkit-font-smoothing:antialiased;
   -webkit-tap-highlight-color:transparent;
   overflow:hidden;
+  /* `overscroll-behavior: none` on html+body kills the iOS Safari
+     rubber-band effect that lets a swipe inside the guide pull
+     the whole page down past its top edge. Pairs with the
+     overscroll-behavior:contain on `.guide-grid-wrap`. */
+  overscroll-behavior:none;
 }
 
 /* Shared positioning vars for the bottom-corner chrome — the IV
@@ -239,11 +244,15 @@ mux-video{
   width:14px;height:14px;border-radius:50%;
   background:#ff0000;
   box-shadow:0 0 12px rgba(255,0,0,.7);
+  /* Pulse via SCALE not opacity — the brand red (#ff0000) must
+     stay pure red throughout the animation. The dot breathes in
+     and out around its center; transform-origin defaults to
+     center anyway. Glow scales with it so the halo still throbs. */
   animation:live-dot-pulse 2s ease-in-out infinite;
 }
 @keyframes live-dot-pulse{
-  0%,100%{opacity:1}
-  50%    {opacity:.3}
+  0%,100%{transform:scale(1)}
+  50%    {transform:scale(.55)}
 }
 
 /* Cold-start CTA — pill-shaped button that announces channel state.
@@ -557,7 +566,15 @@ body.no-fs .logo.show{pointer-events:none}
   transition:opacity 1s ease, background .15s ease, border-color .15s ease;
 }
 #guide-button.show{opacity:1}
-#guide-button:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.8)}
+/* Hover style gated to real-pointer devices so it doesn't stick
+   on touch and turn the first tap into a no-op. */
+@media (hover: hover){
+  #guide-button:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.8)}
+}
+#guide-button:focus{outline:none}
+/* Drop the browser default focus ring (often a blue halo) — ESC-
+   close lands focus back on the pill and the halo would linger. */
+#guide-button:focus-visible{outline:none;box-shadow:0 0 0 2px rgba(255,255,255,.25)}
 
 /* (FS toggle now lives inside the IV watermark as the big white
    disc's interior — see `.logo` + `.logo-fs-icon` rules below.
@@ -640,13 +657,22 @@ body.no-fs .logo.show{pointer-events:none}
   transition:background .15s ease, border-color .15s ease, transform .15s ease;
 }
 .guide-back:focus{outline:none}
-.guide-back:hover,
+/* Hover styles ONLY on devices with a real pointer (mouse) — on
+   touch devices :hover becomes sticky after the first tap (because
+   there's no hoverout), which causes the first tap to apply the
+   "hover" visual state and the second tap to actually fire click.
+   Gating with (hover: hover) eliminates the double-tap problem. */
+@media (hover: hover){
+  .guide-back:hover{
+    background:rgba(255,255,255,.12);
+    border-color:#fff;
+    transform:scale(1.03);
+  }
+}
 .guide-back:focus-visible{
   background:rgba(255,255,255,.12);
   border-color:#fff;
   transform:scale(1.03);
-}
-.guide-back:focus-visible{
   box-shadow:0 0 0 2px rgba(255,255,255,.25);
 }
 /* Two label spans — the long one for roomy viewports, the short
@@ -906,9 +932,12 @@ body.no-fs .logo.show{pointer-events:none}
 .guide-cell.static-slot .title{font-weight:400}
 
 /* End-of-broadcast-day marker — last cell of each row + the
-   corresponding header. Wider than a regular cell so the "Off air"
-   /  "Resumes 6:00 AM" text reads cleanly; dim background so it
-   visually closes the day without competing with the schedule. */
+   corresponding header. Wider than a regular cell so the time +
+   "Off air" / "Resumes 6:00 AM" text reads cleanly; dim background
+   so it visually closes the day without competing with the
+   schedule. The header is two-line: the broadcast END time on top
+   (9:00 P / 21:00), the OFF AIR label below — so viewers see
+   exactly when programming stops. */
 .guide-cell.guide-end-cell,
 .guide-header.guide-end-cell{
   flex:0 0 clamp(140px,16vw,200px);
@@ -917,7 +946,21 @@ body.no-fs .logo.show{pointer-events:none}
 }
 .guide-header.guide-end-cell{
   color:rgba(255,255,255,.55);
-  letter-spacing:.24em;
+  align-items:flex-start;
+  gap:2px;
+  padding-top:clamp(6px,1vh,10px);
+}
+.guide-header.guide-end-cell .end-time{
+  font-size:clamp(10px,1.1vw,12px);
+  letter-spacing:.18em;
+  color:rgba(255,255,255,.95);
+  font-weight:700;
+}
+.guide-header.guide-end-cell .end-label{
+  font-size:clamp(9px,1vw,11px);
+  letter-spacing:.32em;
+  color:rgba(255,255,255,.6);
+  font-weight:700;
 }
 .guide-cell.guide-end-cell .title{
   font-weight:700;
@@ -932,29 +975,11 @@ body.no-fs .logo.show{pointer-events:none}
   letter-spacing:.06em;
 }
 
-/* Vertical red "now" line — moves through the wider current-slot
-   column as the minutes tick. Like Apple Calendar's red "now" line
-   but rotated 90° (our time axis is horizontal). z-index above all
-   cells, pointer-events:none so it doesn't intercept clicks. */
-.now-line{
-  position:absolute;
-  top:0;bottom:0;
-  width:2px;
-  background:#ff0000;
-  z-index:5;
-  pointer-events:none;
-  box-shadow:0 0 10px rgba(255,0,0,.65);
-}
-.now-line::before{
-  /* Dot at the very top, matching Apple Calendar's pill marker. */
-  content:"";
-  position:absolute;
-  top:-5px;left:-4px;
-  width:10px;height:10px;
-  border-radius:50%;
-  background:#ff0000;
-  box-shadow:0 0 8px rgba(255,0,0,.85);
-}
+/* (The vertical "now" line is gone. Reads too "modern live TV"
+   for a TV-Guide-booklet aesthetic — the original guides marked
+   the current show by highlighting its cell, not by drawing a
+   real-time creep line through the schedule. The today row's
+   red-bordered .guide-cell.now is the now-marker. */
 
 /* Show description strip */
 .guide-desc{
@@ -1547,7 +1572,7 @@ customElements.whenDefined('mux-video').then(function(){
       try { mv.pause(); } catch (_) {}
       const t = new Date(info.nextOnAir);
       offairNext.textContent =
-        'CHANNEL RESUMES AT ' + fmtClock(t).toUpperCase();
+        'CHANNEL RESUMES AT ' + fmtSlot(t).toUpperCase();
       // 6 AM PT lands at different local times across timezones,
       // so fmtClock above formats `t` in the viewer's local — they
       // see when the channel comes back ON THEIR clock.
@@ -1674,12 +1699,21 @@ customElements.whenDefined('mux-video').then(function(){
       h.textContent = fmtSlot(t).toUpperCase();
       headRow.appendChild(h);
     }
-    // Trailing header: explicit "END OF DAY" marker, so viewers
-    // who scroll to the right edge of the schedule see a clean
-    // close to the broadcast day instead of cells just stopping.
+    // Trailing header: shows the END-of-broadcast moment as a
+    // proper time on top ("9:00 P" — the boundary that closes the
+    // 8 PM hour and starts the off-air window) and "OFF AIR" below.
+    // Viewers see when programming stops without having to read
+    // between the lines of a missing column. Built from a slot
+    // computed at endHour:00 so the locale formatter handles 12h
+    // vs 24h consistently.
+    const endTS = ptToUtc(ptToday.year, ptToday.month, ptToday.day,
+                          CHANNEL.endHour, 0, 0);
+    const endTimeLabel = fmtSlot(new Date(endTS)).toUpperCase();
     const endHeader = document.createElement('div');
     endHeader.className = 'guide-header guide-end-cell';
-    endHeader.textContent = 'OFF AIR';
+    endHeader.innerHTML =
+      '<div class="end-time">' + endTimeLabel + '</div>' +
+      '<div class="end-label">OFF AIR</div>';
     headRow.appendChild(endHeader);
     guideGrid.appendChild(headRow);
 
@@ -1731,46 +1765,10 @@ customElements.whenDefined('mux-video').then(function(){
 
       guideGrid.appendChild(row);
     }
-
-    // Red "now" line — absolutely positioned inside .guide-grid
-    // (which has position:relative + min-width:max-content), so it
-    // scrolls horizontally with the schedule content. updateNowLine
-    // sets the left offset based on the today-row's current cell.
-    const line = document.createElement('div');
-    line.className = 'now-line';
-    line.id = 'nowLine';
-    guideGrid.appendChild(line);
-    updateNowLine();
-  }
-
-  function updateNowLine(){
-    const line = document.getElementById('nowLine');
-    if (!line) return;
-    const info = getSlotInfo();
-    if (info.offAir) { line.style.display = 'none'; return; }
-    const now = new Date();
-    const col = nowSlotCol(now);
-    // Find the today row's now-cell to get its actual offsetLeft +
-    // offsetWidth (clamp() label width + responsive cell sizes make
-    // pure arithmetic unreliable across viewports).
-    const nowCell = guideGrid.querySelector(
-      '.guide-cell[data-row="0"][data-col="' + col + '"]'
-    );
-    if (!nowCell) { line.style.display = 'none'; return; }
-    // Hourly grid: fraction is progress through the current PT hour,
-    // not the underlying 15-min playback slot. The line glides
-    // smoothly across the hour-wide cell as the minutes tick.
-    const pt = ptParts(Date.now());
-    const fraction = (pt.minute * 60 + pt.second) / 3600; // 0..1
-    const x = nowCell.offsetLeft + fraction * nowCell.offsetWidth;
-    // Start the line at the bottom of the header row so the top
-    // dot lands cleanly below it. Header row height varies with
-    // viewport, so measure it instead of assuming a fixed value.
-    const headRow = guideGrid.querySelector('.guide-row-head');
-    const headTop = headRow ? headRow.offsetHeight : 0;
-    line.style.top  = headTop + 'px';
-    line.style.left = x + 'px';
-    line.style.display = 'block';
+    // (The vertical red "now" line is gone. The today row's
+    // red-bordered .guide-cell.now does all the now-marker work
+    // we need — the TV-Guide-booklet idiom highlights the current
+    // cell, no ticking creep line.)
   }
 
   // Tracks the slot index the grid was built for. When the live
@@ -1804,21 +1802,20 @@ customElements.whenDefined('mux-video').then(function(){
       if (nowCell) nowCell.classList.add('now');
     }
 
-    // Update the red vertical line position (moves through the
-    // wider current-slot column as seconds tick).
-    updateNowLine();
-
     // Description strip changes with channel state so users don't
     // see "TEARS OF STEEL · NOW PLAYING" between airings.
     const live = getSlotInfo();
     if (live.offAir) {
       const t = new Date(live.nextOnAir);
       guideDescTitle.textContent = 'CHANNEL OFF AIR';
+      // Use fmtSlot (single-letter A/P) for consistency with the
+      // schedule headers — viewers see the same time idiom every-
+      // where in the guide.
       guideDescBody.textContent  =
-        'Programming returns at ' + fmtClock(t) +
-        ' (the next 6:00 AM Pacific). The lineup below shows the day.';
+        'Programming returns at ' + fmtSlot(t) +
+        ' (the next 6:00 A Pacific). See the lineup below for what airs next.';
       guideDescTag.textContent   =
-        'OFF AIR · BACK AT ' + fmtClock(t).toUpperCase();
+        'OFF AIR · BACK AT ' + fmtSlot(t).toUpperCase();
     } else if (live.inShow) {
       guideDescTitle.textContent = SHOW.title;
       guideDescBody.textContent  = SHOW.description;
@@ -1831,10 +1828,12 @@ customElements.whenDefined('mux-video').then(function(){
       const secs = Math.max(0, Math.ceil((live.nextSlotStart - Date.now()) / 1000));
       const mm = String(Math.floor(secs / 60)).padStart(2, '0');
       const ss = String(secs % 60).padStart(2, '0');
-      const nextAt = fmtClock(new Date(live.nextSlotStart));
+      // fmtSlot for single-letter A/P consistency with the headers.
+      const nextAt = fmtSlot(new Date(live.nextSlotStart));
       guideDescTitle.textContent = 'BETWEEN SHOWS';
       guideDescBody.textContent  =
-        SHOW.title + ' returns at ' + nextAt + '.';
+        SHOW.title + ' returns at ' + nextAt +
+        '. See the lineup below for what airs next.';
       guideDescTag.textContent   = 'OFF AIR · BACK IN ' + mm + ':' + ss;
     }
   }
@@ -1870,6 +1869,14 @@ customElements.whenDefined('mux-video').then(function(){
   function closeGuide(){
     guideEl.classList.remove('on');
     clearInterval(guideTick); guideTick = 0;
+    // Drop focus from any GUIDE chrome (back button, GUIDE pill,
+    // etc.) so the browser's keyboard-focus ring — usually a blue
+    // halo — doesn't linger on whatever was active when the user
+    // pressed ESC.
+    const ae = document.activeElement;
+    if (ae && ae !== document.body && typeof ae.blur === 'function') {
+      ae.blur();
+    }
   }
   guideBtn.addEventListener('click', openGuide);
   // Netflix-style back-to-TV button sits between the masthead IV
@@ -2114,17 +2121,15 @@ customElements.whenDefined('mux-video').then(function(){
   // flips to "ON AIR · PUSH PLAY" without any page reload.
   const ctaLabel = playButton && playButton.querySelector('.live-label');
   const ctaIcon  = playButton && playButton.querySelector('.play-icon');
-  const localTimeFmt = new Intl.DateTimeFormat([], {
-    hour: 'numeric', minute: '2-digit', hour12: true,
-  });
   let coldStartTick = 0;
   function updateColdStartCTA(){
     if (!playButton || userActivated) return;
     const info = getSlotInfo();
     if (info.offAir) {
       const t = new Date(info.nextOnAir);
+      // fmtSlot for single-letter A/P consistency with the guide.
       ctaLabel.textContent =
-        'OFF AIR · BACK AT ' + localTimeFmt.format(t).toUpperCase();
+        'OFF AIR · BACK AT ' + fmtSlot(t).toUpperCase();
       playButton.classList.add('off-air');
       playButton.disabled = true;
     } else if (info.inShow) {
