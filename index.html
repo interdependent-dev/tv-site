@@ -134,10 +134,10 @@ html,body{
   /* Slot-cell width — drives both the schedule grid and the
      section-grouping (MORNING / AFTERNOON / EVENING) row above
      it. Sharing one var keeps every row aligned across the cell
-     boundaries no matter the viewport. Each cell holds one 15-min
-     slot now — so width matches what the title comfortably reads
-     at, not what an hour of content would need. */
-  --hour-w:130px;
+     boundaries no matter the viewport. With 30-min slots there
+     are 30 cells per row (vs 60 for 15-min); cells get wider
+     accordingly so titles read comfortably without overflowing. */
+  --hour-w:180px;
 }
 @media (max-width:480px) and (orientation:portrait){
   :root{
@@ -147,7 +147,7 @@ html,body{
   }
 }
 @media (max-width:640px){
-  :root{ --hour-w:108px }
+  :root{ --hour-w:148px }
 }
 @media (max-height:480px) and (orientation:landscape){
   :root{
@@ -157,7 +157,7 @@ html,body{
   }
 }
 @media (orientation:landscape) and (max-height:500px){
-  :root{ --hour-w:92px }
+  :root{ --hour-w:124px }
 }
 
 /* Chrome-less full-bleed playback. <media-container> is the v10
@@ -885,13 +885,13 @@ body.no-fs .logo.show{pointer-events:none}
   display:flex;align-items:center;
   box-sizing:border-box;
 }
-/* Each section spans its full count of 15-min slots:
-   MORNING = 6 hours × 4 = 24 slots,
-   AFTERNOON = 6 hours × 4 = 24 slots,
-   EVENING = 3 hours × 4 = 12 slots. */
-.guide-section-morning  { flex:0 0 calc(24 * var(--hour-w)) }
-.guide-section-afternoon{ flex:0 0 calc(24 * var(--hour-w)) }
-.guide-section-evening  { flex:0 0 calc(12 * var(--hour-w)) }
+/* Each section spans its full count of 30-min slots:
+   MORNING = 6 hours × 2 = 12 slots,
+   AFTERNOON = 6 hours × 2 = 12 slots,
+   EVENING = 3 hours × 2 = 6 slots. */
+.guide-section-morning  { flex:0 0 calc(12 * var(--hour-w)) }
+.guide-section-afternoon{ flex:0 0 calc(12 * var(--hour-w)) }
+.guide-section-evening  { flex:0 0 calc(6  * var(--hour-w)) }
 /* The corner above the row-label column is sticky on both axes,
    like the regular .guide-corner — extra z-index keeps it above
    both sticky stacks. The trailing "off-air" placeholder matches
@@ -1324,14 +1324,18 @@ const CHANNEL = {
   // America/Los_Angeles zone so PST↔PDT shifts are automatic
   // — "6 AM PT" stays 6 AM PT year-round). Every viewer on
   // Earth is on-air during the same UTC moments. Last slot of
-  // the day starts at 20:45 PT, ends at 21:00 PT.
+  // the day starts at 20:30 PT, ends at 21:00 PT.
+  //
+  // Slot length is 30 MINUTES. The lineup alternates two shows
+  // (TEARS OF STEEL = 12:14, ASC = 17:26) — neither fits in a
+  // 15-min slot, so a 30-min slot lets each show play in full
+  // and leaves OFF AIR fill for the remainder. The clock-aligned
+  // result: TEARS plays at every :00, ASC plays at every :30.
   startHour: 6,                       // 6 AM PT
   endHour:   21,                      // 9 PM PT
-  slotSec:   900,                     // 15 min per slot
-  showSec:   734,                     // Tears of Steel: 12:14
+  slotSec:   1800,                    // 30 min per slot
   timezone:  'America/Los_Angeles',
 };
-CHANNEL.staticSec = CHANNEL.slotSec - CHANNEL.showSec;
 
 // ── PT timezone helpers ────────────────────────────────────────────
 // Used everywhere we need to map between a UTC timestamp and the
@@ -1409,15 +1413,9 @@ const SHOWS = [
     id:        'asc',
     title:     'ASC',
     titleLine: 'ASC—Thriller',
-    metaLine:  '(12 min.) (2024)',
-    duration:  '12:00',
-    // Default to the full slot duration (900s) so the channel never
-    // cuts to static mid-content — the user reported "went off air
-    // while ASC was still playing" when this was set to 734s and
-    // the actual asset turned out to be longer. The canplay handler
-    // below auto-corrects this to the asset's real runtime once
-    // we've actually loaded it.
-    durationSec: 900,
+    metaLine:  '(17 min.) (2024)',  // Actual runtime: 17:26
+    duration:  '17:26',
+    durationSec: 1046,
     horizontalPbId: 'mdf00qpX9PAVttPZN7jQIHZPXT4krwqf69HGZPBuISXY',
     verticalPbId:   'yBLDE4NXOao4Uv4sYddN02mAT4bUxZ02IYd01p4Mmj5YNA',
     description:
@@ -1431,12 +1429,12 @@ const SHOWS = [
 // a slot is computed), point at the first show.
 const SHOW = SHOWS[0];
 
-// Slot index for a PT moment — 0 at 6:00 AM PT, 1 at 6:15, …
-// SHOWS rotates via this index, so the lineup alternates deterministically
-// every quarter-hour and the same time-of-day on consecutive days plays
-// the same show.
+// Slot index for a PT moment — 0 at 6:00 AM PT, 1 at 6:30 AM PT, …
+// SHOWS rotates via this index, so the lineup alternates every
+// half-hour: TEARS at every :00, ASC at every :30, repeating
+// hourly across the broadcast day.
 function slotIndexInDay(pt) {
-  return (pt.hour - CHANNEL.startHour) * 4 + Math.floor(pt.minute / 15);
+  return (pt.hour - CHANNEL.startHour) * 2 + Math.floor(pt.minute / 30);
 }
 function showForSlotIndex(idx) {
   return SHOWS[((idx % SHOWS.length) + SHOWS.length) % SHOWS.length];
@@ -1469,8 +1467,8 @@ function getSlotInfo(now) {
     return { offAir: true, nextOnAir: next };
   }
 
-  // On-air. Slot boundaries are at PT :00 / :15 / :30 / :45.
-  const slotMin = Math.floor(pt.minute / 15) * 15;
+  // On-air. Slot boundaries are at PT :00 / :30 (every half-hour).
+  const slotMin = Math.floor(pt.minute / 30) * 30;
   const slotStart = ptToUtc(pt.year, pt.month, pt.day, pt.hour, slotMin, 0);
   const tInSlot = (now - slotStart) / 1000;
   const slotIdx = slotIndexInDay({ hour: pt.hour, minute: slotMin });
@@ -1882,18 +1880,18 @@ customElements.whenDefined('mux-video').then(function(){
   // scroll position survives ticks).
   const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
   // Schedule grid is sized in HOURS, not 15-min slots. The channel
-  // Schedule grid is sized in 15-MIN SLOTS so each cell holds
-  // exactly one show. With two shows alternating per slot, that
-  // means viewers see TEARS / ASC / TEARS / ASC … flip across the
-  // grid in lockstep with what's actually playing on the channel.
-  // 60 slot columns cover the 6 AM – 9 PM PT broadcast day; the
-  // trailing OFF AIR cell closes it.
-  const SLOTS_PER_DAY = (CHANNEL.endHour - CHANNEL.startHour) * 4; // 60
+  // Schedule grid is sized in 30-MIN SLOTS — each cell holds one
+  // full show. The 30-min slot length comfortably fits both shows
+  // (TEARS 12:14, ASC 17:26) with OFF AIR fill for the remainder.
+  // Per hour: TEARS at :00, ASC at :30. 30 columns cover the
+  // 6 AM – 9 PM PT broadcast day; the trailing OFF AIR cell
+  // closes it.
+  const SLOTS_PER_DAY = (CHANNEL.endHour - CHANNEL.startHour) * 2; // 30
 
-  // Returns the PT hour + minute for col-th 15-min slot.
-  // col 0 = 6:00 AM PT, col 1 = 6:15 AM PT, ... col 59 = 8:45 PM PT.
+  // Returns the PT hour + minute for col-th 30-min slot.
+  // col 0 = 6:00 AM PT, col 1 = 6:30 AM PT, ... col 29 = 8:30 PM PT.
   function slotForCol(col){
-    const totalMin = CHANNEL.startHour * 60 + col * 15;
+    const totalMin = CHANNEL.startHour * 60 + col * 30;
     return { hour: Math.floor(totalMin / 60), minute: totalMin % 60 };
   }
 
@@ -1905,7 +1903,7 @@ customElements.whenDefined('mux-video').then(function(){
     const nowMs = d instanceof Date ? d.getTime() : (typeof d === 'number' ? d : Date.now());
     const pt = ptParts(nowMs);
     if (pt.hour < CHANNEL.startHour || pt.hour >= CHANNEL.endHour) return -1;
-    return (pt.hour - CHANNEL.startHour) * 4 + Math.floor(pt.minute / 15);
+    return (pt.hour - CHANNEL.startHour) * 2 + Math.floor(pt.minute / 30);
   }
 
   // Column widths: current slot is 200px (wider, so the red
@@ -1927,10 +1925,10 @@ customElements.whenDefined('mux-video').then(function(){
   //   EVENING   6 PM – 8 PM   (cols 12..14)
   // .section-end is applied to the LAST cell of MORNING and
   // AFTERNOON in each row so the schedule renders distinct chunks.
-  // Last 15-min slot of each section: MORNING ends after 11:45 A
-  // (slot 23), AFTERNOON ends after 5:45 P (slot 47). EVENING runs
-  // through slot 59 (8:45 P) and abuts the OFF AIR end-cell.
-  const SECTION_END_COLS = new Set([23, 47]);
+  // Last 30-min slot of each section: MORNING ends after 11:30 A
+  // (slot 11), AFTERNOON ends after 5:30 P (slot 23). EVENING runs
+  // through slot 29 (8:30 P) and abuts the OFF AIR end-cell.
+  const SECTION_END_COLS = new Set([11, 23]);
 
   function buildGuideGrid(){
     const now = new Date();
