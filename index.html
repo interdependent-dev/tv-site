@@ -1400,10 +1400,13 @@ const SHOWS = [
     titleLine: 'ASC—Thriller',
     metaLine:  '(12 min.) (2024)',
     duration:  '12:00',
-    // Mirror Tears of Steel for slot timing until we know the exact
-    // runtime; the player will pause naturally if the asset ends
-    // earlier and the static gap fills the remainder of the slot.
-    durationSec: 734,
+    // Default to the full slot duration (900s) so the channel never
+    // cuts to static mid-content — the user reported "went off air
+    // while ASC was still playing" when this was set to 734s and
+    // the actual asset turned out to be longer. The canplay handler
+    // below auto-corrects this to the asset's real runtime once
+    // we've actually loaded it.
+    durationSec: 900,
     horizontalPbId: 'mdf00qpX9PAVttPZN7jQIHZPXT4krwqf69HGZPBuISXY',
     verticalPbId:   'yBLDE4NXOao4Uv4sYddN02mAT4bUxZ02IYd01p4Mmj5YNA',
     description:
@@ -2428,6 +2431,26 @@ customElements.whenDefined('mux-video').then(function(){
       // <video> element; re-apply the bits we care about.
       mv.muted  = prevMuted;
       mv.volume = prevVolume;
+
+      // Auto-correct the show's durationSec to the asset's actual
+      // length. Hardcoded values can be wrong (the user reported the
+      // channel cutting to static while ASC was still playing —
+      // ASC's real runtime exceeded our 12:14 default). Once the
+      // asset is loaded, mv.duration is the truth. Cap at slotSec
+      // so an asset that overshoots its slot just plays to the slot
+      // boundary. If the duration changed, reschedule the current
+      // slot's "show end → static" transition.
+      if (isFinite(mv.duration) && mv.duration > 0) {
+        const realDur = Math.min(Math.floor(mv.duration), CHANNEL.slotSec);
+        if (show.durationSec !== realDur) {
+          show.durationSec = realDur;
+          if (finished) {
+            clearTimeout(nextTransitionId);
+            applyState();
+          }
+        }
+      }
+
       const live = getSlotInfo();
       if (!live.offAir && live.inShow) {
         try { mv.currentTime = live.tInShow; } catch (_) {}
