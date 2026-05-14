@@ -736,7 +736,7 @@ body.no-fs .logo.show{pointer-events:none}
    echoes the iconic cover treatment without copying it. */
 .guide-wordmark{
   display:flex;flex-direction:column;align-items:flex-start;
-  line-height:1;gap:5px;
+  line-height:1;
   flex-shrink:0;
 }
 .guide-wordmark span{
@@ -748,20 +748,6 @@ body.no-fs .logo.show{pointer-events:none}
   color:rgba(255,255,255,.95);
   padding-bottom:5px;
   border-bottom:2px solid #ff0000;
-}
-/* "Pacific Time" sub-label under the GUIDE wordmark — makes the
-   schedule's timezone explicit so non-PT viewers know the slot
-   labels are PT, not their local. (Their wall clock still shows
-   in the masthead clock to the right; the two intentionally
-   differ for non-PT viewers.) */
-.guide-wordmark-zone{
-  font-family:"Eurostile",sans-serif;
-  font-style:normal;
-  font-weight:400;
-  font-size:clamp(8px,.85vw,10px);
-  letter-spacing:.28em;
-  text-transform:uppercase;
-  color:rgba(255,255,255,.6);
 }
 @media (orientation:landscape) and (max-height:500px){
   .guide-wordmark span{font-size:10px;letter-spacing:.22em;padding-bottom:3px;border-bottom-width:1.5px}
@@ -1553,20 +1539,17 @@ function fmtClockSeconds(d){
 }
 // fmtSlot: column-header form. 12-hour locales: "6:00 A" / "1:00 P"
 // (compact single-letter AM/PM with a space). 24-hour locales:
-// "06:00" / "18:00". Headers read naturally in the viewer's idiom.
-//
-// IMPORTANT: this formats the Date's PT components, NOT the viewer's
-// local hour. The channel is PT-anchored — every slot in the
-// schedule is a Pacific Time moment. A viewer in Eastern (or
-// Tokyo, or London) should still see "2:45 P" for the 2:45 PM PT
-// slot, not their local conversion of it. Using Date.getHours()
-// here would render PT 2:45 PM as "5:45 P" in an ET browser, which
-// was the bug. The viewer's wall clock continues to display in
-// their local zone via fmtClock / fmtClockSeconds.
+// "06:00" / "18:00". Headers read naturally in the viewer's idiom
+// AND in the viewer's wall-clock — for a Hawaii viewer at HST
+// 3:06 PM, the PT 6:06 PM slot displays as "3:00 P" (their local).
+// The channel content is still PT-anchored under the hood (slot
+// alternation, the "currently playing" detection, the OFF AIR
+// window — all use ptParts to find the right slot for any moment).
+// Only the LABEL is localized so the viewer's wall clock matches
+// the now-cell highlight.
 function fmtSlot(d){
-  const pt  = ptParts(d.getTime());
-  const h24 = pt.hour;
-  const m   = pt.minute;
+  const h24 = d.getHours();
+  const m   = d.getMinutes();
   const mm  = m < 10 ? '0' + m : m;
   if (USE_HOUR12) {
     const ap = h24 >= 12 ? 'P' : 'A';
@@ -2696,7 +2679,6 @@ customElements.whenDefined('mux-video').then(function(){
            says "tv GUIDE" without doubling up the "TV". -->
       <div class="guide-wordmark" aria-hidden="true">
         <span>Guide</span>
-        <em class="guide-wordmark-zone">Pacific Time</em>
       </div>
       <!-- Back-to-channel CTA. Classic TV-broadcast phrasing ("we
            now return you to our regularly scheduled programming")
