@@ -120,6 +120,11 @@ html,body{
   --watermark-w:min(20vw,120px);
   --watermark-h:calc(var(--watermark-w) * 0.6041);
   --guide-pill-h:33px;
+  /* Hour-cell width — drives both the schedule grid and the
+     section-grouping (MORNING / AFTERNOON / EVENING) row above
+     it. Sharing one var keeps every row aligned across the cell
+     boundaries no matter the viewport. */
+  --hour-w:180px;
 }
 @media (max-width:480px) and (orientation:portrait){
   :root{
@@ -128,12 +133,18 @@ html,body{
     --watermark-w:min(26vw,72px);
   }
 }
+@media (max-width:640px){
+  :root{ --hour-w:140px }
+}
 @media (max-height:480px) and (orientation:landscape){
   :root{
     --chrome-edge:12px;
     --chrome-bottom:10px;
     --watermark-w:min(14vh,64px);
   }
+}
+@media (orientation:landscape) and (max-height:500px){
+  :root{ --hour-w:120px }
 }
 
 /* Chrome-less full-bleed playback. <media-container> is the v10
@@ -838,6 +849,63 @@ body.no-fs .logo.show{pointer-events:none}
   position:sticky;top:0;
   z-index:3;
 }
+
+/* Section row — sits ABOVE the hour-headers row, breaks the 15-
+   hour broadcast day into three legible chunks: MORNING (6 hours),
+   AFTERNOON (6 hours), EVENING (3 hours). Sticky-top above the
+   hours row so it stays as the viewer scrolls down. Each section
+   spans the width of its hour columns via the section-class
+   flex-basis below. */
+.guide-row-sections{
+  position:sticky;top:0;
+  z-index:4;
+}
+.guide-section{
+  background:rgba(8,8,12,.92);
+  color:rgba(255,255,255,.7);
+  font:700 clamp(10px,1.1vw,12px)/1 "Eurostile",sans-serif;
+  letter-spacing:.32em;
+  text-transform:uppercase;
+  padding:clamp(6px,1.2vh,12px) clamp(8px,1.2vw,16px);
+  border-right:1px solid rgba(255,255,255,.25);
+  border-bottom:1px solid rgba(255,255,255,.35);
+  display:flex;align-items:center;
+  box-sizing:border-box;
+}
+.guide-section-morning  { flex:0 0 calc(6 * var(--hour-w)) }
+.guide-section-afternoon{ flex:0 0 calc(6 * var(--hour-w)) }
+.guide-section-evening  { flex:0 0 calc(3 * var(--hour-w)) }
+/* The corner above the row-label column is sticky on both axes,
+   like the regular .guide-corner — extra z-index keeps it above
+   both sticky stacks. The trailing "off-air" placeholder matches
+   the OFF AIR end column width so the section row is the same
+   total width as the hours row + day rows. */
+.guide-section-corner{
+  flex:0 0 clamp(118px,13vw,168px);
+  position:sticky;left:0;top:0;
+  background:rgba(8,8,12,.97);
+  border-right:1px solid rgba(255,255,255,.25);
+  border-bottom:1px solid rgba(255,255,255,.35);
+  z-index:5;
+}
+.guide-section-end{
+  flex:0 0 clamp(140px,16vw,200px);
+  background:rgba(0,0,0,.65);
+  border-bottom:1px solid rgba(255,255,255,.35);
+}
+@media (orientation:landscape) and (max-height:500px){
+  .guide-section{font-size:10px;letter-spacing:.22em;padding:5px 10px}
+}
+
+/* Schedule cells at section boundaries get a slightly thicker
+   right-border so the column groups read as distinct chunks.
+   .section-end is applied to the LAST hour cell of MORNING (col 5)
+   and AFTERNOON (col 11) — EVENING already abuts the OFF AIR
+   end cell which has its own visual treatment. */
+.guide-cell.section-end,
+.guide-header.section-end{
+  border-right:2px solid rgba(255,255,255,.45);
+}
 /* Shared base. Explicit flex-basis on each cell variant below
    keeps columns aligned across rows even though there's no shared
    grid template. */
@@ -856,10 +924,11 @@ body.no-fs .logo.show{pointer-events:none}
 /* Hour-slot column header. Near-solid dark — sticky cells need to
    obscure content scrolling underneath them, not let it bleed
    through. The light translucency still picks up a hint of the
-   wash from #guide for visual cohesion. Cells are sized for an
-   hour's worth of programming (one cell per broadcast hour). */
+   wash from #guide for visual cohesion. One cell per broadcast
+   hour; --hour-w sets the column width so day rows + the section
+   row above stay aligned. */
 .guide-header{
-  flex:0 0 180px;
+  flex:0 0 var(--hour-w);
   background:rgba(8,8,12,.92);
   text-transform:uppercase;letter-spacing:.18em;
   font-weight:700;font-size:clamp(10px,1.1vw,12px);
@@ -914,9 +983,9 @@ body.no-fs .logo.show{pointer-events:none}
 /* Cell content + state styling. Cells stay mostly translucent so
    the wash + the soft blurred channel still come through, just
    enough hint to remind the viewer the channel is live. One cell
-   per broadcast hour. */
-.guide-cell{flex:0 0 180px;background:rgba(0,0,0,.35);cursor:default}
-.guide-cell.now-col{flex:0 0 240px}
+   per broadcast hour, sized via --hour-w (set on :root with media-
+   query overrides — see the section-grouping vars below). */
+.guide-cell{flex:0 0 var(--hour-w);background:rgba(0,0,0,.35);cursor:default}
 /* Hover preview — only on mouse devices (touch sticks :hover after
    a tap). Subtle background lightening + cursor:pointer so cells
    feel selectable. The JS paired with this updates the description
@@ -1048,14 +1117,12 @@ body.no-fs .logo.show{pointer-events:none}
    IV mark — see `.guide-logo` above. The whole brand mark is the
    "Back to TV" action now. No more × in the top-right corner.) */
 
-/* Mobile: tighter padding. Hourly cells are wider here too since
-   each represents an hour of programming. Sticky day-label column
-   widens to fit fully-spelled day names ("WEDNESDAY"). */
+/* Mobile: tighter padding. Hour-cell width comes from the
+   --hour-w var (set on :root by an earlier media query). Sticky
+   day-label column widens to fit fully-spelled day names
+   ("WEDNESDAY"). */
 @media (max-width:640px){
   #guide{padding:18px 16px}
-  .guide-cell,
-  .guide-header{flex-basis:140px}
-  .guide-cell.now-col{flex-basis:200px}
   .guide-row-label,
   .guide-corner{flex-basis:112px}
   .guide-row-label{letter-spacing:.08em}
@@ -1092,9 +1159,6 @@ body.no-fs .logo.show{pointer-events:none}
     font-size:10px;
     min-height:30px;
   }
-  .guide-cell,
-  .guide-header{flex-basis:120px}
-  .guide-cell.now-col{flex-basis:170px}
   .guide-row-label,
   .guide-corner{flex-basis:96px}
   .guide-row-label{letter-spacing:.06em}
@@ -1757,16 +1821,49 @@ customElements.whenDefined('mux-video').then(function(){
   // future days. Each row carries its day-of-week + calendar date.
   const ROW_COUNT = 30;
 
+  // Time-of-day sections grouping the 15-hour broadcast day.
+  // PT-hour ranges (start inclusive, end inclusive):
+  //   MORNING   6 AM – 11 AM  (cols 0..5)
+  //   AFTERNOON 12 PM – 5 PM  (cols 6..11)
+  //   EVENING   6 PM – 8 PM   (cols 12..14)
+  // .section-end is applied to the LAST cell of MORNING and
+  // AFTERNOON in each row so the schedule renders distinct chunks.
+  const SECTION_END_COLS = new Set([5, 11]);
+
   function buildGuideGrid(){
     const now = new Date();
     const nowCol = nowSlotCol(now);
 
     guideGrid.innerHTML = '';
 
-    // ── Header row (sticky-top) ────────────────────────────────────
+    // ── Section row (sticky-top, z:4) ──────────────────────────────
+    // MORNING / AFTERNOON / EVENING band sits above the hours row,
+    // grouping the 15 broadcast hours into three legible chunks.
+    const sectionRow = document.createElement('div');
+    sectionRow.className = 'guide-row guide-row-sections';
+    const sectionCorner = document.createElement('div');
+    sectionCorner.className = 'guide-section-corner';
+    sectionRow.appendChild(sectionCorner);
+    [
+      ['MORNING',   'guide-section-morning'],
+      ['AFTERNOON', 'guide-section-afternoon'],
+      ['EVENING',   'guide-section-evening'],
+    ].forEach(function(spec){
+      const sec = document.createElement('div');
+      sec.className = 'guide-section ' + spec[1];
+      sec.textContent = spec[0];
+      sectionRow.appendChild(sec);
+    });
+    const sectionEnd = document.createElement('div');
+    sectionEnd.className = 'guide-section-end';
+    sectionRow.appendChild(sectionEnd);
+    guideGrid.appendChild(sectionRow);
+
+    // ── Header row (sticky-top, z:3) ───────────────────────────────
     // Corner cell is sticky on BOTH axes (top:0 + left:0). Then 15
-    // hourly headers, the current hour getting the wider .now-col
-    // flex-basis so the now-line + now-cell have breathing room.
+    // hourly headers. The current hour gets the .now class for the
+    // red-bordered now-cell highlight; columns that close a section
+    // get .section-end for the thicker right divider.
     const headRow = document.createElement('div');
     headRow.className = 'guide-row guide-row-head';
     const corner = document.createElement('div');
@@ -1779,7 +1876,7 @@ customElements.whenDefined('mux-video').then(function(){
                              s.hour, s.minute, 0);
       const t = new Date(slotTS);
       const h = document.createElement('div');
-      h.className = 'guide-header' + (c === nowCol ? ' now-col' : '');
+      h.className = 'guide-header' + (SECTION_END_COLS.has(c) ? ' section-end' : '');
       h.textContent = fmtSlot(t).toUpperCase();
       headRow.appendChild(h);
     }
@@ -1827,7 +1924,8 @@ customElements.whenDefined('mux-video').then(function(){
 
       for (let c = 0; c < HOURS_PER_DAY; c++) {
         const cell = document.createElement('div');
-        cell.className = 'guide-cell' + (c === nowCol ? ' now-col' : '');
+        cell.className = 'guide-cell' +
+          (SECTION_END_COLS.has(c) ? ' section-end' : '');
         cell.dataset.row = String(r);
         cell.dataset.col = String(c);
         if (!isToday) cell.style.opacity = '.65';
