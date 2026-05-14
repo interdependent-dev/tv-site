@@ -853,6 +853,18 @@ body.no-fs .logo.show{pointer-events:none}
   display:flex;
   min-width:max-content;
 }
+/* Week-start separator — every Sunday row (after the first) gets a
+   small breathing gap above plus a thin red rule on the top of
+   every cell in the row. Groups the 30-day schedule into legible
+   weekly chunks. Pure red (#ff0000) at full opacity to honor the
+   brand-color rule. */
+.guide-row.week-start{
+  margin-top:8px;
+}
+.guide-row.week-start > .guide-cell,
+.guide-row.week-start > .guide-row-label{
+  border-top:2px solid #ff0000;
+}
 /* Headers row pins to the top so time labels are always readable
    when the user scrolls down through 30 days. z-index above
    regular cells; the corner cell (top-left, sticky on BOTH axes)
@@ -1005,6 +1017,14 @@ body.no-fs .logo.show{pointer-events:none}
   letter-spacing:.18em;
   color:rgba(255,255,255,.95);
   font-weight:700;
+  /* Pull "9:00 P" flush against the LEFT edge of the end cell so
+     it sits exactly at the boundary between the 8 PM column and
+     the OFF AIR column — viewers read it as "this is the hour
+     boundary where programming stops". The negative margin cancels
+     the cell's own left padding so the text aligns with the cell
+     border. */
+  margin-left:calc(-1 * clamp(8px,1.2vw,16px));
+  padding-left:0;
 }
 .guide-header.guide-end-cell .end-label{
   font-size:clamp(9px,1vw,11px);
@@ -1820,9 +1840,14 @@ customElements.whenDefined('mux-video').then(function(){
       const rowDate = new Date(now);
       rowDate.setDate(now.getDate() + r);
       const isToday = r === 0;
+      // A new calendar week starts on Sunday. After the first row,
+      // every Sunday gets a visual separator (.week-start) so the
+      // 30-day grid breaks into legible weekly chunks rather than
+      // reading as one continuous slab.
+      const isWeekStart = r > 0 && rowDate.getDay() === 0;
 
       const row = document.createElement('div');
-      row.className = 'guide-row';
+      row.className = 'guide-row' + (isWeekStart ? ' week-start' : '');
 
       const label = document.createElement('div');
       label.className = 'guide-row-label' + (isToday ? ' today' : '');
