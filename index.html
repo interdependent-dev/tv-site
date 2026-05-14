@@ -1359,23 +1359,68 @@ function ptToUtc(year, month, day, hour, minute, second){
   return ts;
 }
 
-const SHOW = {
-  // `title` is the bare show name — used in JS string concatenation
-  // ("TEARS OF STEEL returns at …"). `titleLine` is the TV-Guide-
-  // styled headline rendered in cells and the description strip:
-  // em-dash + genre tag, all caps. `metaLine` is the inline
-  // metadata stripe (runtime + production year) in the listing-
-  // page idiom of 1980 TV Guide ("(60 min.) (1981)"). `duration`
-  // stays in MM:SS for any internal seconds-precise math.
-  title:     'TEARS OF STEEL',
-  titleLine: 'TEARS OF STEEL—Sci-fi Short',
-  metaLine:  '(12 min.) (2012)',
-  duration:  '12:14',
-  description:
-    'Open-source 4K sci-fi short — a fractured science team races ' +
-    'to undo a future that was never theirs to write. Directed by ' +
-    'Ian Hubert · Blender Foundation, 2012.',
-};
+// ── Channel lineup ───────────────────────────────────────────────────
+// SHOWS is the rotation. Each 15-min slot picks one show via the
+// slot's index modulo SHOWS.length, so the lineup alternates evenly
+// across the day. Each entry carries the Mux playback IDs for both
+// orientations + the TV-Guide display fields + a runtime in seconds
+// for the "show vs. between-slot static" timing.
+//
+//   `title`     — bare show name (used in prose: "TEARS OF STEEL returns at …")
+//   `titleLine` — TV-Guide-styled headline (em-dash + genre tag, all caps)
+//   `metaLine`  — inline metadata stripe ("(60 min.) (1981)" idiom)
+//   `duration`  — MM:SS display string
+//   `durationSec` — show length in seconds (the rest of the 15-min slot
+//                   plays as the inter-show static gap)
+//   `horizontalPbId` / `verticalPbId` — Mux IDs for landscape + portrait
+const SHOWS = [
+  {
+    id:        'tears-of-steel',
+    title:     'TEARS OF STEEL',
+    titleLine: 'TEARS OF STEEL—Sci-fi Short',
+    metaLine:  '(12 min.) (2012)',
+    duration:  '12:14',
+    durationSec: 734,
+    horizontalPbId: 'Apdb9mHDmGuMt00AVKNNVx6VZEXw7602eYCcTPJIFtpVE',
+    verticalPbId:   'wdN5SRMPQ3Ql8L02Cpl5Fah5L3u00lqhY13EXcSP5x02AU',
+    description:
+      'Open-source 4K sci-fi short — a fractured science team races ' +
+      'to undo a future that was never theirs to write. Directed by ' +
+      'Ian Hubert · Blender Foundation, 2012.',
+  },
+  {
+    id:        'asc',
+    title:     'ASC',
+    titleLine: 'ASC—Thriller',
+    metaLine:  '(12 min.) (2024)',
+    duration:  '12:00',
+    // Mirror Tears of Steel for slot timing until we know the exact
+    // runtime; the player will pause naturally if the asset ends
+    // earlier and the static gap fills the remainder of the slot.
+    durationSec: 734,
+    horizontalPbId: 'mdf00qpX9PAVttPZN7jQIHZPXT4krwqf69HGZPBuISXY',
+    verticalPbId:   'yBLDE4NXOao4Uv4sYddN02mAT4bUxZ02IYd01p4Mmj5YNA',
+    description:
+      'A thriller produced by the American Society of Cinematographers — ' +
+      'used as ASC test content for camera, color, and pipeline work.',
+  },
+];
+
+// Backwards-compat alias: anywhere the old code still reads SHOW.* for
+// non-slot-specific values (e.g., the description-strip fallback before
+// a slot is computed), point at the first show.
+const SHOW = SHOWS[0];
+
+// Slot index for a PT moment — 0 at 6:00 AM PT, 1 at 6:15, …
+// SHOWS rotates via this index, so the lineup alternates deterministically
+// every quarter-hour and the same time-of-day on consecutive days plays
+// the same show.
+function slotIndexInDay(pt) {
+  return (pt.hour - CHANNEL.startHour) * 4 + Math.floor(pt.minute / 15);
+}
+function showForSlotIndex(idx) {
+  return SHOWS[((idx % SHOWS.length) + SHOWS.length) % SHOWS.length];
+}
 
 // ── Wall-clock slot math ────────────────────────────────────────────
 // Returns the current slot state for a given (or now) timestamp.
@@ -1408,17 +1453,23 @@ function getSlotInfo(now) {
   const slotMin = Math.floor(pt.minute / 15) * 15;
   const slotStart = ptToUtc(pt.year, pt.month, pt.day, pt.hour, slotMin, 0);
   const tInSlot = (now - slotStart) / 1000;
-  const inShow = tInSlot < CHANNEL.showSec;
+  const slotIdx = slotIndexInDay({ hour: pt.hour, minute: slotMin });
+  const show    = showForSlotIndex(slotIdx);
+  const showSec = show.durationSec;
+  const inShow  = tInSlot < showSec;
 
   return {
     offAir: false,
     inShow,
     slotStart,
+    slotIdx,
+    show,
+    showSec,
     nextSlotStart: slotStart + CHANNEL.slotSec * 1000,
-    showEnd:       slotStart + CHANNEL.showSec * 1000,
+    showEnd:       slotStart + showSec * 1000,
     tInSlot,
-    tInShow:    inShow ? tInSlot : CHANNEL.showSec,
-    tInStatic:  inShow ? 0       : tInSlot - CHANNEL.showSec,
+    tInShow:    inShow ? tInSlot : showSec,
+    tInStatic:  inShow ? 0       : tInSlot - showSec,
   };
 }
 
@@ -1739,16 +1790,25 @@ customElements.whenDefined('mux-video').then(function(){
     }
 
     if (info.inShow) {
-      // Seek to the live offset and play. Use a small drift tolerance
-      // so we don't keep nudging the video with seeks every tick.
-      const target = info.tInShow;
-      const drift = Math.abs(mv.currentTime - target);
-      if (drift > 0.6) {
-        try { mv.currentTime = target; } catch (_) {}
-      }
-      if (mv.paused) {
-        const p = mv.play();
-        if (p && p.catch) p.catch(function(){});
+      // If we've crossed into a slot that runs a DIFFERENT show
+      // from the one currently loaded in the player, swap the
+      // source. applyShowAndOrientation handles the canplay → seek
+      // → resume dance; it no-ops when the pb_id already matches.
+      const wantPb = pbIdFor(info.show, portraitMQ.matches);
+      if (wantPb !== currentPbId) {
+        applyShowAndOrientation();
+      } else {
+        // Same show, just seek to the live offset. Drift tolerance
+        // so we don't nudge every tick.
+        const target = info.tInShow;
+        const drift = Math.abs(mv.currentTime - target);
+        if (drift > 0.6) {
+          try { mv.currentTime = target; } catch (_) {}
+        }
+        if (mv.paused) {
+          const p = mv.play();
+          if (p && p.catch) p.catch(function(){});
+        }
       }
       showSurface('movie');
       // Next event: show ends at info.showEnd
@@ -1938,9 +1998,24 @@ customElements.whenDefined('mux-video').then(function(){
         cell.dataset.row = String(r);
         cell.dataset.col = String(c);
         if (!isToday) cell.style.opacity = '.65';
+        // Each hour contains four 15-min slots; with SHOWS.length
+        // shows in rotation, an hour cycles through them. List the
+        // distinct shows airing in the hour, in their start order.
+        // For 2 shows that gives "TEARS OF STEEL · ASC".
+        const ptHour = CHANNEL.startHour + c;
+        const slotIdxAtTop = (ptHour - CHANNEL.startHour) * 4;
+        const showsThisHour = [];
+        for (let s = 0; s < 4; s++) {
+          const sh = showForSlotIndex(slotIdxAtTop + s);
+          if (!showsThisHour.includes(sh)) showsThisHour.push(sh);
+        }
+        const titleText = showsThisHour.map(s => s.titleLine).join(' · ');
+        const metaText  = showsThisHour.length > 1
+          ? '(' + showsThisHour[0].duration.split(':')[0] + ' min. each)'
+          : showsThisHour[0].metaLine;
         cell.innerHTML =
-          '<div class="title">' + SHOW.titleLine + '</div>' +
-          '<div class="meta">' + SHOW.metaLine + '</div>';
+          '<div class="title">' + titleText + '</div>' +
+          '<div class="meta">'  + metaText  + '</div>';
         row.appendChild(cell);
       }
       // Trailing END-OF-DAY cell — matches the header marker above.
@@ -2033,17 +2108,25 @@ customElements.whenDefined('mux-video').then(function(){
           dow + ' · ' + date + ' · ' + offStart + ' – ' + offEnd;
         return;
       }
-      // Regular slot — TEARS OF STEEL plays at the indicated hour.
-      // Compute the slot's local time. Build a Date at the PT hour
-      // (slotForCol returns PT hour:minute) then format in viewer's
-      // local for header-consistent display.
-      const s = slotForCol(hoveredSlot.col);
+      // Regular hour — list the shows in the rotation for this
+      // hour's 4 slots (in their start order, deduped). Description
+      // body uses the first show's blurb; tag shows the airing time.
+      const ptHour = CHANNEL.startHour + hoveredSlot.col;
+      const baseSlot = (ptHour - CHANNEL.startHour) * 4;
+      const hourShows = [];
+      for (let s = 0; s < 4; s++) {
+        const sh = showForSlotIndex(baseSlot + s);
+        if (!hourShows.includes(sh)) hourShows.push(sh);
+      }
+      const slotPT = slotForCol(hoveredSlot.col);
       const slotTS = ptToUtc(rowDate.getFullYear(),
                              rowDate.getMonth() + 1, rowDate.getDate(),
-                             s.hour, s.minute, 0);
+                             slotPT.hour, slotPT.minute, 0);
       const slotLocal = fmtSlot(new Date(slotTS)).toUpperCase();
-      guideDescTitle.textContent = SHOW.titleLine;
-      guideDescBody.textContent  = SHOW.description;
+      guideDescTitle.textContent = hourShows.map(s => s.titleLine).join(' · ');
+      guideDescBody.textContent  = hourShows.length > 1
+        ? hourShows.map(s => s.title + ': ' + s.description).join('  ')
+        : hourShows[0].description;
       guideDescTag.textContent   = dow + ' · ' + date + ' · ' + slotLocal;
       return;
     }
@@ -2059,18 +2142,23 @@ customElements.whenDefined('mux-video').then(function(){
       guideDescTag.textContent   =
         'OFF AIR · BACK AT ' + fmtSlot(t).toUpperCase();
     } else if (live.inShow) {
-      guideDescTitle.textContent = SHOW.titleLine;
-      guideDescBody.textContent  = SHOW.description;
-      guideDescTag.textContent   = 'ON AIR · ' + SHOW.metaLine;
+      // The currently-airing slot's show — alternates every 15 min.
+      guideDescTitle.textContent = live.show.titleLine;
+      guideDescBody.textContent  = live.show.description;
+      guideDescTag.textContent   = 'ON AIR · ' + live.show.metaLine;
     } else {
+      // Between shows in the current slot. Compute what airs NEXT
+      // (the next slot's show) — with alternation that's the OTHER
+      // show from the one that just played.
       const secs = Math.max(0, Math.ceil((live.nextSlotStart - Date.now()) / 1000));
       const mm = String(Math.floor(secs / 60)).padStart(2, '0');
       const ss = String(secs % 60).padStart(2, '0');
       const nextAt = fmtSlot(new Date(live.nextSlotStart));
+      const nextShow = showForSlotIndex(live.slotIdx + 1);
       guideDescTitle.textContent = 'BETWEEN SHOWS';
       guideDescBody.textContent  =
-        SHOW.title + ' returns at ' + nextAt +
-        '. See the lineup below for what airs next.';
+        nextShow.title + ' is up next at ' + nextAt +
+        '. See the lineup below for what airs after.';
       guideDescTag.textContent   = 'OFF AIR · BACK IN ' + mm + ':' + ss;
     }
   }
@@ -2186,6 +2274,11 @@ customElements.whenDefined('mux-video').then(function(){
   // the intro never fires `ended` (codec / network failure).
 
   function startMovieAtLive(){
+    // Ensure the player has the correct asset loaded for the slot's
+    // current show + viewport orientation. If a slot rolled over
+    // between page load and PUSH PLAY, this swaps in the right
+    // playback ID; otherwise it's a no-op.
+    applyShowAndOrientation();
     const info = getSlotInfo();
     if (!info.offAir && info.inShow) {
       try { mv.currentTime = info.tInShow; } catch (_) {}
@@ -2294,18 +2387,30 @@ customElements.whenDefined('mux-video').then(function(){
   // If the user rotates twice quickly, the in-flight canplay handler
   // from the first swap is unregistered before attaching the new
   // one — no handler stacking, no double-seek.
-  const HORIZONTAL_PB_ID = 'Apdb9mHDmGuMt00AVKNNVx6VZEXw7602eYCcTPJIFtpVE';
-  const VERTICAL_PB_ID   = 'wdN5SRMPQ3Ql8L02Cpl5Fah5L3u00lqhY13EXcSP5x02AU';
   const muxHlsSrc = function(id){
     return 'https://stream.mux.com/' + id +
            '.m3u8?rendition_order=desc&max_resolution_tier=1080p';
   };
+  // Resolve the playback ID for a (show, orientation) pair.
+  function pbIdFor(show, isPortrait){
+    return isPortrait ? show.verticalPbId : show.horizontalPbId;
+  }
   const portraitMQ = window.matchMedia('(orientation: portrait)');
   let currentPbId = null;
   let pendingCanplay = null;
 
-  function applyOrientationAsset(){
-    const want = portraitMQ.matches ? VERTICAL_PB_ID : HORIZONTAL_PB_ID;
+  // Single swap routine — handles BOTH:
+  //   (a) rotation: current show stays, new orientation picks a
+  //       different playback ID.
+  //   (b) slot rollover into a different show: same orientation,
+  //       new playback ID.
+  // Called from the orientation `change` listener AND from
+  // applyState() at slot transitions, so both code paths funnel
+  // through the same canplay → seek → resume routine.
+  function applyShowAndOrientation(){
+    const info = getSlotInfo();
+    const show = info.offAir ? SHOWS[0] : info.show;
+    const want = pbIdFor(show, portraitMQ.matches);
     if (currentPbId === want) return;
 
     // Snapshot state to restore after the source-swap reload.
@@ -2314,7 +2419,7 @@ customElements.whenDefined('mux-video').then(function(){
     const prevVolume = mv.volume;
 
     // Cancel any prior canplay handler still waiting (rapid double-
-    // rotate races would otherwise stack handlers).
+    // rotate / slot-rollover races would otherwise stack handlers).
     if (pendingCanplay) {
       mv.removeEventListener('canplay', pendingCanplay);
       pendingCanplay = null;
@@ -2343,17 +2448,19 @@ customElements.whenDefined('mux-video').then(function(){
     };
     mv.addEventListener('canplay', pendingCanplay);
   }
+  // Back-compat alias: orientation change is just a special case.
+  const applyOrientationAsset = applyShowAndOrientation;
 
   // Initial selection (sets mv.src before the user can even click
   // PUSH PLAY, so preload="auto" starts buffering immediately).
-  applyOrientationAsset();
+  applyShowAndOrientation();
   // React to rotation. addEventListener('change',...) on the
   // MediaQueryList is the modern API; supported everywhere we care.
   if (portraitMQ.addEventListener) {
-    portraitMQ.addEventListener('change', applyOrientationAsset);
+    portraitMQ.addEventListener('change', applyShowAndOrientation);
   } else if (portraitMQ.addListener) {
     // Safari <14 fallback (deprecated but functional)
-    portraitMQ.addListener(applyOrientationAsset);
+    portraitMQ.addListener(applyShowAndOrientation);
   }
 
   syncFsIcon();
