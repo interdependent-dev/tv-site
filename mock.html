@@ -1,0 +1,591 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>INTERDEPENDENT.tv — TV Guide design mock</title>
+<style>
+/* ── Type ─────────────────────────────────────────────────────────── */
+@font-face{
+  font-family:"Eurostile";
+  src:url("fonts/EurostileNextPro-Regular.ttf") format("truetype");
+  font-weight:400;font-style:normal;font-display:swap;
+}
+@font-face{
+  font-family:"Eurostile";
+  src:url("fonts/EurostileNextPro-Bold.ttf") format("truetype");
+  font-weight:700;font-style:normal;font-display:swap;
+}
+@font-face{
+  font-family:"Eurostile Wide";
+  src:url("fonts/EurostileNextPro-WideBold.ttf") format("truetype");
+  font-weight:700;font-style:normal;font-display:swap;
+}
+*{margin:0;box-sizing:border-box}
+html,body{
+  background:#000;color:#fff;height:100%;
+  font-family:"Eurostile",-apple-system,BlinkMacSystemFont,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+body{
+  padding:24px 24px 80px;
+  min-height:100vh;
+  background:linear-gradient(180deg,#000 0%,#0a0a14 100%);
+}
+
+/* ── Mock framing ─────────────────────────────────────────────────── */
+.mock-page{
+  max-width:1400px;margin:0 auto;
+}
+.mock-section{
+  margin-bottom:48px;
+}
+.mock-section-label{
+  font:700 11px/1 "Eurostile",sans-serif;
+  letter-spacing:.32em;text-transform:uppercase;
+  color:rgba(255,255,255,.5);
+  border-bottom:1px solid rgba(255,255,255,.2);
+  padding-bottom:8px;margin-bottom:20px;
+}
+.mock-note{
+  font-size:13px;color:rgba(255,255,255,.55);
+  margin-bottom:14px;line-height:1.5;
+}
+
+/* ── Common building blocks ───────────────────────────────────────── */
+.iv-logo{
+  display:inline-flex;align-items:center;line-height:0;
+}
+.iv-logo svg{width:90px;height:auto}
+.wordmark{
+  font-family:"Eurostile Wide","Eurostile",sans-serif;
+  font-weight:700;font-size:12px;letter-spacing:.32em;text-transform:uppercase;
+  color:#fff;border-bottom:2px solid #ff0000;padding-bottom:4px;display:inline-block;
+}
+
+/* ── Mock 1: COMING ATTRACTIONS banner ────────────────────────────── */
+.coming-banner{
+  border:1px solid rgba(255,255,255,.4);
+  padding:18px 22px;
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  gap:24px;align-items:center;
+  background:linear-gradient(90deg, rgba(255,0,0,.08), rgba(0,0,0,.4));
+}
+.coming-banner .label{
+  font:700 11px/1 "Eurostile",sans-serif;
+  letter-spacing:.32em;text-transform:uppercase;
+  color:#ff5a5a;
+}
+.coming-banner .headline{
+  font-family:"Eurostile Wide","Eurostile",sans-serif;
+  font-weight:700;font-size:22px;letter-spacing:.04em;text-transform:uppercase;
+}
+.coming-banner .meta{
+  font-size:11px;letter-spacing:.22em;text-transform:uppercase;
+  color:rgba(255,255,255,.7);margin-top:4px;
+}
+.coming-banner .cta{
+  appearance:none;border:1px solid #fff;background:transparent;
+  color:#fff;cursor:pointer;
+  font:700 11px/1 "Eurostile",sans-serif;
+  letter-spacing:.24em;text-transform:uppercase;
+  padding:10px 16px 9px;border-radius:999px;
+}
+
+/* ── Mock 2: Schedule cells with sub-brand prefix ─────────────────── */
+.cells-strip{
+  display:grid;
+  grid-template-columns:repeat(4, 1fr);
+  gap:0;
+  border:1px solid rgba(255,255,255,.25);
+}
+.cell{
+  border-right:1px solid rgba(255,255,255,.25);
+  padding:14px 16px;
+  min-height:110px;
+  background:rgba(0,0,0,.35);
+  display:flex;flex-direction:column;justify-content:center;
+  position:relative;
+}
+.cell:last-child{border-right:none}
+.cell .sub-brand{
+  font:700 10px/1 "Eurostile",sans-serif;
+  letter-spacing:.28em;text-transform:uppercase;
+  color:#ff5a5a;
+  margin-bottom:6px;
+}
+.cell.live .sub-brand{color:#ff0000}
+.cell .title{
+  font-weight:700;font-size:13px;letter-spacing:.04em;
+  text-transform:uppercase;color:#fff;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.cell .meta{
+  font-size:10px;letter-spacing:.06em;text-transform:uppercase;
+  color:rgba(255,255,255,.6);margin-top:6px;
+}
+.cell.now{
+  background:linear-gradient(90deg, rgba(255,0,0,.32), rgba(255,0,0,.12));
+  box-shadow:inset 0 0 0 2px #ff0000;
+}
+.cell .badge{
+  position:absolute;top:8px;right:8px;
+  font:700 8px/1 "Eurostile",sans-serif;
+  letter-spacing:.2em;text-transform:uppercase;
+  background:#ff0000;color:#fff;padding:4px 6px 3px;
+  border-radius:2px;
+}
+
+/* ── Mock 3: Featured description strip ───────────────────────────── */
+.featured{
+  border:1px solid rgba(255,255,255,.4);
+  padding:20px 24px;
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:24px;align-items:center;
+}
+.featured .stamp{
+  font:700 10px/1 "Eurostile",sans-serif;
+  letter-spacing:.32em;text-transform:uppercase;
+  color:#ff5a5a;margin-bottom:6px;
+}
+.featured .title{
+  font-family:"Eurostile Wide","Eurostile",sans-serif;
+  font-weight:700;font-size:24px;letter-spacing:.04em;text-transform:uppercase;
+}
+.featured .tagline{
+  font-style:italic;font-size:14px;color:rgba(255,255,255,.8);
+  margin-top:4px;letter-spacing:.02em;
+}
+.featured .body{
+  font-size:13px;color:rgba(255,255,255,.7);line-height:1.5;margin-top:8px;
+  max-width:62ch;
+}
+.featured .tag{
+  font:700 11px/1 "Eurostile",sans-serif;
+  letter-spacing:.32em;text-transform:uppercase;
+  border:1px solid rgba(255,255,255,.5);
+  padding:10px 14px 8px;
+  white-space:nowrap;
+}
+
+/* ── Mock 4: Detail sheet (the magazine-style modal) ──────────────── */
+.detail-stage{
+  position:relative;
+  height:760px;
+  border:1px solid rgba(255,255,255,.2);
+  overflow:hidden;
+  background:#000;
+}
+/* Faux schedule visible behind */
+.detail-stage .bg-schedule{
+  position:absolute;inset:0;
+  background:
+    linear-gradient(0deg, rgba(0,0,0,.55), rgba(0,0,0,.55)),
+    repeating-linear-gradient(
+      90deg,
+      rgba(255,255,255,.1) 0 1px,
+      transparent 1px 180px),
+    repeating-linear-gradient(
+      0deg,
+      rgba(255,255,255,.1) 0 1px,
+      transparent 1px 64px);
+  filter:blur(2px) saturate(.5);
+  opacity:.55;
+}
+.detail-stage .bg-schedule::after{
+  content:"WED MAY 14   THURSDAY   FRIDAY   SATURDAY   SUNDAY   MONDAY   TUESDAY";
+  position:absolute;top:30px;left:30px;
+  font:700 10px/1 "Eurostile",sans-serif;
+  letter-spacing:.32em;color:rgba(255,255,255,.35);
+}
+
+/* The drawer */
+.detail-sheet{
+  position:absolute;
+  top:0;right:0;bottom:0;
+  width:60%;max-width:680px;
+  background:rgba(0,0,0,.88);
+  backdrop-filter:blur(28px) saturate(.7);
+  -webkit-backdrop-filter:blur(28px) saturate(.7);
+  border-left:1px solid rgba(255,255,255,.25);
+  overflow-y:auto;
+  padding:32px 36px 40px;
+  display:flex;flex-direction:column;gap:20px;
+}
+.detail-sheet .close-row{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:8px;
+}
+.detail-sheet .back-pill{
+  appearance:none;background:transparent;border:1px solid rgba(255,255,255,.4);
+  color:#fff;cursor:pointer;
+  font:700 11px/1 "Eurostile",sans-serif;
+  letter-spacing:.24em;text-transform:uppercase;
+  padding:9px 14px 8px;border-radius:999px;
+}
+.detail-sheet .stamp{
+  font-family:"Eurostile Wide","Eurostile",sans-serif;
+  font-weight:700;font-size:14px;letter-spacing:.32em;text-transform:uppercase;
+  color:#fff;display:inline-block;padding-bottom:6px;
+  border-bottom:2px solid #ff0000;
+}
+.detail-sheet .title{
+  font-family:"Eurostile Wide","Eurostile",sans-serif;
+  font-weight:700;font-size:48px;letter-spacing:.02em;text-transform:uppercase;
+  line-height:1.05;margin-top:4px;
+}
+.detail-sheet .tagline{
+  font-style:italic;font-size:18px;color:#ff5a5a;
+  letter-spacing:.04em;line-height:1.4;
+}
+.detail-sheet .hero{
+  width:100%;aspect-ratio:16/9;
+  background:linear-gradient(135deg,#1a0a0a 0%, #3a0808 40%, #0a0a0a 100%);
+  border:1px solid rgba(255,255,255,.2);
+  position:relative;display:grid;place-items:center;
+  color:rgba(255,255,255,.3);font-size:11px;letter-spacing:.4em;
+}
+.detail-sheet .hero::before{
+  content:"";position:absolute;inset:0;
+  background:radial-gradient(circle at 30% 40%, rgba(255,0,0,.18), transparent 60%);
+}
+.detail-sheet .synopsis{
+  font-size:15px;line-height:1.55;color:rgba(255,255,255,.88);
+}
+.detail-sheet .synopsis::first-letter{
+  font-family:"Eurostile Wide","Eurostile",sans-serif;
+  font-size:48px;float:left;line-height:.9;
+  padding:4px 8px 0 0;color:#ff0000;
+}
+.detail-sheet .meta-stripe{
+  font:700 11px/1.4 "Eurostile",sans-serif;
+  letter-spacing:.24em;text-transform:uppercase;
+  color:rgba(255,255,255,.7);
+  border-top:1px solid rgba(255,255,255,.25);
+  border-bottom:1px solid rgba(255,255,255,.25);
+  padding:12px 0;
+  display:flex;flex-wrap:wrap;gap:14px;
+}
+.detail-sheet .meta-stripe span{
+  display:inline-block;
+}
+.detail-sheet .meta-stripe .live-pip{
+  display:inline-flex;align-items:center;gap:6px;color:#ff0000;
+}
+.detail-sheet .meta-stripe .live-pip::before{
+  content:"";width:8px;height:8px;border-radius:50%;background:#ff0000;
+  box-shadow:0 0 8px rgba(255,0,0,.6);
+}
+.detail-sheet .airings{
+  font-size:13px;color:rgba(255,255,255,.7);line-height:1.6;
+}
+.detail-sheet .airings strong{
+  color:#fff;letter-spacing:.06em;text-transform:uppercase;
+  font-weight:700;font-size:11px;display:block;margin-bottom:4px;
+}
+.detail-sheet .actions{
+  display:flex;flex-wrap:wrap;gap:10px;
+}
+.detail-sheet .btn{
+  appearance:none;border:1px solid #fff;cursor:pointer;
+  font:700 11px/1 "Eurostile",sans-serif;
+  letter-spacing:.24em;text-transform:uppercase;
+  padding:13px 20px 12px;border-radius:999px;
+  text-decoration:none;display:inline-block;
+}
+.detail-sheet .btn-primary{
+  background:#ff0000;border-color:#ff0000;color:#fff;
+}
+.detail-sheet .btn-ghost{
+  background:transparent;color:#fff;
+}
+.detail-sheet .credits{
+  font-size:13px;color:rgba(255,255,255,.7);line-height:1.6;
+  border-top:1px solid rgba(255,255,255,.25);padding-top:14px;
+}
+.detail-sheet .credits strong{
+  color:#fff;letter-spacing:.06em;text-transform:uppercase;
+  font-weight:700;font-size:11px;display:block;margin-bottom:6px;
+}
+
+/* ── Mock 5: Sub-brand label gallery ──────────────────────────────── */
+.brand-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));
+  gap:14px;
+}
+.brand-card{
+  border:1px solid rgba(255,255,255,.25);
+  padding:18px 20px;
+}
+.brand-card .lbl{
+  font-family:"Eurostile Wide","Eurostile",sans-serif;
+  font-weight:700;font-size:13px;letter-spacing:.32em;text-transform:uppercase;
+  color:#fff;display:inline-block;
+  border-bottom:2px solid #ff0000;padding-bottom:4px;margin-bottom:10px;
+}
+.brand-card .tag{
+  font-style:italic;font-size:13px;color:#ff5a5a;
+  margin-bottom:8px;line-height:1.4;
+}
+.brand-card .one-line{
+  font-size:12px;color:rgba(255,255,255,.7);line-height:1.5;
+}
+.brand-card .slug{
+  font:400 10px/1 ui-monospace,Menlo,monospace;
+  color:rgba(255,255,255,.4);
+  margin-top:10px;letter-spacing:.05em;
+}
+
+.arc-group h2{
+  font:700 11px/1 "Eurostile",sans-serif;
+  letter-spacing:.32em;text-transform:uppercase;
+  color:#ff5a5a;margin:24px 0 12px;
+}
+
+.boilerplate{
+  font-size:11px;color:rgba(255,255,255,.45);
+  letter-spacing:.06em;line-height:1.6;
+  text-align:center;border-top:1px solid rgba(255,255,255,.15);
+  padding-top:20px;margin-top:36px;
+}
+</style>
+</head>
+<body>
+<div class="mock-page">
+
+  <!-- ─────────────────────────────────────────────────────────────── -->
+  <div class="mock-section">
+    <div class="mock-section-label">Mock 1 / The “COMING ATTRACTIONS” banner</div>
+    <div class="mock-note">Sits above the schedule grid. Calls out the next premiere or live event. Click → opens the detail sheet (Mock 4).</div>
+    <div class="coming-banner">
+      <span class="label">Coming Attractions</span>
+      <div>
+        <div class="headline">Opening Night Conversation</div>
+        <div class="meta">Standing Room Only® · Live · THU JUN 12 · 7:00 P</div>
+      </div>
+      <button class="cta">RSVP</button>
+    </div>
+  </div>
+
+  <!-- ─────────────────────────────────────────────────────────────── -->
+  <div class="mock-section">
+    <div class="mock-section-label">Mock 2 / Schedule cells with sub-brand prefix</div>
+    <div class="mock-note">Each cell shows the sub-brand label on top (red), then title, then compact metadata. The NEW badge flags premieres; the red border + wash flags “airing now.”</div>
+    <div class="cells-strip">
+
+      <div class="cell">
+        <div class="sub-brand">Open Source Theater</div>
+        <div class="title">Tears of Steel — Sci-Fi Short</div>
+        <div class="meta">(12 min.) (2012)</div>
+      </div>
+
+      <div class="cell now">
+        <div class="sub-brand">Indie Theater</div>
+        <div class="title">Sintel — Animation</div>
+        <div class="meta">(15 min.) (2010) · NOW</div>
+      </div>
+
+      <div class="cell live">
+        <span class="badge">Live</span>
+        <div class="sub-brand">Standing Room Only®</div>
+        <div class="title">Opening Night Conversation</div>
+        <div class="meta">(90 min.) · LIVE · 7:00 P</div>
+      </div>
+
+      <div class="cell">
+        <span class="badge">Premiere</span>
+        <div class="sub-brand">Avant-Première</div>
+        <div class="title">The Project (cast & crew cut)</div>
+        <div class="meta">(78 min.) (2026) · INVITE</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ─────────────────────────────────────────────────────────────── -->
+  <div class="mock-section">
+    <div class="mock-section-label">Mock 3 / Featured / “What’s On” description strip</div>
+    <div class="mock-note">Always-on summary of the live moment, same slot as today’s description strip. Sub-brand stamp, title, tagline, body copy, status tag on the right.</div>
+    <div class="featured">
+      <div>
+        <div class="stamp">Standing Room Only®</div>
+        <div class="title">Opening Night Conversation</div>
+        <div class="tagline">“Live. In the room. Or on your screen.”</div>
+        <div class="body">A live conversation with the directors of TEARS OF STEEL, broadcast from the venue floor. Limited seats in the room — unlimited seats on the stream. Q&amp;A from both audiences.</div>
+      </div>
+      <div class="tag">Live · 7:00 P</div>
+    </div>
+  </div>
+
+  <!-- ─────────────────────────────────────────────────────────────── -->
+  <div class="mock-section">
+    <div class="mock-section-label">Mock 4 / The DETAIL SHEET — magazine spread, slides over the guide</div>
+    <div class="mock-note">Click any cell to open. Schedule stays partly visible behind a dark blur. ESC, the BACK pill, or a backdrop tap closes it.</div>
+    <div class="detail-stage">
+      <div class="bg-schedule"></div>
+      <div class="detail-sheet">
+
+        <div class="close-row">
+          <button class="back-pill">← Back to guide</button>
+        </div>
+
+        <span class="stamp">Standing Room Only®</span>
+        <h1 class="title">Opening Night<br>Conversation</h1>
+        <p class="tagline">“Live. In the room. Or on your screen.”</p>
+
+        <div class="hero">HERO IMAGE / STILL FROM THE EVENT</div>
+
+        <p class="synopsis">A live conversation with the directors of TEARS OF STEEL, broadcast from the venue floor in San Francisco. Limited seats in the room — unlimited seats on the stream. Audience Q&amp;A from both rooms. The whole evening is filmed for the archive and rebroadcast the next morning on INTERDEPENDENT.tv.</p>
+
+        <div class="meta-stripe">
+          <span>(90 min.)</span>
+          <span>(2026)</span>
+          <span>NR</span>
+          <span class="live-pip">LIVE</span>
+          <span>Captioned</span>
+        </div>
+
+        <div class="airings">
+          <strong>Airings</strong>
+          THU JUN 12; 7:00 P (Live) · FRI JUN 13; 11:00 A (Encore) · SUN JUN 15; 6:00 P (Encore)
+        </div>
+
+        <div class="actions">
+          <a class="btn btn-primary" href="https://plots.com/events/opening-night">Buy Tickets · Plots</a>
+          <a class="btn btn-ghost" href="https://interdependent.tv/live/opening-night">Stream Live · RSVP to Hold</a>
+        </div>
+
+        <div class="credits">
+          <strong>Cast &amp; Crew</strong>
+          Directed by Ian Hubert · Produced by Blender Foundation ·
+          Hosted by INTERDEPENDENT.tv · Featuring …
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ─────────────────────────────────────────────────────────────── -->
+  <div class="mock-section">
+    <div class="mock-section-label">Mock 5 / The full sub-brand taxonomy</div>
+    <div class="mock-note">All 12 proposed sub-brands grouped by arc. Each card shows the label as it’ll appear on cells / in the detail-sheet stamp, the tagline (italic, red), the one-liner, and the URL slug.</div>
+
+    <div class="arc-group">
+      <h2>Auditions arc</h2>
+      <div class="brand-grid">
+
+        <div class="brand-card">
+          <div class="lbl">Open Call</div>
+          <div class="tag">“Step one. Bring everything.”</div>
+          <div class="one-line">The wide net. New faces get seen for the first time.</div>
+          <div class="slug">/open-call/&lt;slug&gt;</div>
+        </div>
+
+        <div class="brand-card">
+          <div class="lbl">Callbacks</div>
+          <div class="tag">“Now we go deeper.”</div>
+          <div class="one-line">The shortlist returns. Scenes get specific. The room gets quieter.</div>
+          <div class="slug">/callbacks/&lt;slug&gt;</div>
+        </div>
+
+        <div class="brand-card">
+          <div class="lbl">Chemistry Reads</div>
+          <div class="tag">“Two actors. One room. No safety net.”</div>
+          <div class="one-line">Pairing tests where leads find their counterparts.</div>
+          <div class="slug">/chemistry-reads/&lt;slug&gt;</div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="arc-group">
+      <h2>Screening arc</h2>
+      <div class="brand-grid">
+
+        <div class="brand-card">
+          <div class="lbl">Table Read</div>
+          <div class="tag">“Before a single frame is shot.”</div>
+          <div class="one-line">The full script in a room with cast, crew, and craft.</div>
+          <div class="slug">/table-reads/&lt;slug&gt;</div>
+        </div>
+
+        <div class="brand-card">
+          <div class="lbl">Preview</div>
+          <div class="tag">“First eyes on it.”</div>
+          <div class="one-line">Test screening with a curated audience before the cut locks.</div>
+          <div class="slug">/previews/&lt;slug&gt;</div>
+        </div>
+
+        <div class="brand-card">
+          <div class="lbl">Cast &amp; Crew</div>
+          <div class="tag">“The people who built it, watching it first.”</div>
+          <div class="one-line">Closed screening for the makers.</div>
+          <div class="slug">/cast-crew/&lt;slug&gt;</div>
+        </div>
+
+        <div class="brand-card">
+          <div class="lbl">Producer Screening</div>
+          <div class="tag">“The deck-check before the launch.”</div>
+          <div class="one-line">Stakeholder review of the locked cut.</div>
+          <div class="slug">/producer-screening/&lt;slug&gt;</div>
+        </div>
+
+        <div class="brand-card">
+          <div class="lbl">Avant-Première</div>
+          <div class="tag">“Before the world sees it.”</div>
+          <div class="one-line">Industry + press screening one week ahead of release.</div>
+          <div class="slug">/avant-premiere/&lt;slug&gt;</div>
+        </div>
+
+        <div class="brand-card">
+          <div class="lbl">Premiere</div>
+          <div class="tag">“The first show. The big show.”</div>
+          <div class="one-line">Public-facing debut.</div>
+          <div class="slug">/premiere/&lt;slug&gt;</div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="arc-group">
+      <h2>Live arc (hybrid IRL + stream)</h2>
+      <div class="brand-grid">
+
+        <div class="brand-card">
+          <div class="lbl">Standing Room Only®</div>
+          <div class="tag">“Live. In the room. Or on your screen.”</div>
+          <div class="one-line">Limited seats IRL, stream runs in parallel. The signature live event format.</div>
+          <div class="slug">/standing-room-only/&lt;slug&gt;</div>
+        </div>
+
+        <div class="brand-card">
+          <div class="lbl">On Location</div>
+          <div class="tag">“Where the work actually happens.”</div>
+          <div class="one-line">Broadcasts from sets, festivals, premieres in the field.</div>
+          <div class="slug">/on-location/&lt;slug&gt;</div>
+        </div>
+
+        <div class="brand-card">
+          <div class="lbl">Interdependent Nights</div>
+          <div class="tag">“Late. Loud. On every screen at once.”</div>
+          <div class="one-line">Late-night live entertainment.</div>
+          <div class="slug">/interdependent-nights/&lt;slug&gt;</div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <div class="boilerplate">
+    INTERDEPENDENT.tv · Programming in Pacific Time unless noted ·
+    Captioning available where indicated · © 2026 INTERDEPENDENT Ventures
+  </div>
+
+</div>
+</body>
+</html>
