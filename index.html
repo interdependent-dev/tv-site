@@ -2433,7 +2433,7 @@ customElements.whenDefined('mux-video').then(function(){
     mv.src = muxHlsSrc(want);
 
     // Wait for the new source to be playable, then re-sync to the
-    // live wall-clock position and restore prior audio + play state.
+    // live wall-clock position and (re-)start playback.
     pendingCanplay = function onReady(){
       mv.removeEventListener('canplay', pendingCanplay);
       pendingCanplay = null;
@@ -2461,11 +2461,18 @@ customElements.whenDefined('mux-video').then(function(){
         }
       }
 
+      // Re-sync to live AND play, if the channel should be playing
+      // right now. The previous gate here (`if (wasPlaying)`) caused
+      // a persistent black screen after every OFF AIR → ON AIR
+      // resume and after every static-gap → next-slot transition,
+      // because in both cases mv was paused before the swap so
+      // wasPlaying captured false. The right gate is "user has
+      // activated the channel AND we're currently in a show slot" —
+      // which is also what protects the cold-start preload (no
+      // userActivated yet) from auto-playing in the background.
       const live = getSlotInfo();
-      if (!live.offAir && live.inShow) {
+      if (userActivated && !live.offAir && live.inShow) {
         try { mv.currentTime = live.tInShow; } catch (_) {}
-      }
-      if (wasPlaying) {
         const p = mv.play();
         if (p && p.catch) p.catch(function(){});
       }
