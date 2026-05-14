@@ -1360,8 +1360,17 @@ function ptToUtc(year, month, day, hour, minute, second){
 }
 
 const SHOW = {
-  title: 'TEARS OF STEEL',
-  duration: '12:14',
+  // `title` is the bare show name — used in JS string concatenation
+  // ("TEARS OF STEEL returns at …"). `titleLine` is the TV-Guide-
+  // styled headline rendered in cells and the description strip:
+  // em-dash + genre tag, all caps. `metaLine` is the inline
+  // metadata stripe (runtime + production year) in the listing-
+  // page idiom of 1980 TV Guide ("(60 min.) (1981)"). `duration`
+  // stays in MM:SS for any internal seconds-precise math.
+  title:     'TEARS OF STEEL',
+  titleLine: 'TEARS OF STEEL—Sci-fi Short',
+  metaLine:  '(12 min.) (2012)',
+  duration:  '12:14',
   description:
     'Open-source 4K sci-fi short — a fractured science team races ' +
     'to undo a future that was never theirs to write. Directed by ' +
@@ -1930,8 +1939,8 @@ customElements.whenDefined('mux-video').then(function(){
         cell.dataset.col = String(c);
         if (!isToday) cell.style.opacity = '.65';
         cell.innerHTML =
-          '<div class="title">' + SHOW.title + '</div>' +
-          '<div class="meta">' + SHOW.duration + '</div>';
+          '<div class="title">' + SHOW.titleLine + '</div>' +
+          '<div class="meta">' + SHOW.metaLine + '</div>';
         row.appendChild(cell);
       }
       // Trailing END-OF-DAY cell — matches the header marker above.
@@ -2033,7 +2042,7 @@ customElements.whenDefined('mux-video').then(function(){
                              rowDate.getMonth() + 1, rowDate.getDate(),
                              s.hour, s.minute, 0);
       const slotLocal = fmtSlot(new Date(slotTS)).toUpperCase();
-      guideDescTitle.textContent = SHOW.title;
+      guideDescTitle.textContent = SHOW.titleLine;
       guideDescBody.textContent  = SHOW.description;
       guideDescTag.textContent   = dow + ' · ' + date + ' · ' + slotLocal;
       return;
@@ -2050,9 +2059,9 @@ customElements.whenDefined('mux-video').then(function(){
       guideDescTag.textContent   =
         'OFF AIR · BACK AT ' + fmtSlot(t).toUpperCase();
     } else if (live.inShow) {
-      guideDescTitle.textContent = SHOW.title;
+      guideDescTitle.textContent = SHOW.titleLine;
       guideDescBody.textContent  = SHOW.description;
-      guideDescTag.textContent   = 'ON AIR · ' + SHOW.duration;
+      guideDescTag.textContent   = 'ON AIR · ' + SHOW.metaLine;
     } else {
       const secs = Math.max(0, Math.ceil((live.nextSlotStart - Date.now()) / 1000));
       const mm = String(Math.floor(secs / 60)).padStart(2, '0');
@@ -2547,10 +2556,10 @@ customElements.whenDefined('mux-video').then(function(){
        program identity reads first, then you scan the slots. -->
   <div class="guide-desc">
     <div>
-      <div class="desc-title" id="guideDescTitle">TEARS OF STEEL</div>
+      <div class="desc-title" id="guideDescTitle">TEARS OF STEEL—Sci-fi Short</div>
       <div class="desc-body" id="guideDescBody">Open-source 4K sci-fi short — a fractured science team races to save humanity from its own machines.</div>
     </div>
-    <div class="desc-tag" id="guideDescTag">NOW PLAYING · 12:14</div>
+    <div class="desc-tag" id="guideDescTag">ON AIR · (12 min.) (2012)</div>
   </div>
   <div class="guide-grid-wrap">
     <div class="guide-grid" id="guideGrid"></div>
