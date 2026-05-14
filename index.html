@@ -679,6 +679,31 @@ body.no-fs .logo.show{pointer-events:none}
    one for phones. Pure CSS swap, no JS. */
 .guide-back-long  {display:inline}
 .guide-back-short {display:none}
+
+/* Announcer-cadence highlight. Each word inside the back-button is
+   wrapped in .bw with a `--i` index (0..n). All words run the same
+   4.5s keyframe; staggered animation-delay (--i × 0.35s) lights
+   them up sequentially left-to-right — mimicking the cadence of
+   the TV-broadcast voice-over reading the phrase. After the sweep,
+   everyone holds white for ~2.3s before the next cycle. Pure red
+   #ff0000, no opacity dip (the brand-color rule). */
+.guide-back .bw{
+  display:inline-block;
+  color:inherit;
+  animation:bw-flash 4.5s ease-in-out infinite;
+  animation-delay:calc(var(--i, 0) * 0.35s);
+  will-change:color;
+}
+@keyframes bw-flash{
+  0%, 100% { color:inherit;  }
+  3%       { color:#ff0000;  }
+  10%      { color:inherit;  }
+}
+/* Respect user motion preferences — viewers with prefers-reduced-
+   motion get the static white label, no flashing color. */
+@media (prefers-reduced-motion: reduce){
+  .guide-back .bw{animation:none}
+}
 @media (max-width:900px){
   .guide-back{font-size:10px;letter-spacing:.18em;padding:8px 14px 7px}
   .guide-back-long  {display:none}
@@ -2418,11 +2443,17 @@ customElements.whenDefined('mux-video').then(function(){
            does the work of an icon — viewers know exactly what it
            means and which direction it points. CSS swaps in a
            shorter label on phones where the full wording wouldn't
-           fit alongside the day/date/time cluster. -->
+           fit alongside the day/date/time cluster.
+           Each word is wrapped in .bw so the announcer-cadence
+           red flash (see CSS @keyframes bw-flash) can pulse them
+           left-to-right with a stagger — feels like the original
+           voice-over reading you the phrase. --i is the word's
+           position in the line; the animation-delay multiplier
+           uses it to space the flashes evenly. -->
       <button class="guide-back" id="guideBack" type="button"
               aria-label="Back to our regularly scheduled programming">
-        <span class="guide-back-long">Back to our regularly scheduled programming</span>
-        <span class="guide-back-short">Back to programming</span>
+        <span class="guide-back-long"><span class="bw" style="--i:0">Back</span> <span class="bw" style="--i:1">to</span> <span class="bw" style="--i:2">our</span> <span class="bw" style="--i:3">regularly</span> <span class="bw" style="--i:4">scheduled</span> <span class="bw" style="--i:5">programming</span></span>
+        <span class="guide-back-short"><span class="bw" style="--i:0">Back</span> <span class="bw" style="--i:1">to</span> <span class="bw" style="--i:2">programming</span></span>
       </button>
     </div>
     <div class="guide-clock">
