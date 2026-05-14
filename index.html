@@ -120,11 +120,13 @@ html,body{
   --watermark-w:min(20vw,120px);
   --watermark-h:calc(var(--watermark-w) * 0.6041);
   --guide-pill-h:33px;
-  /* Hour-cell width — drives both the schedule grid and the
+  /* Slot-cell width — drives both the schedule grid and the
      section-grouping (MORNING / AFTERNOON / EVENING) row above
      it. Sharing one var keeps every row aligned across the cell
-     boundaries no matter the viewport. */
-  --hour-w:180px;
+     boundaries no matter the viewport. Each cell holds one 15-min
+     slot now — so width matches what the title comfortably reads
+     at, not what an hour of content would need. */
+  --hour-w:130px;
 }
 @media (max-width:480px) and (orientation:portrait){
   :root{
@@ -134,7 +136,7 @@ html,body{
   }
 }
 @media (max-width:640px){
-  :root{ --hour-w:140px }
+  :root{ --hour-w:108px }
 }
 @media (max-height:480px) and (orientation:landscape){
   :root{
@@ -144,7 +146,7 @@ html,body{
   }
 }
 @media (orientation:landscape) and (max-height:500px){
-  :root{ --hour-w:120px }
+  :root{ --hour-w:92px }
 }
 
 /* Chrome-less full-bleed playback. <media-container> is the v10
@@ -872,9 +874,13 @@ body.no-fs .logo.show{pointer-events:none}
   display:flex;align-items:center;
   box-sizing:border-box;
 }
-.guide-section-morning  { flex:0 0 calc(6 * var(--hour-w)) }
-.guide-section-afternoon{ flex:0 0 calc(6 * var(--hour-w)) }
-.guide-section-evening  { flex:0 0 calc(3 * var(--hour-w)) }
+/* Each section spans its full count of 15-min slots:
+   MORNING = 6 hours × 4 = 24 slots,
+   AFTERNOON = 6 hours × 4 = 24 slots,
+   EVENING = 3 hours × 4 = 12 slots. */
+.guide-section-morning  { flex:0 0 calc(24 * var(--hour-w)) }
+.guide-section-afternoon{ flex:0 0 calc(24 * var(--hour-w)) }
+.guide-section-evening  { flex:0 0 calc(12 * var(--hour-w)) }
 /* The corner above the row-label column is sticky on both axes,
    like the regular .guide-corner — extra z-index keeps it above
    both sticky stacks. The trailing "off-air" placeholder matches
@@ -1855,27 +1861,30 @@ customElements.whenDefined('mux-video').then(function(){
   // scroll position survives ticks).
   const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
   // Schedule grid is sized in HOURS, not 15-min slots. The channel
-  // still runs at 15-min slot granularity for playback (Tears of
-  // Steel + 2:46 of static every quarter hour) — but the GUIDE
-  // shows one cell per broadcast hour so the table reads at a
-  // glance. 15 hourly columns cover the 6 AM – 9 PM PT broadcast
-  // day; the trailing OFF AIR cell closes it.
-  const HOURS_PER_DAY = CHANNEL.endHour - CHANNEL.startHour; // 15
+  // Schedule grid is sized in 15-MIN SLOTS so each cell holds
+  // exactly one show. With two shows alternating per slot, that
+  // means viewers see TEARS / ASC / TEARS / ASC … flip across the
+  // grid in lockstep with what's actually playing on the channel.
+  // 60 slot columns cover the 6 AM – 9 PM PT broadcast day; the
+  // trailing OFF AIR cell closes it.
+  const SLOTS_PER_DAY = (CHANNEL.endHour - CHANNEL.startHour) * 4; // 60
 
-  // Returns the PT hour + minute for col-th hourly column.
-  // col 0 = 6:00 AM PT, col 1 = 7:00 AM PT, ... col 14 = 8:00 PM PT.
+  // Returns the PT hour + minute for col-th 15-min slot.
+  // col 0 = 6:00 AM PT, col 1 = 6:15 AM PT, ... col 59 = 8:45 PM PT.
   function slotForCol(col){
-    return { hour: CHANNEL.startHour + col, minute: 0 };
+    const totalMin = CHANNEL.startHour * 60 + col * 15;
+    return { hour: Math.floor(totalMin / 60), minute: totalMin % 60 };
   }
 
-  // Returns the hourly column index (0..HOURS_PER_DAY-1) for the
+  // Returns the slot column index (0..SLOTS_PER_DAY-1) for the
   // given moment, or -1 if outside channel hours. Boundaries
-  // evaluated in PT.
+  // evaluated in PT — matches the playback's slot math precisely
+  // so the "now" highlight stays in lockstep with the channel.
   function nowSlotCol(d){
     const nowMs = d instanceof Date ? d.getTime() : (typeof d === 'number' ? d : Date.now());
     const pt = ptParts(nowMs);
     if (pt.hour < CHANNEL.startHour || pt.hour >= CHANNEL.endHour) return -1;
-    return pt.hour - CHANNEL.startHour;
+    return (pt.hour - CHANNEL.startHour) * 4 + Math.floor(pt.minute / 15);
   }
 
   // Column widths: current slot is 200px (wider, so the red
@@ -1897,7 +1906,10 @@ customElements.whenDefined('mux-video').then(function(){
   //   EVENING   6 PM – 8 PM   (cols 12..14)
   // .section-end is applied to the LAST cell of MORNING and
   // AFTERNOON in each row so the schedule renders distinct chunks.
-  const SECTION_END_COLS = new Set([5, 11]);
+  // Last 15-min slot of each section: MORNING ends after 11:45 A
+  // (slot 23), AFTERNOON ends after 5:45 P (slot 47). EVENING runs
+  // through slot 59 (8:45 P) and abuts the OFF AIR end-cell.
+  const SECTION_END_COLS = new Set([23, 47]);
 
   function buildGuideGrid(){
     const now = new Date();
@@ -1929,17 +1941,16 @@ customElements.whenDefined('mux-video').then(function(){
     guideGrid.appendChild(sectionRow);
 
     // ── Header row (sticky-top, z:3) ───────────────────────────────
-    // Corner cell is sticky on BOTH axes (top:0 + left:0). Then 15
-    // hourly headers. The current hour gets the .now class for the
-    // red-bordered now-cell highlight; columns that close a section
-    // get .section-end for the thicker right divider.
+    // Corner cell is sticky on BOTH axes (top:0 + left:0). Then 60
+    // 15-min slot headers. Cells that close a section get
+    // .section-end for the thicker right divider.
     const headRow = document.createElement('div');
     headRow.className = 'guide-row guide-row-head';
     const corner = document.createElement('div');
     corner.className = 'guide-corner';
     headRow.appendChild(corner);
     const ptToday = ptParts(Date.now());
-    for (let c = 0; c < HOURS_PER_DAY; c++) {
+    for (let c = 0; c < SLOTS_PER_DAY; c++) {
       const s = slotForCol(c);
       const slotTS = ptToUtc(ptToday.year, ptToday.month, ptToday.day,
                              s.hour, s.minute, 0);
@@ -1991,31 +2002,19 @@ customElements.whenDefined('mux-video').then(function(){
       label.appendChild(dateRow);
       row.appendChild(label);
 
-      for (let c = 0; c < HOURS_PER_DAY; c++) {
+      for (let c = 0; c < SLOTS_PER_DAY; c++) {
         const cell = document.createElement('div');
         cell.className = 'guide-cell' +
           (SECTION_END_COLS.has(c) ? ' section-end' : '');
         cell.dataset.row = String(r);
         cell.dataset.col = String(c);
         if (!isToday) cell.style.opacity = '.65';
-        // Each hour contains four 15-min slots; with SHOWS.length
-        // shows in rotation, an hour cycles through them. List the
-        // distinct shows airing in the hour, in their start order.
-        // For 2 shows that gives "TEARS OF STEEL · ASC".
-        const ptHour = CHANNEL.startHour + c;
-        const slotIdxAtTop = (ptHour - CHANNEL.startHour) * 4;
-        const showsThisHour = [];
-        for (let s = 0; s < 4; s++) {
-          const sh = showForSlotIndex(slotIdxAtTop + s);
-          if (!showsThisHour.includes(sh)) showsThisHour.push(sh);
-        }
-        const titleText = showsThisHour.map(s => s.titleLine).join(' · ');
-        const metaText  = showsThisHour.length > 1
-          ? '(' + showsThisHour[0].duration.split(':')[0] + ' min. each)'
-          : showsThisHour[0].metaLine;
+        // ONE show per 15-min slot — alternation pattern is now
+        // visible across the grid: TOS · ASC · TOS · ASC …
+        const show = showForSlotIndex(c);
         cell.innerHTML =
-          '<div class="title">' + titleText + '</div>' +
-          '<div class="meta">'  + metaText  + '</div>';
+          '<div class="title">' + show.titleLine + '</div>' +
+          '<div class="meta">'  + show.metaLine  + '</div>';
         row.appendChild(cell);
       }
       // Trailing END-OF-DAY cell — matches the header marker above.
@@ -2108,25 +2107,17 @@ customElements.whenDefined('mux-video').then(function(){
           dow + ' · ' + date + ' · ' + offStart + ' – ' + offEnd;
         return;
       }
-      // Regular hour — list the shows in the rotation for this
-      // hour's 4 slots (in their start order, deduped). Description
-      // body uses the first show's blurb; tag shows the airing time.
-      const ptHour = CHANNEL.startHour + hoveredSlot.col;
-      const baseSlot = (ptHour - CHANNEL.startHour) * 4;
-      const hourShows = [];
-      for (let s = 0; s < 4; s++) {
-        const sh = showForSlotIndex(baseSlot + s);
-        if (!hourShows.includes(sh)) hourShows.push(sh);
-      }
+      // Regular 15-min slot — exactly one show per cell. Tag shows
+      // the airing time (in the viewer's local format); body uses
+      // that show's blurb.
       const slotPT = slotForCol(hoveredSlot.col);
       const slotTS = ptToUtc(rowDate.getFullYear(),
                              rowDate.getMonth() + 1, rowDate.getDate(),
                              slotPT.hour, slotPT.minute, 0);
       const slotLocal = fmtSlot(new Date(slotTS)).toUpperCase();
-      guideDescTitle.textContent = hourShows.map(s => s.titleLine).join(' · ');
-      guideDescBody.textContent  = hourShows.length > 1
-        ? hourShows.map(s => s.title + ': ' + s.description).join('  ')
-        : hourShows[0].description;
+      const slotShow = showForSlotIndex(hoveredSlot.col);
+      guideDescTitle.textContent = slotShow.titleLine;
+      guideDescBody.textContent  = slotShow.description;
       guideDescTag.textContent   = dow + ' · ' + date + ' · ' + slotLocal;
       return;
     }
