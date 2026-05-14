@@ -596,75 +596,86 @@ body.no-fs .logo.show{pointer-events:none}
   .guide-logo svg{width:clamp(56px,10vh,72px)}
 }
 
-/* Back-to-TV button — naked left-pointing arrow with a long stem.
-   No surrounding circle / pill — the arrow IS the affordance. The
-   stem extends well to the right of the arrowhead, visually
-   pointing the viewer back at the IV mark to its left. Stroke
-   uses currentColor so opacity/color hover transitions ride on
-   the button's text color. */
+/* Back-to-TV button — TV Guide booklet aesthetic. Pill outline,
+   uppercase Eurostile, wide letter-spacing — same wordmark
+   language as the GUIDE pill in the bottom corner. The full
+   broadcast phrasing on desktop ("BACK TO OUR REGULARLY SCHEDULED
+   PROGRAMMING") fits comfortably; on small viewports a shorter
+   "BACK TO PROGRAMMING" stand-in keeps the button readable. */
 .guide-back{
   appearance:none;
-  background:transparent;border:none;
-  padding:8px 12px;margin:0;
-  color:rgba(255,255,255,.7);
-  cursor:pointer;
-  display:flex;align-items:center;
-  position:relative; /* anchor for the tooltip */
-  flex-shrink:0;
-  transition:color .15s ease, transform .15s ease;
+  background:rgba(0,0,0,.45);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,.4);
+  color:#fff;cursor:pointer;
+  font:700 11px/1.1 "Eurostile",sans-serif;
+  letter-spacing:.24em;text-transform:uppercase;
+  padding:10px 18px 9px;border-radius:999px;
+  white-space:nowrap;
+  flex-shrink:1; /* allow shrinking on tight viewports before wrap */
+  transition:background .15s ease, border-color .15s ease, transform .15s ease;
 }
 .guide-back:focus{outline:none}
 .guide-back:hover,
 .guide-back:focus-visible{
-  color:#fff;
-  transform:scale(1.05);
+  background:rgba(255,255,255,.12);
+  border-color:#fff;
+  transform:scale(1.03);
 }
-.guide-back svg{
-  width:clamp(54px,6vw,78px);
-  height:auto;
-  display:block;
-  transition:filter .15s ease;
+.guide-back:focus-visible{
+  box-shadow:0 0 0 2px rgba(255,255,255,.25);
 }
-.guide-back:focus-visible svg{
-  filter:drop-shadow(0 0 8px rgba(255,255,255,.85));
+/* Two label spans — the long one for roomy viewports, the short
+   one for phones. Pure CSS swap, no JS. */
+.guide-back-long  {display:inline}
+.guide-back-short {display:none}
+@media (max-width:900px){
+  .guide-back{font-size:10px;letter-spacing:.18em;padding:8px 14px 7px}
+  .guide-back-long  {display:none}
+  .guide-back-short {display:inline}
 }
-/* Tooltip pill below the button — same chrome as .logo-tip. */
-.guide-back-tip{
-  position:absolute;
-  top:calc(100% + 6px);
-  left:50%;
-  transform:translateX(-50%);
-  white-space:nowrap;
-  font:700 11px/1 "Eurostile",sans-serif;
-  letter-spacing:.22em;text-transform:uppercase;
-  color:#fff;
-  background:rgba(0,0,0,.55);
-  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
-  border:1px solid rgba(255,255,255,.3);
-  border-radius:999px;
-  padding:7px 12px 6px;
-  opacity:0;
-  pointer-events:none;
-  transition:opacity .12s ease;
-}
-.guide-back:hover .guide-back-tip,
-.guide-back:focus-visible .guide-back-tip{opacity:1}
-@media (max-width:640px){
-  .guide-back svg{width:clamp(44px,12vw,58px)}
+@media (max-width:380px){
+  .guide-back{font-size:9px;letter-spacing:.14em;padding:7px 11px 6px}
 }
 @media (orientation:landscape) and (max-height:500px){
-  .guide-back{padding:6px 8px}
-  .guide-back svg{width:40px}
+  .guide-back{padding:6px 12px 5px;font-size:9px;letter-spacing:.18em}
 }
 
-/* The masthead left group — IV mark + back button stay together,
-   the clock floats off to the right via flex auto-margin. */
+/* The masthead left group — IV mark + TV GUIDE wordmark + back
+   button stay together, the clock floats off to the right via
+   flex auto-margin. */
 .guide-mast-left{
   display:flex;align-items:center;
   gap:clamp(14px,2.5vw,28px);
+  flex-wrap:wrap;
 }
 @media (orientation:landscape) and (max-height:500px){
   .guide-mast-left{gap:10px}
+}
+
+/* TV GUIDE wordmark — callback to the original red-bar TV Guide
+   booklet logo. Tight Eurostile Wide caps, faint red underline
+   echoes the iconic cover treatment without copying it. */
+.guide-wordmark{
+  display:flex;flex-direction:column;align-items:flex-start;
+  line-height:1;
+  flex-shrink:0;
+}
+.guide-wordmark span{
+  font-family:"Eurostile Wide","Eurostile",sans-serif;
+  font-weight:700;
+  font-size:clamp(11px,1.1vw,13px);
+  letter-spacing:.32em;
+  text-transform:uppercase;
+  color:rgba(255,255,255,.95);
+  padding-bottom:5px;
+  border-bottom:2px solid #ff0000;
+}
+@media (orientation:landscape) and (max-height:500px){
+  .guide-wordmark span{font-size:10px;letter-spacing:.22em;padding-bottom:3px;border-bottom-width:1.5px}
+}
+@media (max-width:640px){
+  .guide-wordmark span{font-size:10px;letter-spacing:.22em;padding-bottom:3px}
 }
 
 /* (The masthead's "Back to TV" tooltip moved onto the dedicated
@@ -721,11 +732,18 @@ body.no-fs .logo.show{pointer-events:none}
    scrolling through the schedule; time-header row is sticky-top
    for the same reason on vertical scroll. */
 /* Scrolling viewport for the schedule. Both axes scroll inside
-   this box; sticky cells inside the rows pin to its edges. */
+   this box; sticky cells inside the rows pin to its edges.
+   `overscroll-behavior: contain` keeps mobile touch scrolling
+   inside the grid — without it, an upward swipe at the top of the
+   grid would chain to the document and bounce the whole guide.
+   `-webkit-overflow-scrolling: touch` enables momentum scrolling
+   on iOS. */
 .guide-grid-wrap{
   flex:1;
   margin-top:clamp(10px,2vh,18px);
   overflow:auto;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
   border:1px solid rgba(255,255,255,.35);
   border-radius:2px;
   background:transparent; /* let the wash from #guide come through */
@@ -856,6 +874,33 @@ body.no-fs .logo.show{pointer-events:none}
   opacity:.45;
 }
 .guide-cell.static-slot .title{font-weight:400}
+
+/* End-of-broadcast-day marker — last cell of each row + the
+   corresponding header. Wider than a regular cell so the "Off air"
+   /  "Resumes 6:00 AM" text reads cleanly; dim background so it
+   visually closes the day without competing with the schedule. */
+.guide-cell.guide-end-cell,
+.guide-header.guide-end-cell{
+  flex:0 0 clamp(140px,16vw,200px);
+  background:rgba(0,0,0,.65);
+  border-right:none;
+}
+.guide-header.guide-end-cell{
+  color:rgba(255,255,255,.55);
+  letter-spacing:.24em;
+}
+.guide-cell.guide-end-cell .title{
+  font-weight:700;
+  color:rgba(255,255,255,.75);
+  text-transform:uppercase;
+  letter-spacing:.18em;
+  font-size:clamp(10px,1.1vw,12px);
+}
+.guide-cell.guide-end-cell .meta{
+  opacity:.5;
+  text-transform:none;
+  letter-spacing:.06em;
+}
 
 /* Vertical red "now" line — moves through the wider current-slot
    column as the minutes tick. Like Apple Calendar's red "now" line
@@ -1567,6 +1612,13 @@ customElements.whenDefined('mux-video').then(function(){
       h.textContent = fmtSlot(t).toUpperCase();
       headRow.appendChild(h);
     }
+    // Trailing header: explicit "END OF DAY" marker, so viewers
+    // who scroll to the right edge of the schedule see a clean
+    // close to the broadcast day instead of cells just stopping.
+    const endHeader = document.createElement('div');
+    endHeader.className = 'guide-header guide-end-cell';
+    endHeader.textContent = 'OFF AIR';
+    headRow.appendChild(endHeader);
     guideGrid.appendChild(headRow);
 
     // ── Day rows ──────────────────────────────────────────────────
@@ -1604,6 +1656,16 @@ customElements.whenDefined('mux-video').then(function(){
           '<div class="meta">' + SHOW.duration + '</div>';
         row.appendChild(cell);
       }
+      // Trailing END-OF-DAY cell — matches the header marker above.
+      // Visually closes each day so the table doesn't just stop
+      // mid-air at 8:45p. Subtle, dim, no clickable affordance.
+      const endCell = document.createElement('div');
+      endCell.className = 'guide-cell guide-end-cell';
+      if (!isToday) endCell.style.opacity = '.65';
+      endCell.innerHTML =
+        '<div class="title">Off air</div>' +
+        '<div class="meta">Resumes 6:00 AM</div>';
+      row.appendChild(endCell);
 
       guideGrid.appendChild(row);
     }
@@ -2124,27 +2186,31 @@ customElements.whenDefined('mux-video').then(function(){
      program description at the bottom. Built and refreshed by JS. -->
 <div id="guide" role="dialog" aria-modal="true" aria-label="TV guide">
   <div class="guide-mast">
-    <!-- Left group: brand mark + back-to-TV button. The IV mark is
-         decorative; the dedicated back arrow to its right (Netflix
-         style) is the affordance, visually pointing at the brand:
-         "you came from INTERDEPENDENT.tv — this returns you there." -->
+    <!-- Left group: brand mark + "TV GUIDE" wordmark + back button.
+         The IV mark is decorative. The wordmark is a callback to
+         the classic TV Guide booklet — small red bar under the
+         "TV GUIDE" label evokes the original cover treatment. The
+         back-to-TV button (right of the wordmark) is the action. -->
     <div class="guide-mast-left">
       <div class="guide-logo">
         <svg viewBox="-1 -1 394 238" fill-rule="evenodd" role="img" aria-label="INTERDEPENDENT TV"><path fill="#fff" d="M72.4265993,181.599151 C66.4590298,181.599151 61.6302421,176.771465 61.6302421,170.837972 C61.6302421,164.895874 66.4590298,160.07249 72.4265993,160.07249 C78.3985826,160.07249 83.2229564,164.895874 83.2229564,170.837972 C83.2229564,176.771465 78.3985826,181.599151 72.4265993,181.599151 M91.860925,171.461871 C91.860925,160.132729 83.1567482,151.462687 73.0577845,151.462687 C61.6964503,151.462687 52.9966875,160.132729 52.9966875,171.461871 C52.9966875,181.538913 61.6964503,190.208955 73.0577845,190.208955 C83.1567482,190.208955 91.860925,181.538913 91.860925,171.461871M24.7317875,73.9701493 C24.7317875,114.823555 57.9498633,147.940299 99.5404822,147.940299 C139.904437,147.940299 173.122512,114.823555 173.122512,73.9701493 C173.122512,33.1167433 139.904437,0 99.5404822,0 C57.9498633,0 24.7317875,33.1167433 24.7317875,73.9701493 ZM127.194217,164.849451 C123.67483,164.849451 120.831581,162.010133 120.831581,158.511688 C120.831581,155.009017 123.67483,152.169699 127.194217,152.169699 C130.70927,152.169699 133.552519,155.009017 133.552519,158.511688 C133.552519,162.010133 130.70927,164.849451 127.194217,164.849451 M127.194217,147.940299 C121.338684,147.940299 116.592712,152.66827 116.592712,158.511688 C116.592712,164.346655 121.338684,169.074627 127.194217,169.074627 C133.045415,169.074627 137.791387,164.346655 137.791387,158.511688 C137.791387,152.66827 133.045415,147.940299 127.194217,147.940299M107.7622,183.164179 C102.884091,183.164179 98.92715,187.105962 98.92715,191.972361 C98.92715,196.834336 102.884091,200.776119 107.7622,200.776119 C112.640309,200.776119 116.592712,196.834336 116.592712,191.972361 C116.592712,187.105962 112.640309,183.164179 107.7622,183.164179M88.3256373,214.865672 C82.4745768,214.865672 77.728475,219.595655 77.728475,225.432836 C77.728475,231.270017 82.4745768,236 88.3256373,236 C94.1810481,236 98.92715,231.270017 98.92715,225.432836 C98.92715,219.595655 94.1810481,214.865672 88.3256373,214.865672M17.6655625,116.238806 C7.90718362,116.238806 0,124.123696 0,133.852952 C0,143.577797 7.90718362,151.462687 17.6655625,151.462687 C27.4239414,151.462687 35.331125,143.577797 35.331125,133.852952 C35.331125,124.123696 27.4239414,116.238806 17.6655625,116.238806M180.186475,112.716418 C170.433871,112.716418 162.523175,120.601308 162.523175,130.330564 C162.523175,140.055409 170.433871,147.940299 180.186475,147.940299 C189.943604,147.940299 197.8543,140.055409 197.8543,130.330564 C197.8543,120.601308 189.943604,112.716418 180.186475,112.716418M239.894118,45.170986 L282.776959,45.1709859 L282.776959,63.8942535 L239.894118,63.8942535 L239.894118,104.40507 C239.894118,124.823247 240.972673,126.780451 251.145666,126.780451 L253.001174,126.780451 C262.953117,126.780451 264.046554,124.770747 264.046554,106.053746 L264.046554,99.9894648 L284.426299,99.9894648 L284.426299,110.587606 C284.426299,139.540191 277.772511,146.534141 250.527164,146.534141 L247.228483,146.534141 C220.272791,146.534141 214.77252,139.9545 214.77252,106.672 L214.77252,63.8942535 L201.165465,63.8942535 L201.165465,45.1709859 L214.77252,45.170986 L214.77252,19.4104225 L239.894118,19.4104225 ZM318.496605,45.5306504 L341.82905,125.320038 L365.161495,45.5306504 L365.26667,45.1709859 L365.641397,45.1709859 L391,45.170986 L391.693801,45.170986 L391.474322,45.8291572 L358.487522,144.74972 L358.373533,145.091549 L324.459897,145.091549 L324.345908,144.74972 L291.359107,45.8291571 L291.139628,45.1709859 L318.39143,45.1709859 Z"/></svg>
       </div>
+      <!-- "TV GUIDE" wordmark — small callback to the original
+           red-bar TV Guide booklet logo. Thin red rule under the
+           text echoes the cover treatment without copying it. -->
+      <div class="guide-wordmark" aria-hidden="true">
+        <span>TV Guide</span>
+      </div>
+      <!-- Back-to-channel CTA. Classic TV-broadcast phrasing ("we
+           now return you to our regularly scheduled programming")
+           does the work of an icon — viewers know exactly what it
+           means and which direction it points. CSS swaps in a
+           shorter label on phones where the full wording wouldn't
+           fit alongside the day/date/time cluster. -->
       <button class="guide-back" id="guideBack" type="button"
-              aria-label="Back to INTERDEPENDENT.tv">
-        <!-- Left-pointing arrow with a moderate-length stem.
-             40×20 viewBox — stem is long enough to point clearly
-             at the IV mark to its left without dominating the
-             masthead. Stroke 2.5 reads as a solid line at the
-             rendered size; round caps/joins soften the corners. -->
-        <svg viewBox="0 0 40 20" aria-hidden="true">
-          <path d="M38 10 H4 M4 10 L12 3 M4 10 L12 17"
-                fill="none" stroke="currentColor" stroke-width="2.5"
-                stroke-linejoin="round" stroke-linecap="round"/>
-        </svg>
-        <span class="guide-back-tip" aria-hidden="true">Back to TV</span>
+              aria-label="Back to our regularly scheduled programming">
+        <span class="guide-back-long">Back to our regularly scheduled programming</span>
+        <span class="guide-back-short">Back to programming</span>
       </button>
     </div>
     <div class="guide-clock">
