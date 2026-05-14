@@ -665,7 +665,7 @@ body.no-fs .logo.show{pointer-events:none}
   .guide-back{padding:6px 12px 5px;font-size:9px;letter-spacing:.18em}
 }
 
-/* The masthead left group — IV mark + TV GUIDE wordmark + back
+/* The masthead left group — IV mark + GUIDE wordmark + back
    button stay together, the clock floats off to the right via
    flex auto-margin. */
 .guide-mast-left{
@@ -674,7 +674,11 @@ body.no-fs .logo.show{pointer-events:none}
   flex-wrap:wrap;
 }
 @media (orientation:landscape) and (max-height:500px){
-  .guide-mast-left{gap:10px}
+  /* Landscape phones — viewport is wide-but-short. Bump the
+     inter-element gap so the IV mark, GUIDE wordmark, and back-
+     to-programming pill have room to breathe rather than crowding
+     each other at the top edge. */
+  .guide-mast-left{gap:18px}
 }
 
 /* TV GUIDE wordmark — callback to the original red-bar TV Guide
