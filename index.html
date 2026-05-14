@@ -679,31 +679,6 @@ body.no-fs .logo.show{pointer-events:none}
    one for phones. Pure CSS swap, no JS. */
 .guide-back-long  {display:inline}
 .guide-back-short {display:none}
-
-/* Announcer-cadence highlight. Each word inside the back-button is
-   wrapped in .bw with a `--i` index (0..n). All words run the same
-   4.5s keyframe; staggered animation-delay (--i × 0.35s) lights
-   them up sequentially left-to-right — mimicking the cadence of
-   the TV-broadcast voice-over reading the phrase. After the sweep,
-   everyone holds white for ~2.3s before the next cycle. Pure red
-   #ff0000, no opacity dip (the brand-color rule). */
-.guide-back .bw{
-  display:inline-block;
-  color:inherit;
-  animation:bw-flash 4.5s ease-in-out infinite;
-  animation-delay:calc(var(--i, 0) * 0.35s);
-  will-change:color;
-}
-@keyframes bw-flash{
-  0%, 100% { color:inherit;  }
-  3%       { color:#ff0000;  }
-  10%      { color:inherit;  }
-}
-/* Respect user motion preferences — viewers with prefers-reduced-
-   motion get the static white label, no flashing color. */
-@media (prefers-reduced-motion: reduce){
-  .guide-back .bw{animation:none}
-}
 @media (max-width:900px){
   .guide-back{font-size:10px;letter-spacing:.18em;padding:8px 14px 7px}
   .guide-back-long  {display:none}
@@ -853,18 +828,8 @@ body.no-fs .logo.show{pointer-events:none}
   display:flex;
   min-width:max-content;
 }
-/* Week-start separator — every Sunday row (after the first) gets a
-   small breathing gap above plus a thin red rule on the top of
-   every cell in the row. Groups the 30-day schedule into legible
-   weekly chunks. Pure red (#ff0000) at full opacity to honor the
-   brand-color rule. */
-.guide-row.week-start{
-  margin-top:8px;
-}
-.guide-row.week-start > .guide-cell,
-.guide-row.week-start > .guide-row-label{
-  border-top:2px solid #ff0000;
-}
+/* (Week-start separators were removed. The 30-day grid reads as
+   a single continuous schedule again.) */
 /* Headers row pins to the top so time labels are always readable
    when the user scrolls down through 30 days. z-index above
    regular cells; the corner cell (top-left, sticky on BOTH axes)
@@ -901,22 +866,23 @@ body.no-fs .logo.show{pointer-events:none}
   opacity:.95;
 }
 /* Day-row label cell — sticks to the left edge of the wrap on
-   horizontal scroll. The `clamp(...)` flex-basis tracks the
-   viewport width like the old grid template did, so the column
-   auto-sizes from 68 to 108 px. Near-solid background obscures
-   any cell content that scrolls behind it. */
+   horizontal scroll. The `clamp(...)` flex-basis is sized to fit
+   the longest fully-spelled day name ("WEDNESDAY") at the row's
+   font + letter-spacing, on the full range of viewports.
+   Near-solid background obscures any cell content that scrolls
+   behind it. */
 .guide-row-label{
-  flex:0 0 clamp(68px,8vw,108px);
+  flex:0 0 clamp(118px,13vw,168px);
   position:sticky;left:0;z-index:2;
   background:rgba(8,8,12,.94);
-  font-weight:700;letter-spacing:.18em;text-transform:uppercase;
+  font-weight:700;letter-spacing:.12em;text-transform:uppercase;
 }
 /* Top-left corner — sticky on BOTH axes. Sits above row labels
    (z:2) and headers (z:3) so the inner stickies tuck under it.
    Slightly darker than the other stickies — it's the only cell
    over which BOTH the header row AND the day labels can scroll. */
 .guide-corner{
-  flex:0 0 clamp(68px,8vw,108px);
+  flex:0 0 clamp(118px,13vw,168px);
   position:sticky;left:0;top:0;z-index:4;
   background:rgba(8,8,12,.97);
 }
@@ -1084,14 +1050,16 @@ body.no-fs .logo.show{pointer-events:none}
 
 /* Mobile: tighter padding. Hourly cells are wider here too since
    each represents an hour of programming. Sticky day-label column
-   shrinks for screen real estate. */
+   widens to fit fully-spelled day names ("WEDNESDAY"). */
 @media (max-width:640px){
   #guide{padding:18px 16px}
   .guide-cell,
   .guide-header{flex-basis:140px}
   .guide-cell.now-col{flex-basis:200px}
   .guide-row-label,
-  .guide-corner{flex-basis:62px}
+  .guide-corner{flex-basis:112px}
+  .guide-row-label{letter-spacing:.08em}
+  .guide-row-label .label-dow{font-size:11px}
   .guide-mast{gap:12px;padding-bottom:8px}
   .guide-desc{grid-template-columns:1fr;gap:8px}
 }
@@ -1128,7 +1096,8 @@ body.no-fs .logo.show{pointer-events:none}
   .guide-header{flex-basis:120px}
   .guide-cell.now-col{flex-basis:170px}
   .guide-row-label,
-  .guide-corner{flex-basis:54px}
+  .guide-corner{flex-basis:96px}
+  .guide-row-label{letter-spacing:.06em}
   .guide-cell .title{font-size:11px}
   .guide-cell .meta{font-size:8px;margin-top:1px}
   .guide-row-label{font-size:10px;letter-spacing:.14em}
@@ -1840,20 +1809,15 @@ customElements.whenDefined('mux-video').then(function(){
       const rowDate = new Date(now);
       rowDate.setDate(now.getDate() + r);
       const isToday = r === 0;
-      // A new calendar week starts on Sunday. After the first row,
-      // every Sunday gets a visual separator (.week-start) so the
-      // 30-day grid breaks into legible weekly chunks rather than
-      // reading as one continuous slab.
-      const isWeekStart = r > 0 && rowDate.getDay() === 0;
 
       const row = document.createElement('div');
-      row.className = 'guide-row' + (isWeekStart ? ' week-start' : '');
+      row.className = 'guide-row';
 
       const label = document.createElement('div');
       label.className = 'guide-row-label' + (isToday ? ' today' : '');
       const dowRow = document.createElement('div');
       dowRow.className = 'label-dow';
-      dowRow.textContent = DAYS_SHORT[rowDate.getDay()];
+      dowRow.textContent = DAYS_LONG[rowDate.getDay()];
       const dateRow = document.createElement('div');
       dateRow.className = 'label-date';
       dateRow.textContent = MONTHS[rowDate.getMonth()] + ' ' + rowDate.getDate();
@@ -2468,17 +2432,11 @@ customElements.whenDefined('mux-video').then(function(){
            does the work of an icon — viewers know exactly what it
            means and which direction it points. CSS swaps in a
            shorter label on phones where the full wording wouldn't
-           fit alongside the day/date/time cluster.
-           Each word is wrapped in .bw so the announcer-cadence
-           red flash (see CSS @keyframes bw-flash) can pulse them
-           left-to-right with a stagger — feels like the original
-           voice-over reading you the phrase. --i is the word's
-           position in the line; the animation-delay multiplier
-           uses it to space the flashes evenly. -->
+           fit alongside the day/date/time cluster. -->
       <button class="guide-back" id="guideBack" type="button"
               aria-label="Back to our regularly scheduled programming">
-        <span class="guide-back-long"><span class="bw" style="--i:0">Back</span> <span class="bw" style="--i:1">to</span> <span class="bw" style="--i:2">our</span> <span class="bw" style="--i:3">regularly</span> <span class="bw" style="--i:4">scheduled</span> <span class="bw" style="--i:5">programming</span></span>
-        <span class="guide-back-short"><span class="bw" style="--i:0">Back</span> <span class="bw" style="--i:1">to</span> <span class="bw" style="--i:2">programming</span></span>
+        <span class="guide-back-long">Back to our regularly scheduled programming</span>
+        <span class="guide-back-short">Back to programming</span>
       </button>
     </div>
     <div class="guide-clock">
