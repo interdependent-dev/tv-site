@@ -549,7 +549,14 @@ body.no-fs .logo.show{pointer-events:none}
    bottom. Slides in via opacity + tiny translate. */
 #guide{
   position:fixed;inset:0;z-index:25;
-  background:radial-gradient(ellipse at top, #0a1830 0%, #000 70%);
+  /* Translucent dark veil + heavy backdrop blur — the live channel
+     keeps playing behind the guide; the blur softens the picture
+     to a quiet color wash so the schedule reads clearly on top.
+     No blue gradient — off-brand. The wash is neutral, the only
+     accent colors are white (chrome) + red (today / now). */
+  background:rgba(0,0,0,.55);
+  backdrop-filter:blur(28px) saturate(.6);
+  -webkit-backdrop-filter:blur(28px) saturate(.6);
   display:none;
   flex-direction:column;
   padding:clamp(16px,3.5vh,32px) clamp(16px,3vw,40px);
@@ -613,7 +620,7 @@ body.no-fs .logo.show{pointer-events:none}
   transform:scale(1.05);
 }
 .guide-back svg{
-  width:clamp(72px,8vw,108px);
+  width:clamp(64px,7vw,92px);
   height:auto;
   display:block;
   transition:filter .15s ease;
@@ -643,11 +650,11 @@ body.no-fs .logo.show{pointer-events:none}
 .guide-back:hover .guide-back-tip,
 .guide-back:focus-visible .guide-back-tip{opacity:1}
 @media (max-width:640px){
-  .guide-back svg{width:clamp(56px,16vw,76px)}
+  .guide-back svg{width:clamp(52px,14vw,68px)}
 }
 @media (orientation:landscape) and (max-height:500px){
   .guide-back{padding:6px 8px}
-  .guide-back svg{width:52px}
+  .guide-back svg{width:46px}
 }
 
 /* The masthead left group — IV mark + back button stay together,
@@ -713,90 +720,119 @@ body.no-fs .logo.show{pointer-events:none}
    Day-label column is sticky-left so it stays visible while
    scrolling through the schedule; time-header row is sticky-top
    for the same reason on vertical scroll. */
+/* Scrolling viewport for the schedule. Both axes scroll inside
+   this box; sticky cells inside the rows pin to its edges. */
 .guide-grid-wrap{
-  /* Block-level scroll container — NOT a flex container. A previous
-     `display:flex; flex-direction:column` here was making the grid
-     a flex item, which constrained its width and broke the
-     scrolling/sticky relationship `position:sticky` depends on.
-     Removed: the grid sizes from its own template, the wrap
-     scrolls when content overflows, sticky cells stick to the
-     wrap's left edge. */
   flex:1;
   margin-top:clamp(10px,2vh,18px);
   overflow:auto;
-  border:1px solid rgba(255,255,255,.5);
+  border:1px solid rgba(255,255,255,.35);
   border-radius:2px;
-  background:#000;
+  background:transparent; /* let the wash from #guide come through */
+  position:relative;      /* containing block for the now-line */
 }
+/* Inner stack — the rows are flex containers; this wrapper sets
+   the intrinsic width and is the containing block for the
+   absolutely-positioned now-line. Without an explicit
+   min-width:max-content, the rows would shrink to the wrap's
+   width and overflow:auto would do nothing. */
 .guide-grid{
-  display:grid;
-  /* grid-template-columns is set imperatively in buildGuideGrid()
-     so the current slot's column can be widened (200px vs 130px).
-     Fallback here for first paint before JS runs. */
-  grid-template-columns:clamp(68px,8vw,108px) repeat(48,130px);
-  position:relative; /* containing block for .now-line */
+  position:relative;
+  min-width:max-content;
 }
+/* One row = one flex container. Sticky cells inside rows stick to
+   .guide-grid-wrap's edges reliably — unlike CSS-Grid sticky-items,
+   which use the grid track as the containing block and scroll with
+   the grid. (That was the bug — day labels disappeared on
+   horizontal scroll because they were tied to the grid track, not
+   the wrap.) The row's min-width:max-content guarantees the row is
+   wider than the wrap so sticky has somewhere to work. */
+.guide-row{
+  display:flex;
+  min-width:max-content;
+}
+/* Headers row pins to the top so time labels are always readable
+   when the user scrolls down through 30 days. z-index above
+   regular cells; the corner cell (top-left, sticky on BOTH axes)
+   wins over both. */
+.guide-row-head{
+  position:sticky;top:0;
+  z-index:3;
+}
+/* Shared base. Explicit flex-basis on each cell variant below
+   keeps columns aligned across rows even though there's no shared
+   grid template. */
+.guide-cell,
 .guide-header,
-.guide-cell{
-  border-right:1px solid rgba(255,255,255,.4);
-  border-bottom:1px solid rgba(255,255,255,.4);
+.guide-row-label,
+.guide-corner{
+  border-right:1px solid rgba(255,255,255,.25);
+  border-bottom:1px solid rgba(255,255,255,.25);
   padding:clamp(8px,1.4vh,14px) clamp(8px,1.2vw,16px);
   font-size:clamp(11px,1.2vw,13px);
   display:flex;flex-direction:column;justify-content:center;
   min-height:46px;
+  box-sizing:border-box;
 }
+/* Time-slot column header. Near-solid dark — sticky cells need to
+   obscure content scrolling underneath them, not let it bleed
+   through. The light translucency still picks up a hint of the
+   wash from #guide for visual cohesion. */
 .guide-header{
-  background:#0a1830;
+  flex:0 0 130px;
+  background:rgba(8,8,12,.92);
   text-transform:uppercase;letter-spacing:.18em;
   font-weight:700;font-size:clamp(10px,1.1vw,12px);
   opacity:.95;
-  position:sticky;top:0;z-index:2;
 }
+/* Day-row label cell — sticks to the left edge of the wrap on
+   horizontal scroll. The `clamp(...)` flex-basis tracks the
+   viewport width like the old grid template did, so the column
+   auto-sizes from 68 to 108 px. Near-solid background obscures
+   any cell content that scrolls behind it. */
 .guide-row-label{
-  font-weight:700;letter-spacing:.22em;text-transform:uppercase;
-  background:#000;
-  /* !important here is intentional: this column MUST stay pinned
-     to the left edge of the scroll container regardless of any
-     future cell-state rule (e.g. `.today` background) that might
-     shadow `position`. Sticky cells in grids are still finicky in
-     some engines, so we lock the three properties hard. */
-  position:sticky !important;
-  left:0 !important;
-  z-index:1;
+  flex:0 0 clamp(68px,8vw,108px);
+  position:sticky;left:0;z-index:2;
+  background:rgba(8,8,12,.94);
+  font-weight:700;letter-spacing:.18em;text-transform:uppercase;
 }
-/* Top-left corner: needs to win both stickys. */
-.guide-header.corner{
-  left:0 !important;z-index:3;background:#0a1830;
-  position:sticky !important;
+/* Top-left corner — sticky on BOTH axes. Sits above row labels
+   (z:2) and headers (z:3) so the inner stickies tuck under it.
+   Slightly darker than the other stickies — it's the only cell
+   over which BOTH the header row AND the day labels can scroll. */
+.guide-corner{
+  flex:0 0 clamp(68px,8vw,108px);
+  position:sticky;left:0;top:0;z-index:4;
+  background:rgba(8,8,12,.97);
 }
+/* Today's label — red wash, red text. Layered over a dark base so
+   the cell content scrolling underneath still doesn't bleed
+   through. Sticky inherits from the base rule above. */
 .guide-row-label.today{
-  background:#1a0000;
+  background:
+    linear-gradient(rgba(255,0,0,.22), rgba(255,0,0,.22)),
+    rgba(8,8,12,.94);
   color:#ff5a5a;
-  /* Re-assert sticky for the "today" variant — same specificity
-     as `.guide-row-label` plus one extra class, so without the
-     re-assert the longhand `background` override would never
-     touch `position`, but cascade engines have surprised us
-     before. Belt + braces. */
-  position:sticky !important;
-  left:0 !important;
 }
-/* Today's label shows two lines: the day-of-week + the calendar
-   date ("TUE" / "MAY 12"). Sub-line is smaller and slightly
-   dimmer for hierarchy. */
+/* Day label internals — DOW on top, date below. Every row now
+   carries both lines so a viewer scrolling through 30 days always
+   knows the calendar date, not just "FRIDAY". */
+.guide-row-label .label-dow{
+  font-size:clamp(11px,1.2vw,13px);
+}
 .guide-row-label .label-date{
   font-size:clamp(9px,1vw,10px);
   font-weight:400;
   letter-spacing:.08em;
-  opacity:.75;
-  margin-top:4px;
+  opacity:.7;
+  margin-top:3px;
   text-transform:uppercase;
 }
-/* (Removed a stale `.guide-cell { position: relative }` rule that
-   was overriding the sticky positioning on `.guide-row-label` —
-   identical specificity, later rule won, day labels weren't
-   sticking on horizontal scroll. Cells don't need relative
-   positioning; the `.guide-grid` parent is the containing block
-   for `.now-line`.) */
+.guide-row-label.today .label-date{opacity:.85}
+
+/* Cell content + state styling */
+.guide-cell{flex:0 0 130px;background:rgba(0,0,0,.2)}
+.guide-cell.now-col{flex:0 0 200px}
 .guide-cell .title{
   font-weight:700;font-size:clamp(11px,1.2vw,13px);
   letter-spacing:.04em;
@@ -808,14 +844,14 @@ body.no-fs .logo.show{pointer-events:none}
   text-transform:uppercase;
 }
 .guide-cell.now{
-  background:linear-gradient(90deg, rgba(255,0,0,.35), rgba(255,0,0,.15));
+  background:linear-gradient(90deg, rgba(255,0,0,.32), rgba(255,0,0,.12));
   color:#fff;
   box-shadow:inset 0 0 0 2px #ff0000;
 }
 .guide-cell.now .title{color:#fff}
 .guide-cell.static-slot{
   background:rgba(255,255,255,.02);
-  opacity:.4;
+  opacity:.45;
 }
 .guide-cell.static-slot .title{font-weight:400}
 
@@ -874,22 +910,22 @@ body.no-fs .logo.show{pointer-events:none}
    IV mark — see `.guide-logo` above. The whole brand mark is the
    "Back to TV" action now. No more × in the top-right corner.) */
 
-/* Mobile: tighter padding, smaller font scales. Columns stay 48
-   wide (full schedule) but each column is narrower so swiping
-   feels brisk. The sticky day-label column shrinks too. */
+/* Mobile: tighter padding, narrower columns so swiping the 48-slot
+   day feels brisk. Sticky day-label column shrinks too. */
 @media (max-width:640px){
   #guide{padding:18px 16px}
-  .guide-grid{grid-template-columns:54px repeat(48,108px)}
+  .guide-cell,
+  .guide-header{flex-basis:108px}
+  .guide-cell.now-col{flex-basis:160px}
+  .guide-row-label,
+  .guide-corner{flex-basis:62px}
   .guide-mast{gap:12px;padding-bottom:8px}
   .guide-desc{grid-template-columns:1fr;gap:8px}
 }
 
 /* Mobile landscape — viewport height is the constraint. Squeeze
-   every chrome surrounding the grid so the schedule itself gets
-   at least three rows visible without scrolling. Reduces #guide
-   padding, masthead bottom-padding, description strip padding +
-   font scale, grid cell min-height + row-label font, and the gap
-   between masthead → desc → grid. */
+   every chrome surrounding the grid so the schedule gets multiple
+   rows visible without scrolling. */
 @media (orientation:landscape) and (max-height:500px){
   #guide{padding:10px 14px}
   .guide-mast{
@@ -907,16 +943,23 @@ body.no-fs .logo.show{pointer-events:none}
   .guide-desc .desc-body{font-size:10px;margin-top:1px;line-height:1.35}
   .guide-desc .desc-tag{font-size:8px;letter-spacing:.22em;padding:5px 8px 3px}
   .guide-grid-wrap{margin-top:6px}
-  .guide-grid{grid-template-columns:46px repeat(48,92px)}
+  .guide-cell,
   .guide-header,
-  .guide-cell{
+  .guide-row-label,
+  .guide-corner{
     padding:4px 8px;
     font-size:10px;
     min-height:30px;
   }
+  .guide-cell,
+  .guide-header{flex-basis:92px}
+  .guide-cell.now-col{flex-basis:138px}
+  .guide-row-label,
+  .guide-corner{flex-basis:54px}
   .guide-cell .title{font-size:11px}
   .guide-cell .meta{font-size:8px;margin-top:1px}
   .guide-row-label{font-size:10px;letter-spacing:.14em}
+  .guide-row-label .label-dow{font-size:10px}
   .guide-row-label .label-date{font-size:8px;margin-top:1px}
 }
 </style>
@@ -1487,36 +1530,30 @@ customElements.whenDefined('mux-video').then(function(){
   // Column widths: current slot is 200px (wider, so the red
    // now-line moving through it is easier to read); all others
    // are 130px. The label column is sized via clamp().
-  const COL_WIDTH        = 130;
-  const COL_WIDTH_NOW    = 200;
-  const COL_WIDTH_LABEL  = 'clamp(68px,8vw,108px)';
+  // (Column widths live in CSS now — `.guide-cell` flex-basis 130px,
+  //  `.guide-cell.now-col` 200px, `.guide-row-label` clamp(68-108px),
+  //  mobile + landscape media queries override. Keeps the schedule
+  //  layout declaratively responsive instead of computed in JS.)
+
+  // 30 days of schedule. Today is row 0 (highlighted), then 29
+  // future days. Each row carries its day-of-week + calendar date.
+  const ROW_COUNT = 30;
 
   function buildGuideGrid(){
     const now = new Date();
-    const todayDow = now.getDay();
     const nowCol = nowSlotCol(now);
-
-    // Apply column template: label col + 48 time cols, current
-    // slot widened. Rebuilt on every open / slot change so the
-    // wider column moves with "now".
-    const cols = [COL_WIDTH_LABEL];
-    for (let c = 0; c < SLOTS_PER_DAY; c++) {
-      cols.push((c === nowCol ? COL_WIDTH_NOW : COL_WIDTH) + 'px');
-    }
-    guideGrid.style.gridTemplateColumns = cols.join(' ');
 
     guideGrid.innerHTML = '';
 
+    // ── Header row (sticky-top) ────────────────────────────────────
+    // Corner cell is sticky on BOTH axes (top:0 + left:0). Then 48
+    // hour-slot headers, the current slot getting the wider .now-col
+    // flex-basis so the now-line + now-cell have breathing room.
+    const headRow = document.createElement('div');
+    headRow.className = 'guide-row guide-row-head';
     const corner = document.createElement('div');
-    corner.className = 'guide-header corner';
-    corner.textContent = '';
-    guideGrid.appendChild(corner);
-
-    // Build slot column labels. The slot's start time is computed
-    // in PT (the channel's broadcast clock), converted to a UTC
-    // timestamp, then formatted in the viewer's local time — so an
-    // East-Coast viewer sees a 5 PM PT slot labeled "8 PM", a Tokyo
-    // viewer sees the same slot labeled "10 AM" (next day), etc.
+    corner.className = 'guide-corner';
+    headRow.appendChild(corner);
     const ptToday = ptParts(Date.now());
     for (let c = 0; c < SLOTS_PER_DAY; c++) {
       const s = slotForCol(c);
@@ -1524,46 +1561,55 @@ customElements.whenDefined('mux-video').then(function(){
                              s.hour, s.minute, 0);
       const t = new Date(slotTS);
       const h = document.createElement('div');
-      h.className = 'guide-header';
+      h.className = 'guide-header' + (c === nowCol ? ' now-col' : '');
       h.textContent = fmtSlot(t).toUpperCase();
-      guideGrid.appendChild(h);
+      headRow.appendChild(h);
     }
+    guideGrid.appendChild(headRow);
 
-    for (let r = 0; r < 7; r++) {
-      const dow = (todayDow + r) % 7;
+    // ── Day rows ──────────────────────────────────────────────────
+    // Each row: sticky-left day label + 48 program cells. Today is
+    // row 0. Every row shows DAY + DATE so a viewer scrolling 30 days
+    // always knows the calendar date — not just the abbreviation.
+    for (let r = 0; r < ROW_COUNT; r++) {
+      const rowDate = new Date(now);
+      rowDate.setDate(now.getDate() + r);
       const isToday = r === 0;
+
+      const row = document.createElement('div');
+      row.className = 'guide-row';
+
       const label = document.createElement('div');
-      label.className = 'guide-cell guide-row-label' + (isToday ? ' today' : '');
-      if (isToday) {
-        // Today gets the date inline so the user sees "TUE · MAY 12"
-        // and knows which week-day belongs to which calendar date.
-        const dateRow = document.createElement('div');
-        dateRow.className = 'label-date';
-        dateRow.textContent = MONTHS[now.getMonth()] + ' ' + now.getDate();
-        const dowRow = document.createElement('div');
-        dowRow.textContent = DAYS_SHORT[dow];
-        label.appendChild(dowRow);
-        label.appendChild(dateRow);
-      } else {
-        label.textContent = DAYS_SHORT[dow];
-      }
-      guideGrid.appendChild(label);
+      label.className = 'guide-row-label' + (isToday ? ' today' : '');
+      const dowRow = document.createElement('div');
+      dowRow.className = 'label-dow';
+      dowRow.textContent = DAYS_SHORT[rowDate.getDay()];
+      const dateRow = document.createElement('div');
+      dateRow.className = 'label-date';
+      dateRow.textContent = MONTHS[rowDate.getMonth()] + ' ' + rowDate.getDate();
+      label.appendChild(dowRow);
+      label.appendChild(dateRow);
+      row.appendChild(label);
+
       for (let c = 0; c < SLOTS_PER_DAY; c++) {
         const cell = document.createElement('div');
-        cell.className = 'guide-cell';
+        cell.className = 'guide-cell' + (c === nowCol ? ' now-col' : '');
         cell.dataset.row = String(r);
         cell.dataset.col = String(c);
         if (!isToday) cell.style.opacity = '.65';
         cell.innerHTML =
           '<div class="title">' + SHOW.title + '</div>' +
           '<div class="meta">' + SHOW.duration + '</div>';
-        guideGrid.appendChild(cell);
+        row.appendChild(cell);
       }
+
+      guideGrid.appendChild(row);
     }
 
-    // Red "now" line — vertical bar marking the live wall-clock
-    // position inside the current slot's wider column. Appended
-    // last so it stacks above the cell backgrounds.
+    // Red "now" line — absolutely positioned inside .guide-grid
+    // (which has position:relative + min-width:max-content), so it
+    // scrolls horizontally with the schedule content. updateNowLine
+    // sets the left offset based on the today-row's current cell.
     const line = document.createElement('div');
     line.className = 'now-line';
     line.id = 'nowLine';
@@ -1579,7 +1625,7 @@ customElements.whenDefined('mux-video').then(function(){
     const now = new Date();
     const col = nowSlotCol(now);
     // Find the today row's now-cell to get its actual offsetLeft +
-    // offsetWidth (sticky positioning + clamp() label width make
+    // offsetWidth (clamp() label width + responsive cell sizes make
     // pure arithmetic unreliable across viewports).
     const nowCell = guideGrid.querySelector(
       '.guide-cell[data-row="0"][data-col="' + col + '"]'
@@ -1587,6 +1633,12 @@ customElements.whenDefined('mux-video').then(function(){
     if (!nowCell) { line.style.display = 'none'; return; }
     const fraction = info.tInSlot / CHANNEL.slotSec; // 0..1
     const x = nowCell.offsetLeft + fraction * nowCell.offsetWidth;
+    // Start the line at the bottom of the header row so the top
+    // dot lands cleanly below it. Header row height varies with
+    // viewport, so measure it instead of assuming a fixed value.
+    const headRow = guideGrid.querySelector('.guide-row-head');
+    const headTop = headRow ? headRow.offsetHeight : 0;
+    line.style.top  = headTop + 'px';
     line.style.left = x + 'px';
     line.style.display = 'block';
   }
@@ -2067,14 +2119,14 @@ customElements.whenDefined('mux-video').then(function(){
       </div>
       <button class="guide-back" id="guideBack" type="button"
               aria-label="Back to INTERDEPENDENT.tv">
-        <!-- Left-pointing arrow with a long stem. 72×20 viewBox so
-             the stem stretches well past a square — emphasizes the
-             "back" direction pointing at the IV mark to its left.
-             Stroke-width 2.2 reads as a solid line at the rendered
-             size; round caps/joins soften the corners. -->
-        <svg viewBox="0 0 72 20" aria-hidden="true">
-          <path d="M70 10 H4 M4 10 L14 2 M4 10 L14 18"
-                fill="none" stroke="currentColor" stroke-width="2.2"
+        <!-- Left-pointing arrow with a moderate-length stem.
+             48×20 viewBox — the stem is long enough to point
+             clearly at the IV mark to its left without dominating
+             the masthead. Stroke 2.5 reads as a solid line at
+             the rendered size; round caps/joins soften the corners. -->
+        <svg viewBox="0 0 48 20" aria-hidden="true">
+          <path d="M46 10 H4 M4 10 L12 3 M4 10 L12 17"
+                fill="none" stroke="currentColor" stroke-width="2.5"
                 stroke-linejoin="round" stroke-linecap="round"/>
         </svg>
         <span class="guide-back-tip" aria-hidden="true">Back to TV</span>
