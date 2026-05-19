@@ -340,25 +340,27 @@ mux-video{
 
 /* Auto-play opt-in toggle — appears directly below the cold-start
    live-badge in the top-right corner during off-air states. Hidden
-   by default; JS adds .show during off-air. Pulsing white ring on
-   the checkbox draws the eye without competing with the brand
-   flourish; when checked, the box fills brand red and the check-
-   mark snaps in.
+   by default; JS adds .show during off-air.
 
-   The badge above it lives at `top: clamp(20px,4vh,40px)` with a
-   pill height around clamp(20px,2.4vw,26px); we offset by the badge
-   height + gap so the two read as a stacked group, right-aligned
-   to the same edge. */
+   Layout: row is right-aligned so the BOX sits flush with the
+   badge's right edge — checkbox lands directly under the countdown
+   digits, label trails to the left. Typography matches the
+   live-label exactly (Eurostile 700, .18em tracking, uppercase,
+   tabular-nums, brand text-shadow) at a step-down size so the
+   badge reads as primary and the toggle as secondary.
+
+   Pulse: a wide white/red ring breathes outward from the box at a
+   slow 2.6s cycle to draw the eye without feeling like a UI alert. */
 .auto-play-toggle{
   position:absolute;z-index:3;
   top:max(env(safe-area-inset-top,0px), clamp(20px,4vh,40px));
   right:max(env(safe-area-inset-right,0px), clamp(20px,4vw,48px));
-  transform:translateY(calc(clamp(18px,2.4vw,24px) + 16px));
+  transform:translateY(calc(clamp(20px,2.6vw,26px) + 18px));
   appearance:none;background:transparent;border:none;
-  color:#fff;font-family:inherit;
-  display:none;align-items:center;gap:10px;
+  color:#fff;font-family:"Eurostile","Eurostile Wide",sans-serif;
+  display:none;align-items:center;gap:12px;
   cursor:pointer;
-  padding:6px 4px;
+  padding:6px 0;
   opacity:0;
   transition:opacity .4s ease;
 }
@@ -367,57 +369,102 @@ mux-video{
   animation:auto-play-in .6s ease-out forwards 1.4s;
 }
 @keyframes auto-play-in{
-  from{opacity:0;transform:translateY(calc(clamp(18px,2.4vw,24px) + 10px))}
-  to  {opacity:1;transform:translateY(calc(clamp(18px,2.4vw,24px) + 16px))}
+  from{opacity:0;transform:translateY(calc(clamp(20px,2.6vw,26px) + 10px))}
+  to  {opacity:1;transform:translateY(calc(clamp(20px,2.6vw,26px) + 18px))}
 }
 .auto-play-box{
   position:relative;
   display:inline-flex;align-items:center;justify-content:center;
-  width:clamp(20px,2.4vw,24px);
-  height:clamp(20px,2.4vw,24px);
-  border:2px solid #fff;
-  border-radius:4px;
+  width:clamp(20px,2.6vw,26px);
+  height:clamp(20px,2.6vw,26px);
+  /* No continuous border — the SVG's inner corner brackets are the
+     frame, matching the watermark's fullscreen-enter icon. Subtle
+     dark fill keeps the brackets legible against the snow; ramps
+     to brand red when armed. overflow:visible lets the outer
+     bracket layer paint past the box edge. */
   background:rgba(0,0,0,.45);
-  box-shadow:0 0 0 0 rgba(255,255,255,.55), 0 0 12px rgba(255,255,255,.25);
-  animation:auto-play-pulse 1.8s ease-in-out infinite;
-  transition:background .15s ease, border-color .15s ease;
+  border-radius:3px;
+  overflow:visible;
+  box-shadow:0 0 14px rgba(255,255,255,.18);
+  transition:background .15s ease, box-shadow .2s ease;
+}
+/* Pulse runs on a ::after layer so the breathing rings don't fight
+   the box's own static glow / hover state on the same box-shadow
+   stack. */
+.auto-play-box::after{
+  content:"";
+  position:absolute;inset:-2px;
+  border-radius:5px;
+  pointer-events:none;
+  box-shadow:0 0 0 0 rgba(255,255,255,.6), 0 0 0 0 rgba(255,0,0,.45);
+  animation:auto-play-pulse 2.6s ease-out infinite;
 }
 @keyframes auto-play-pulse{
-  0%,100%{box-shadow:0 0 0 0 rgba(255,255,255,.55), 0 0 14px rgba(255,255,255,.2)}
-  50%    {box-shadow:0 0 0 6px rgba(255,255,255,0),  0 0 18px rgba(255,0,0,.35)}
+  0%  {box-shadow:0 0 0 0 rgba(255,255,255,.65), 0 0 0 0 rgba(255,0,0,.5)}
+  70% {box-shadow:0 0 0 14px rgba(255,255,255,0), 0 0 0 22px rgba(255,0,0,0)}
+  100%{box-shadow:0 0 0 14px rgba(255,255,255,0), 0 0 0 22px rgba(255,0,0,0)}
 }
-.auto-play-check{
-  width:80%;height:80%;color:#fff;
+.auto-play-icon{
+  width:100%;height:100%;
+  overflow:visible; /* outer brackets at negative coords */
+  color:#fff;
+  filter:drop-shadow(0 0 3px rgba(0,0,0,.7));
+}
+/* Outer corner brackets — the fullscreen-enter halo. Hidden in the
+   idle unchecked state; pop in on hover (preview), stay on .on
+   (armed). Slight scale snap on entrance gives the four corners a
+   "fullscreen frame just locked in" feel. */
+.auto-play-corners-outer{
   opacity:0;
-  transform:scale(.4);
-  transition:opacity .18s ease, transform .25s cubic-bezier(.34,1.56,.64,1);
+  transform-box:fill-box;
+  transform-origin:50% 50%;
+  transform:scale(.82);
+  transition:opacity .25s ease, transform .35s cubic-bezier(.34,1.56,.64,1);
+}
+/* Check is hidden in the unchecked state (including the saved-
+   preference pre-checked render before the viewer interacts) and
+   only fades in once the toggle is .on. */
+.auto-play-check{
+  opacity:0;
+  transform-box:fill-box;
+  transform-origin:center;
+  transform:scale(.85);
+  transition:opacity .2s ease, transform .25s cubic-bezier(.34,1.56,.64,1);
 }
 .auto-play-toggle:hover .auto-play-box,
 .auto-play-toggle:focus-visible .auto-play-box{
-  background:rgba(255,255,255,.18);
-  border-color:#fff;
+  background:rgba(255,255,255,.14);
+}
+.auto-play-toggle:hover .auto-play-corners-outer,
+.auto-play-toggle:focus-visible .auto-play-corners-outer{
+  opacity:1;transform:scale(1);
 }
 .auto-play-toggle:focus-visible{outline:none}
 .auto-play-toggle:focus-visible .auto-play-box{
-  box-shadow:0 0 0 3px rgba(255,255,255,.35), 0 0 16px rgba(255,255,255,.4);
+  box-shadow:0 0 0 3px rgba(255,255,255,.35), 0 0 18px rgba(255,255,255,.4);
 }
 .auto-play-toggle.on .auto-play-box{
   background:#ff0000;
-  border-color:#ff0000;
-  animation:none;
-  box-shadow:0 0 14px rgba(255,0,0,.55);
+  box-shadow:0 0 18px rgba(255,0,0,.65);
+}
+/* Stop the pulse once armed — the red fill + outer corner halo are
+   the new visual anchors. */
+.auto-play-toggle.on .auto-play-box::after{
+  animation:none;box-shadow:none;
+}
+.auto-play-toggle.on .auto-play-corners-outer{
+  opacity:1;transform:scale(1);
 }
 .auto-play-toggle.on .auto-play-check{
   opacity:1;transform:scale(1);
 }
 .auto-play-label{
-  font-family:inherit;
-  font-size:clamp(10px,1.05vw,13px);
-  font-weight:500;
-  letter-spacing:.18em;
+  font:700 clamp(10px,1.3vw,14px)/1 "Eurostile","Eurostile Wide",sans-serif;
   color:rgba(255,255,255,.85);
+  letter-spacing:.18em;text-transform:uppercase;
   text-shadow:0 0 12px rgba(0,0,0,.8);
-  text-transform:uppercase;
+  font-variant-numeric:tabular-nums;
+  font-feature-settings:"tnum";
   user-select:none;-webkit-user-select:none;
   transition:color .15s ease, text-shadow .15s ease;
 }
@@ -444,8 +491,8 @@ mux-video{
   .intro-logo svg,
   .live-badge{animation:intro-fade-in 1.2s ease-in forwards .2s}
   .auto-play-toggle.show{animation:none;opacity:1;
-    transform:translateY(calc(clamp(18px,2.4vw,24px) + 16px))}
-  .auto-play-box{animation:none}
+    transform:translateY(calc(clamp(20px,2.6vw,26px) + 18px))}
+  .auto-play-box::after{animation:none;box-shadow:none}
   .intro.activated .intro-logo,
   .intro.activated .intro-cta,
   .intro.activated .auto-play-toggle{animation:none;opacity:0}
@@ -540,6 +587,14 @@ mux-video{
 body.in-fs .logo-fs-icon,
 body.in-fs .logo-tip{visibility:hidden}
 body.in-fs .logo{cursor:default}
+
+/* Idle cursor hide — when channel is live and parked on the movie
+   surface, the chrome idle-timer also hides the cursor so it
+   doesn't sit over the picture. Any mousemove brings it back via
+   pingControls(). Selector covers descendants so child elements
+   with their own cursor:* rules (buttons, etc.) also disappear. */
+body.cursor-idle,
+body.cursor-idle *{cursor:none !important}
 /* Platforms without Fullscreen API support (iOS Safari / iPhone
    Chrome) — keep the watermark non-interactive and hide the icon
    and tooltip so there's no dead affordance. JS adds `.no-fs` to
@@ -1364,10 +1419,27 @@ body.no-fs .logo.show{pointer-events:none}
           role="switch" aria-checked="false"
           aria-label="Auto play when channel goes live">
     <span class="auto-play-box" aria-hidden="true">
-      <svg viewBox="0 0 16 16" class="auto-play-check" aria-hidden="true">
-        <polyline points="3.5 8.5 7 12 13 4" fill="none" stroke="currentColor"
-                  stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"
+      <!-- The unchecked-idle box is intentionally minimal: dark
+           fill + pulse, no check, no corner brackets. The four
+           fullscreen-enter L-brackets only appear on hover (preview:
+           "this CTA will go fullscreen") and stay on .on (armed:
+           "fullscreen engaged on top of auto-play"). Geometry
+           mirrors .logo-fs-icon so the language is consistent. -->
+      <svg viewBox="0 0 20 20" class="auto-play-icon" aria-hidden="true">
+        <polyline class="auto-play-check"
+                  points="6 10.5 9 13.5 14.5 7.5"
+                  fill="none" stroke="currentColor" stroke-width="2.4"
+                  stroke-linecap="round" stroke-linejoin="round"
                   vector-effect="non-scaling-stroke"/>
+        <g class="auto-play-corners auto-play-corners-outer"
+           fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round"
+           vector-effect="non-scaling-stroke">
+          <polyline points="-4 4 -4 -4 4 -4"/>
+          <polyline points="16 -4 24 -4 24 4"/>
+          <polyline points="24 16 24 24 16 24"/>
+          <polyline points="4 24 -4 24 -4 16"/>
+        </g>
       </svg>
     </span>
     <span class="auto-play-label">AUTO PLAY WHEN LIVE</span>
@@ -1789,12 +1861,19 @@ customElements.whenDefined('mux-video').then(function(){
     if (onInfoSurface) {
       watermark.classList.remove('show');
       guideBtn.classList.add('show');
+      document.body.classList.remove('cursor-idle');
     } else if (onMovieSurface) {
       watermark.classList.toggle('show', on);
       guideBtn.classList.toggle('show', on);
+      // Cursor follows the chrome — hide it together with the
+      // watermark/GUIDE when idle so it doesn't sit over the
+      // picture; any mousemove resets via pingControls() and
+      // brings everything back at once.
+      document.body.classList.toggle('cursor-idle', !on);
     } else {
       // Pre-activation: watermark hidden; GUIDE governed elsewhere.
       watermark.classList.remove('show');
+      document.body.classList.remove('cursor-idle');
     }
   }
   // Idle-hide delay. Touch devices (phones, tablets) get a quicker
@@ -2458,8 +2537,18 @@ customElements.whenDefined('mux-video').then(function(){
     mv.muted = false;
     mv.volume = 0;
 
-    // (4) Seek + play movie silently at the live wall-clock offset.
-    startMovieAtLive();
+    // (4) Seek + play movie silently at the live wall-clock offset
+    //     — but ONLY when activating mid-stream (channel is already
+    //     on-air at this moment). For the off-air → on-air auto-
+    //     activate path (kicked off ~INTRO_LEAD_MS before slot
+    //     start), we hold the feed off entirely so the sequence
+    //     reads as OFF-AIR → ANIMATION → ACTUAL LIVE FEED. finish()
+    //     brings the feed up at the live wall-clock position when
+    //     intro.ended fires.
+    const startInfo = getSlotInfo();
+    if (!startInfo.offAir && startInfo.inShow) {
+      startMovieAtLive();
+    }
 
     intro.classList.add('activated');
     // Arm the safety net once we're actually committed.
@@ -2480,6 +2569,18 @@ customElements.whenDefined('mux-video').then(function(){
     // Movie volume ramps to listening level. 0.65 = slightly above
     // average; user adjusts via device controls from there.
     mv.volume = 0.65;
+
+    // Re-sync the feed to the live wall-clock position with the
+    // correct source. In the mid-stream activate path, mv has been
+    // playing silently since activate() and this is essentially a
+    // no-op (source matches, drift is ~0). In the off-air auto-
+    // activate path the feed was held off (toggle's audio prime
+    // may have left mv playing the just-ended slot's source); this
+    // is where applyShowAndOrientation swaps to the now-current
+    // show and the feed comes up at the live wall-clock offset,
+    // a few seconds past slot start — OFF-AIR → ANIMATION →
+    // ACTUAL LIVE FEED.
+    startMovieAtLive();
 
     applyState();
     // Channel is live → restore the GUIDE pill (it was hidden when
@@ -2640,33 +2741,23 @@ customElements.whenDefined('mux-video').then(function(){
   // OFF AIR → ON AIR flip, it auto-fires activate() so the channel
   // comes up with sound, in fullscreen, without a second click.
   //
-  // Persistence: localStorage('ivtv.autoPlayWhenLive'). On a returning
-  // visit the box is pre-rendered as `.on` so the choice is recalled,
-  // but the actual gesture-consumption happens on the next click —
-  // browsers won't let us call requestFullscreen() from a saved
-  // boolean alone. The pre-checked state advertises "this is set,
-  // tap once to confirm and we'll handle the rest."
-  const AUTO_PLAY_KEY = 'ivtv.autoPlayWhenLive';
+  // No persistence: every fresh page load starts unchecked. Browsers
+  // require a new transient user activation per session for
+  // requestFullscreen() + play()-with-sound; a persisted boolean
+  // can't restore that credit. Showing a pre-checked box on reload
+  // would lie about what the browser will actually do, so the toggle
+  // resets each visit and the viewer re-clicks to arm.
   const autoPlayBtn = document.getElementById('autoPlayToggle');
   let autoPlayArmed = false; // gesture consumed this session
-  function loadAutoPlayPref(){
-    try { return localStorage.getItem(AUTO_PLAY_KEY) === '1'; } catch (_) { return false; }
-  }
-  function saveAutoPlayPref(on){
-    try { localStorage.setItem(AUTO_PLAY_KEY, on ? '1' : '0'); } catch (_) {}
-  }
   function setAutoPlayVisual(on){
     if (!autoPlayBtn) return;
     autoPlayBtn.classList.toggle('on', !!on);
     autoPlayBtn.setAttribute('aria-checked', on ? 'true' : 'false');
   }
   if (autoPlayBtn) {
-    // Reflect saved preference visually on load (no gesture yet).
-    setAutoPlayVisual(loadAutoPlayPref());
     autoPlayBtn.addEventListener('click', function(){
       const on = !autoPlayBtn.classList.contains('on');
       setAutoPlayVisual(on);
-      saveAutoPlayPref(on);
       if (!on) { autoPlayArmed = false; return; }
       // Within the click handler — spend the user gesture now so the
       // later OFF AIR → ON AIR transition can play with sound and
@@ -2703,9 +2794,37 @@ customElements.whenDefined('mux-video').then(function(){
   const ctaLabel = playButton && playButton.querySelector('.live-label');
   const ctaIcon  = playButton && playButton.querySelector('.play-icon');
   let coldStartTick = 0;
+  // Lead window for the off-air → on-air auto-activate. The intro
+  // animation is ~5.8s; firing activate() this many ms before the
+  // slot starts means the countdown fades, the animation plays as
+  // the OFF-AIR → LIVE FEED buffer, and finish() brings the live
+  // feed up when the intro ends (a few seconds past slot start, at
+  // the live wall-clock position).
+  const INTRO_LEAD_MS = 3000;
   function updateColdStartCTA(){
     if (!playButton || userActivated) return;
     const info = getSlotInfo();
+
+    // Auto-fire activate() when the viewer armed it AND we're inside
+    // the intro lead window (or already on-air — mid-stream
+    // fallback if the ticker missed the lead window due to its 1s
+    // resolution). activate() then handles the off-air vs in-show
+    // branch to decide whether to start the feed immediately or
+    // wait for intro.ended.
+    if (autoPlayArmed) {
+      let msToOnAir;
+      if (info.offAir)        msToOnAir = info.nextOnAir - Date.now();
+      else if (!info.inShow)  msToOnAir = info.nextSlotStart - Date.now();
+      else                    msToOnAir = 0; // already on-air
+      if (msToOnAir <= INTRO_LEAD_MS) {
+        // Toggle stays .show through activate() so the
+        // .intro.activated fade-out animates it out with the rest
+        // of the cold-start chrome.
+        activate();
+        return;
+      }
+    }
+
     if (info.offAir) {
       const t = new Date(info.nextOnAir);
       // fmtSlot for single-letter A/P consistency with the guide.
@@ -2718,19 +2837,8 @@ customElements.whenDefined('mux-video').then(function(){
       ctaLabel.textContent = 'ON AIR · PUSH PLAY';
       playButton.classList.remove('off-air');
       playButton.disabled = false;
-      // Auto-activate if the viewer armed it during this session.
-      // One-shot: activate() flips userActivated and the ticker
-      // short-circuits on its next call, so no re-entry guard needed
-      // beyond the existing one inside activate(). The toggle stays
-      // .show through activate() so the `.intro.activated` fade-out
-      // rule animates it out with the rest of the cold-start chrome;
-      // if we're NOT armed we hide it immediately since PUSH PLAY is
-      // now the active CTA.
-      if (autoPlayArmed) {
-        activate();
-      } else if (autoPlayBtn) {
-        autoPlayBtn.classList.remove('show');
-      }
+      // PUSH PLAY is the active CTA now — hide the toggle.
+      if (autoPlayBtn) autoPlayBtn.classList.remove('show');
     } else {
       const secs = Math.max(0, Math.ceil((info.nextSlotStart - Date.now()) / 1000));
       const mm = String(Math.floor(secs / 60)).padStart(2, '0');
