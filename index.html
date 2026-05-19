@@ -338,11 +338,102 @@ mux-video{
   box-shadow:0 0 8px rgba(255,255,255,.15);
 }
 
+/* Auto-play opt-in toggle — appears directly below the cold-start
+   live-badge in the top-right corner during off-air states. Hidden
+   by default; JS adds .show during off-air. Pulsing white ring on
+   the checkbox draws the eye without competing with the brand
+   flourish; when checked, the box fills brand red and the check-
+   mark snaps in.
+
+   The badge above it lives at `top: clamp(20px,4vh,40px)` with a
+   pill height around clamp(20px,2.4vw,26px); we offset by the badge
+   height + gap so the two read as a stacked group, right-aligned
+   to the same edge. */
+.auto-play-toggle{
+  position:absolute;z-index:3;
+  top:max(env(safe-area-inset-top,0px), clamp(20px,4vh,40px));
+  right:max(env(safe-area-inset-right,0px), clamp(20px,4vw,48px));
+  transform:translateY(calc(clamp(18px,2.4vw,24px) + 16px));
+  appearance:none;background:transparent;border:none;
+  color:#fff;font-family:inherit;
+  display:none;align-items:center;gap:10px;
+  cursor:pointer;
+  padding:6px 4px;
+  opacity:0;
+  transition:opacity .4s ease;
+}
+.auto-play-toggle.show{
+  display:inline-flex;
+  animation:auto-play-in .6s ease-out forwards 1.4s;
+}
+@keyframes auto-play-in{
+  from{opacity:0;transform:translateY(calc(clamp(18px,2.4vw,24px) + 10px))}
+  to  {opacity:1;transform:translateY(calc(clamp(18px,2.4vw,24px) + 16px))}
+}
+.auto-play-box{
+  position:relative;
+  display:inline-flex;align-items:center;justify-content:center;
+  width:clamp(20px,2.4vw,24px);
+  height:clamp(20px,2.4vw,24px);
+  border:2px solid #fff;
+  border-radius:4px;
+  background:rgba(0,0,0,.45);
+  box-shadow:0 0 0 0 rgba(255,255,255,.55), 0 0 12px rgba(255,255,255,.25);
+  animation:auto-play-pulse 1.8s ease-in-out infinite;
+  transition:background .15s ease, border-color .15s ease;
+}
+@keyframes auto-play-pulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(255,255,255,.55), 0 0 14px rgba(255,255,255,.2)}
+  50%    {box-shadow:0 0 0 6px rgba(255,255,255,0),  0 0 18px rgba(255,0,0,.35)}
+}
+.auto-play-check{
+  width:80%;height:80%;color:#fff;
+  opacity:0;
+  transform:scale(.4);
+  transition:opacity .18s ease, transform .25s cubic-bezier(.34,1.56,.64,1);
+}
+.auto-play-toggle:hover .auto-play-box,
+.auto-play-toggle:focus-visible .auto-play-box{
+  background:rgba(255,255,255,.18);
+  border-color:#fff;
+}
+.auto-play-toggle:focus-visible{outline:none}
+.auto-play-toggle:focus-visible .auto-play-box{
+  box-shadow:0 0 0 3px rgba(255,255,255,.35), 0 0 16px rgba(255,255,255,.4);
+}
+.auto-play-toggle.on .auto-play-box{
+  background:#ff0000;
+  border-color:#ff0000;
+  animation:none;
+  box-shadow:0 0 14px rgba(255,0,0,.55);
+}
+.auto-play-toggle.on .auto-play-check{
+  opacity:1;transform:scale(1);
+}
+.auto-play-label{
+  font-family:inherit;
+  font-size:clamp(10px,1.05vw,13px);
+  font-weight:500;
+  letter-spacing:.18em;
+  color:rgba(255,255,255,.85);
+  text-shadow:0 0 12px rgba(0,0,0,.8);
+  text-transform:uppercase;
+  user-select:none;-webkit-user-select:none;
+  transition:color .15s ease, text-shadow .15s ease;
+}
+.auto-play-toggle:hover .auto-play-label,
+.auto-play-toggle:focus-visible .auto-play-label,
+.auto-play-toggle.on .auto-play-label{
+  color:#fff;
+  text-shadow:0 0 12px rgba(255,255,255,.45), 0 0 12px rgba(0,0,0,.8);
+}
+
 /* Activated → fade out the centerpiece logo + the cta badge so
    the intro video has the screen to itself. */
 .intro.activated{cursor:default}
 .intro.activated .intro-logo,
-.intro.activated .intro-cta{
+.intro.activated .intro-cta,
+.intro.activated .auto-play-toggle{
   animation:intro-out .35s ease forwards;
   pointer-events:none;
 }
@@ -352,8 +443,12 @@ mux-video{
 @media (prefers-reduced-motion:reduce){
   .intro-logo svg,
   .live-badge{animation:intro-fade-in 1.2s ease-in forwards .2s}
+  .auto-play-toggle.show{animation:none;opacity:1;
+    transform:translateY(calc(clamp(18px,2.4vw,24px) + 16px))}
+  .auto-play-box{animation:none}
   .intro.activated .intro-logo,
-  .intro.activated .intro-cta{animation:none;opacity:0}
+  .intro.activated .intro-cta,
+  .intro.activated .auto-play-toggle{animation:none;opacity:0}
 }
 
 /* Watermark — bottom-right. Now a <button> doubling as the
@@ -1252,6 +1347,30 @@ body.no-fs .logo.show{pointer-events:none}
             vector-effect="non-scaling-stroke"
             d="M2 1 L13 7 L2 13 Z"/>
     </svg>
+  </button>
+  <!-- Auto-play opt-in — sits directly under the OFF AIR badge in
+       the top-right corner during cold-start off-air states (between-
+       show countdown OR off-hours). With nothing on air there's no
+       PUSH PLAY to click, so the viewer has no way to spend their
+       "one user gesture" on fullscreen + autoplay-with-sound. This
+       toggle absorbs that gesture: clicking it now enters fullscreen
+       and primes the audio gate so the existing OFF AIR → ON AIR
+       state transition can auto-fire activate() with no further
+       click. Pulsing checkbox + uppercase label = eye-catching enough
+       to compete with the IV-logo flourish without overpowering it.
+       Preference is persisted in localStorage so returning viewers
+       see the box pre-checked. -->
+  <button id="autoPlayToggle" class="auto-play-toggle" type="button"
+          role="switch" aria-checked="false"
+          aria-label="Auto play when channel goes live">
+    <span class="auto-play-box" aria-hidden="true">
+      <svg viewBox="0 0 16 16" class="auto-play-check" aria-hidden="true">
+        <polyline points="3.5 8.5 7 12 13 4" fill="none" stroke="currentColor"
+                  stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"
+                  vector-effect="non-scaling-stroke"/>
+      </svg>
+    </span>
+    <span class="auto-play-label">AUTO PLAY WHEN LIVE</span>
   </button>
   <!-- The intro animation video — covers everything once activated.
        <source> children are populated by the inline script below
@@ -2510,6 +2629,63 @@ customElements.whenDefined('mux-video').then(function(){
   const playButton = document.getElementById('playButton');
   if (playButton) playButton.addEventListener('click', activate);
 
+  // ── Auto-play-when-live opt-in ────────────────────────────────────
+  // During cold-start OFF AIR (between shows OR off-hours), the PUSH
+  // PLAY badge is disabled — there's nothing to play yet, so the
+  // viewer has no way to spend their "one user gesture" on fullscreen
+  // + autoplay-with-sound. The toggle below the badge absorbs that
+  // gesture: a click flips it on, immediately enters fullscreen, and
+  // primes the <mux-video> audio gate (muted play() → unmute later
+  // without re-prompting). When the cold-start ticker then sees the
+  // OFF AIR → ON AIR flip, it auto-fires activate() so the channel
+  // comes up with sound, in fullscreen, without a second click.
+  //
+  // Persistence: localStorage('ivtv.autoPlayWhenLive'). On a returning
+  // visit the box is pre-rendered as `.on` so the choice is recalled,
+  // but the actual gesture-consumption happens on the next click —
+  // browsers won't let us call requestFullscreen() from a saved
+  // boolean alone. The pre-checked state advertises "this is set,
+  // tap once to confirm and we'll handle the rest."
+  const AUTO_PLAY_KEY = 'ivtv.autoPlayWhenLive';
+  const autoPlayBtn = document.getElementById('autoPlayToggle');
+  let autoPlayArmed = false; // gesture consumed this session
+  function loadAutoPlayPref(){
+    try { return localStorage.getItem(AUTO_PLAY_KEY) === '1'; } catch (_) { return false; }
+  }
+  function saveAutoPlayPref(on){
+    try { localStorage.setItem(AUTO_PLAY_KEY, on ? '1' : '0'); } catch (_) {}
+  }
+  function setAutoPlayVisual(on){
+    if (!autoPlayBtn) return;
+    autoPlayBtn.classList.toggle('on', !!on);
+    autoPlayBtn.setAttribute('aria-checked', on ? 'true' : 'false');
+  }
+  if (autoPlayBtn) {
+    // Reflect saved preference visually on load (no gesture yet).
+    setAutoPlayVisual(loadAutoPlayPref());
+    autoPlayBtn.addEventListener('click', function(){
+      const on = !autoPlayBtn.classList.contains('on');
+      setAutoPlayVisual(on);
+      saveAutoPlayPref(on);
+      if (!on) { autoPlayArmed = false; return; }
+      // Within the click handler — spend the user gesture now so the
+      // later OFF AIR → ON AIR transition can play with sound and
+      // stay in fullscreen without a second click.
+      autoPlayArmed = true;
+      enterFullscreen();
+      // Prime the mux-video audio gate: muted play() opens the
+      // channel for later unmuting (set muted=false + volume>0) with
+      // no autoplay-policy re-check. Volume=0 stays silent until the
+      // real activate() ramp happens.
+      try {
+        mv.muted = true;
+        mv.volume = 0;
+        const p = mv.play();
+        if (p && p.catch) p.catch(function(){});
+      } catch (_) {}
+    });
+  }
+
   // ── Cold-start CTA state ─────────────────────────────────────────
   // The badge speaks three different states based on the wall-clock
   // channel state, computed once per second until the user activates:
@@ -2537,10 +2713,24 @@ customElements.whenDefined('mux-video').then(function(){
         'OFF AIR · BACK AT ' + fmtSlot(t).toUpperCase();
       playButton.classList.add('off-air');
       playButton.disabled = true;
+      if (autoPlayBtn) autoPlayBtn.classList.add('show');
     } else if (info.inShow) {
       ctaLabel.textContent = 'ON AIR · PUSH PLAY';
       playButton.classList.remove('off-air');
       playButton.disabled = false;
+      // Auto-activate if the viewer armed it during this session.
+      // One-shot: activate() flips userActivated and the ticker
+      // short-circuits on its next call, so no re-entry guard needed
+      // beyond the existing one inside activate(). The toggle stays
+      // .show through activate() so the `.intro.activated` fade-out
+      // rule animates it out with the rest of the cold-start chrome;
+      // if we're NOT armed we hide it immediately since PUSH PLAY is
+      // now the active CTA.
+      if (autoPlayArmed) {
+        activate();
+      } else if (autoPlayBtn) {
+        autoPlayBtn.classList.remove('show');
+      }
     } else {
       const secs = Math.max(0, Math.ceil((info.nextSlotStart - Date.now()) / 1000));
       const mm = String(Math.floor(secs / 60)).padStart(2, '0');
@@ -2548,6 +2738,7 @@ customElements.whenDefined('mux-video').then(function(){
       ctaLabel.textContent = 'OFF AIR · BACK IN ' + mm + ':' + ss;
       playButton.classList.add('off-air');
       playButton.disabled = true;
+      if (autoPlayBtn) autoPlayBtn.classList.add('show');
     }
   }
   function startColdStartTicker(){
