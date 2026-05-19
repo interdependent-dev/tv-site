@@ -447,13 +447,14 @@ mux-video{
   background:#ff0000;
   box-shadow:0 0 18px rgba(255,0,0,.65);
 }
-/* Stop the pulse once armed — the red fill + outer corner halo are
-   the new visual anchors. */
+/* Stop the pulse once armed — the red fill + check are the new
+   visual anchors. The outer fullscreen brackets are intentionally
+   NOT shown in the .on state: the toggle's job there is to read
+   as "armed", not advertise the fullscreen action again (the
+   viewer is already in fullscreen at that point). They remain
+   available on hover/focus as the preview cue. */
 .auto-play-toggle.on .auto-play-box::after{
   animation:none;box-shadow:none;
-}
-.auto-play-toggle.on .auto-play-corners-outer{
-  opacity:1;transform:scale(1);
 }
 .auto-play-toggle.on .auto-play-check{
   opacity:1;transform:scale(1);
@@ -2758,7 +2759,21 @@ customElements.whenDefined('mux-video').then(function(){
     autoPlayBtn.addEventListener('click', function(){
       const on = !autoPlayBtn.classList.contains('on');
       setAutoPlayVisual(on);
-      if (!on) { autoPlayArmed = false; return; }
+      if (!on) {
+        // Unchecking → fully revert the arm:
+        //   - autoPlayArmed=false stops the cold-start ticker from
+        //     auto-firing activate() at the next slot transition.
+        //   - exitFullscreen() drops back to the normal tab view
+        //     (ESC equivalent) since the checkbox is what put us
+        //     there in the first place.
+        //   - pause the silent feed prime so the channel reads as
+        //     "nothing playing"; when on-air arrives, PUSH PLAY is
+        //     the only path forward and requires a real click.
+        autoPlayArmed = false;
+        exitFullscreen();
+        try { mv.pause(); } catch (_) {}
+        return;
+      }
       // Within the click handler — spend the user gesture now so the
       // later OFF AIR → ON AIR transition can play with sound and
       // stay in fullscreen without a second click.
