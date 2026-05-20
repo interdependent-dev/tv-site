@@ -410,16 +410,32 @@ mux-video{
   color:#fff;
   filter:drop-shadow(0 0 3px rgba(0,0,0,.7));
 }
-/* Outer corner brackets — the fullscreen-enter halo. Hidden in the
-   idle unchecked state; pop in on hover (preview), stay on .on
-   (armed). Slight scale snap on entrance gives the four corners a
-   "fullscreen frame just locked in" feel. */
+/* Outer corner brackets — the fullscreen-enter halo. Hidden in
+   the idle unchecked state; pop in on hover/focus as the preview
+   cue. Slight scale snap on entrance gives the four corners a
+   "fullscreen frame just locked in" feel. While body.in-fs is set
+   the hover cue flips to .auto-play-minimize (inside-the-box). */
 .auto-play-corners-outer{
   opacity:0;
   transform-box:fill-box;
   transform-origin:50% 50%;
   transform:scale(.82);
   transition:opacity .25s ease, transform .35s cubic-bezier(.34,1.56,.64,1);
+}
+/* Minimize icon — lives INSIDE the box. Only revealed on hover/
+   focus while in fullscreen, simultaneously with the red fill +
+   check fading out. Mirror animation to the FS-enter brackets but
+   inverted: those start scaled DOWN and grow OUTWARD (zoom out
+   from the box), so this layer starts scaled UP and shrinks
+   INWARD (zoom in toward the box) — a literal "minimize" motion.
+   Rendered in white so it reads as clearly as the FS-enter
+   brackets on the snow background. */
+.auto-play-minimize{
+  opacity:0;
+  transform-box:fill-box;
+  transform-origin:50% 50%;
+  transform:scale(1.18);
+  transition:opacity .15s ease, transform .22s ease-out;
 }
 /* Check is hidden in the unchecked state (including the saved-
    preference pre-checked render before the viewer interacts) and
@@ -437,6 +453,38 @@ mux-video{
 }
 .auto-play-toggle:hover .auto-play-corners-outer,
 .auto-play-toggle:focus-visible .auto-play-corners-outer{
+  opacity:1;transform:scale(1);
+}
+/* While the viewer is actually in fullscreen, the hover cue
+   transforms wholesale: the FS-enter outer brackets stay hidden,
+   the red fill drops back to the idle dark, the check fades out,
+   and the inside-the-box minimize icon snaps in — a 1:1 of a
+   classic minimize button.
+
+   The `:not(.hover-suppress)` gate on body blocks these rules
+   immediately after a click that toggled fullscreen, when the
+   viewport reflow leaves :hover stuck on the toggle even though
+   the cursor hasn't actually moved. JS clears .hover-suppress on
+   the next mousemove, which is the moment the browser re-evaluates
+   :hover against the new layout — so the dim only ever fires for
+   a genuine hover, never for the stale post-click one. */
+body.in-fs .auto-play-toggle:hover .auto-play-corners-outer,
+body.in-fs .auto-play-toggle:focus-visible .auto-play-corners-outer{
+  opacity:0;transform:scale(.82);
+}
+body.in-fs:not(.hover-suppress) .auto-play-toggle.on:hover .auto-play-box,
+body.in-fs:not(.hover-suppress) .auto-play-toggle.on:focus-visible .auto-play-box{
+  background:rgba(0,0,0,.45);
+  box-shadow:0 0 14px rgba(255,255,255,.18);
+  transition:background .15s ease, box-shadow .15s ease;
+}
+body.in-fs:not(.hover-suppress) .auto-play-toggle.on:hover .auto-play-check,
+body.in-fs:not(.hover-suppress) .auto-play-toggle.on:focus-visible .auto-play-check{
+  opacity:0;transform:scale(.85);
+  transition:opacity .15s ease, transform .15s ease;
+}
+body.in-fs:not(.hover-suppress) .auto-play-toggle.on:hover .auto-play-minimize,
+body.in-fs:not(.hover-suppress) .auto-play-toggle.on:focus-visible .auto-play-minimize{
   opacity:1;transform:scale(1);
 }
 .auto-play-toggle:focus-visible{outline:none}
@@ -1421,11 +1469,21 @@ body.no-fs .logo.show{pointer-events:none}
           aria-label="Auto play when channel goes live">
     <span class="auto-play-box" aria-hidden="true">
       <!-- The unchecked-idle box is intentionally minimal: dark
-           fill + pulse, no check, no corner brackets. The four
-           fullscreen-enter L-brackets only appear on hover (preview:
-           "this CTA will go fullscreen") and stay on .on (armed:
-           "fullscreen engaged on top of auto-play"). Geometry
-           mirrors .logo-fs-icon so the language is consistent. -->
+           fill + pulse, no check, no corner brackets. Two state-
+           specific icons live in the SVG and only show on hover/
+           focus, gated by body.in-fs:
+             • .auto-play-corners-outer (fullscreen-enter):
+               Circumscribes the box from outside via overflow:
+               visible. L-corners at the outer corners, arms
+               pointing inward — same vocabulary as .logo-fs-icon.
+               Visible while NOT in fullscreen ("click to go
+               fullscreen").
+             • .auto-play-minimize (minimize): Lives INSIDE the
+               box. Four L's with corners near center pointing
+               outward to the box edges. Visible while IN
+               fullscreen, where the red fill + check also fade
+               out so the hover state reads as a 1:1 minimize
+               icon ("click to leave fullscreen / disarm"). -->
       <svg viewBox="0 0 20 20" class="auto-play-icon" aria-hidden="true">
         <polyline class="auto-play-check"
                   points="6 10.5 9 13.5 14.5 7.5"
@@ -1440,6 +1498,15 @@ body.no-fs .logo.show{pointer-events:none}
           <polyline points="16 -4 24 -4 24 4"/>
           <polyline points="24 16 24 24 16 24"/>
           <polyline points="4 24 -4 24 -4 16"/>
+        </g>
+        <g class="auto-play-minimize"
+           fill="none" stroke="currentColor" stroke-width="1.5"
+           stroke-linecap="round" stroke-linejoin="round"
+           vector-effect="non-scaling-stroke">
+          <polyline points="5 8 8 8 8 5"/>
+          <polyline points="15 8 12 8 12 5"/>
+          <polyline points="15 12 12 12 12 15"/>
+          <polyline points="5 12 8 12 8 15"/>
         </g>
       </svg>
     </span>
@@ -2759,6 +2826,19 @@ customElements.whenDefined('mux-video').then(function(){
     autoPlayBtn.addEventListener('click', function(){
       const on = !autoPlayBtn.classList.contains('on');
       setAutoPlayVisual(on);
+      // Suppress hover-driven styling until the cursor actually
+      // moves at least once. enterFullscreen() / exitFullscreen()
+      // reflow the viewport and the browser leaves :hover sticky
+      // on the toggle until the next mousemove — without this gate
+      // the hover-in-fs state dims the red fill immediately and
+      // stays dimmed even when the cursor isn't really on the box.
+      // First mousemove tells the browser to re-evaluate :hover
+      // against the new layout, so the dim only ever fires for a
+      // genuine hover.
+      document.body.classList.add('hover-suppress');
+      document.addEventListener('mousemove', function(){
+        document.body.classList.remove('hover-suppress');
+      }, { once: true });
       if (!on) {
         // Unchecking → fully revert the arm:
         //   - autoPlayArmed=false stops the cold-start ticker from
