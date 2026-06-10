@@ -1202,7 +1202,11 @@ body.no-fs .logo.show{pointer-events:none}
    enough hint to remind the viewer the channel is live. One cell
    per broadcast hour, sized via --hour-w (set on :root with media-
    query overrides — see the section-grouping vars below). */
-.guide-cell{flex:0 0 var(--hour-w);background:rgba(0,0,0,.35);cursor:default}
+/* min-width:0 kills the flex automatic minimum size — without it a
+   long nowrap title (e.g. SCREENPLAY SUBMISSIONS—Open Call) silently
+   FORCES its cell wider than --hour-w, sliding every later column off
+   its time header. With it, the title's own ellipsis takes over. */
+.guide-cell{flex:0 0 var(--hour-w);min-width:0;background:rgba(0,0,0,.35);cursor:default}
 /* Hover preview — only on mouse devices (touch sticks :hover after
    a tap). Subtle background lightening + cursor:pointer so cells
    feel selectable. The JS paired with this updates the description
@@ -2330,9 +2334,15 @@ customElements.whenDefined('mux-video').then(function(){
       endCell.className = 'guide-cell guide-end-cell';
       endCell.dataset.row = String(r);
       if (!isToday) endCell.style.opacity = '.65';
+      // Resume time in the VIEWER's clock — "6:00 AM" is only true
+      // in PT; an ET viewer's channel comes back at 9:00 A, a
+      // Paris viewer's at 15:00.
+      const resumeLocal = fmtSlot(new Date(ptToUtc(
+        ptToday.year, ptToday.month, ptToday.day + 1,
+        CHANNEL.startHour, 0, 0)));
       endCell.innerHTML =
         '<div class="title">Off air</div>' +
-        '<div class="meta">Resumes 6:00 AM</div>';
+        '<div class="meta">Resumes ' + resumeLocal + '</div>';
       row.appendChild(endCell);
 
       guideGrid.appendChild(row);
@@ -2404,10 +2414,18 @@ customElements.whenDefined('mux-video').then(function(){
         const offStart = fmtSlot(new Date(endTS)).toUpperCase();
         const offEnd   = fmtSlot(new Date(resumeTS)).toUpperCase();
         guideDescTitle.textContent = 'OFF AIR';
+        // Tag each boundary with its weekday when it falls on a
+        // different LOCAL calendar day than the hovered row — for
+        // far-east viewers even the broadcast END can land on the
+        // next local day, so "overnight … the next morning" lied.
+        const endD = new Date(endTS), resD = new Date(resumeTS);
+        const dayTag = function(d){
+          return d.toDateString() === rowDate.toDateString()
+            ? '' : ' ' + DAYS_SHORT[d.getDay()];
+        };
         guideDescBody.textContent  =
-          'No programming scheduled overnight from ' + offStart +
-          ' until ' + offEnd + ' the next morning. Browse another ' +
-          'day below.';
+          'No programming scheduled from ' + offStart + dayTag(endD) +
+          ' until ' + offEnd + dayTag(resD) + '. Browse another day below.';
         guideDescTag.textContent   =
           dow + ' · ' + date + ' · ' + offStart + ' – ' + offEnd;
         return;
@@ -2432,9 +2450,16 @@ customElements.whenDefined('mux-video').then(function(){
     if (live.offAir) {
       const t = new Date(live.nextOnAir);
       guideDescTitle.textContent = 'CHANNEL OFF AIR';
+      // fmtSlot renders in the viewer's clock; add the weekday only
+      // when the return moment lands on a different LOCAL day than
+      // the viewer's today (overnight in the US, but e.g. a Paris
+      // viewer's channel can return the same local afternoon).
+      const sameLocalDay = t.toDateString() === new Date().toDateString();
       guideDescBody.textContent  =
-        'Programming returns at ' + fmtSlot(t) +
-        ' (the next 6:00 A Pacific). See the lineup below for what airs next.';
+        'Programming returns ' +
+        (sameLocalDay ? '' : DAYS_LONG[t.getDay()] + ' ') +
+        'at ' + fmtSlot(t) +
+        '. See the lineup below for what airs next.';
       guideDescTag.textContent   =
         'OFF AIR · BACK AT ' + fmtSlot(t).toUpperCase();
     } else if (live.inShow) {
@@ -3065,7 +3090,7 @@ customElements.whenDefined('mux-video').then(function(){
 <!-- ── OFF AIR (outside 11:00–23:00 local) ────────────────────────── -->
 <div id="offair" aria-hidden="true">
   <div class="offair-title">OFF AIR</div>
-  <div class="offair-sub" id="offairNext">CHANNEL RESUMES AT 11:00 AM</div>
+  <div class="offair-sub" id="offairNext">CHANNEL RESUMES SOON</div>
 </div>
 
 <!-- ── GUIDE button — toggles the EPG overlay ─────────────────────── -->
