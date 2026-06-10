@@ -1307,30 +1307,155 @@ body.no-fs .logo.show{pointer-events:none}
    real-time creep line through the schedule. The today row's
    red-bordered .guide-cell.now is the now-marker. */
 
-/* Show description strip */
-.guide-desc{
-  margin-top:clamp(10px,2vh,18px);
-  border:1px solid rgba(255,255,255,.5);
-  padding:clamp(10px,1.6vh,16px) clamp(12px,1.4vw,20px);
+/* ── Featured close-up (hero) ──────────────────────────────────────
+   Pendry split: identity column left, key art right. The art panel
+   is fixed-aspect so the grid below keeps a stable top edge while
+   copy lengths change. */
+.guide-hero{
   display:grid;
-  grid-template-columns:1fr auto;
-  gap:18px;align-items:center;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:clamp(14px,2.4vw,32px);
+  align-items:stretch;
+  margin-top:clamp(10px,1.8vh,16px);
+}
+.guide-desc{
+  display:flex;flex-direction:column;justify-content:center;
+  gap:clamp(4px,.8vh,8px);
+  min-width:0;
+}
+/* State chip — ON AIR (solid red + pulsing dot), UP NEXT (outline),
+   OFF AIR / SCHEDULED (dim outline). The Hulu/YouTube-TV "on now"
+   badge in the channel's own vocabulary. */
+.desc-state{
+  display:inline-flex;align-items:center;gap:7px;
+  width:max-content;
+  font-size:clamp(9px,1vw,10px);
+  font-weight:700;letter-spacing:.3em;text-transform:uppercase;
+  padding:5px 9px 4px 8px;
+  border:1px solid rgba(255,255,255,.5);
+  color:rgba(255,255,255,.85);
+}
+.desc-state .chip-dot{
+  width:6px;height:6px;border-radius:50%;
+  background:currentColor;
+  flex:0 0 auto;
+}
+.desc-state.on{
+  background:#f00;border-color:#f00;color:#fff;
+}
+.desc-state.on .chip-dot{
+  animation:chip-pulse 1.6s ease-in-out infinite;
+}
+@keyframes chip-pulse{
+  0%,100%{opacity:1}
+  50%{opacity:.25}
+}
+.desc-state.off{
+  border-color:rgba(255,255,255,.3);
+  color:rgba(255,255,255,.5);
 }
 .guide-desc .desc-title{
   font-family:"Eurostile Wide","Eurostile",sans-serif;
   font-weight:700;letter-spacing:.04em;
-  font-size:clamp(16px,2vw,22px);
+  font-size:clamp(18px,2.6vw,30px);
   text-transform:uppercase;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 .guide-desc .desc-body{
   font-size:clamp(11px,1.2vw,14px);
-  opacity:.75;margin-top:4px;line-height:1.45;
+  opacity:.75;line-height:1.45;
+  max-width:62ch;
+  display:-webkit-box;
+  -webkit-line-clamp:3;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
 }
+/* Key-art panel — Mux still of the featured show. Dimmed +
+   desaturated whenever the featured listing isn't live right now,
+   so ON AIR always reads brightest. */
+.guide-hero-art{
+  width:clamp(190px,23vw,330px);
+  aspect-ratio:16/9;
+  border:1px solid rgba(255,255,255,.45);
+  background:#000;
+  position:relative;
+  overflow:hidden;
+  align-self:center;
+}
+.guide-hero-art img{
+  width:100%;height:100%;
+  object-fit:cover;display:block;
+  transition:opacity .35s ease, filter .35s ease;
+}
+.guide-hero-art img.dim{
+  opacity:.5;
+  filter:saturate(.55);
+}
+.guide-hero-art img:not([src]){opacity:0}
+
+/* ── Promo band — the Pendry red strip, repurposed for the open
+   call. Deep-red gradient, cream copy, full width, clickable. */
+.guide-promo{
+  margin-top:clamp(8px,1.6vh,14px);
+  display:flex;align-items:baseline;
+  gap:clamp(12px,2vw,22px);
+  padding:clamp(8px,1.3vh,11px) clamp(12px,1.6vw,20px) clamp(7px,1.1vh,9px);
+  background:linear-gradient(90deg,#5e0000,#a40000 30%,#8a0000 70%,#4f0000);
+  border:1px solid rgba(255,90,90,.45);
+  text-decoration:none;color:#fff;
+  transition:filter .2s ease;
+}
+.guide-promo:hover{filter:brightness(1.25)}
+.guide-promo .promo-title{
+  font-family:"Eurostile Wide","Eurostile",sans-serif;
+  font-weight:700;text-transform:uppercase;
+  letter-spacing:.12em;
+  font-size:clamp(11px,1.3vw,14px);
+  white-space:nowrap;
+}
+.guide-promo .promo-copy{
+  flex:1;
+  color:rgba(255,233,206,.92);
+  font-size:clamp(10px,1.1vw,12px);
+  letter-spacing:.06em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.guide-promo .promo-url{
+  font-size:clamp(9px,1vw,11px);
+  letter-spacing:.14em;
+  opacity:.85;
+  white-space:nowrap;
+}
+
+/* ── Hint bar — guide-channel key legend. */
+.guide-hint{
+  margin-top:clamp(6px,1.2vh,10px);
+  display:flex;justify-content:center;
+  gap:clamp(16px,3vw,40px);
+  font-size:clamp(8px,.9vw,10px);
+  letter-spacing:.28em;text-transform:uppercase;
+  opacity:.5;
+  white-space:nowrap;
+}
+
+/* Live progress strip across the bottom of the ON AIR cell — red
+   while the show plays, gray while the slot sits in its static
+   gap. Width is set per clock-tick from the slot position. */
+.guide-cell{position:relative}
+.cell-progress{
+  position:absolute;left:0;bottom:0;
+  height:3px;width:0;
+  background:#ff0000;
+  transition:width 1s linear;
+}
+.cell-progress.static-gap{background:rgba(255,255,255,.35)}
+/* Spent listings (earlier today) gray out, YouTube-TV style. */
+.guide-cell.past{opacity:.38}
+.guide-cell.past .title{font-weight:400}
+
 .guide-desc .desc-tag{
   font-size:clamp(9px,1vw,11px);
   letter-spacing:.32em;text-transform:uppercase;
-  border:1px solid rgba(255,255,255,.5);
-  padding:8px 12px 6px;
   opacity:.8;
 }
 
@@ -1349,7 +1474,14 @@ body.no-fs .logo.show{pointer-events:none}
   .guide-row-label{letter-spacing:.08em}
   .guide-row-label .label-dow{font-size:11px}
   .guide-mast{gap:12px;padding-bottom:8px}
-  .guide-desc{grid-template-columns:1fr;gap:8px}
+  /* Phones: the key-art panel cedes its column — the close-up box
+     goes full width and the art tucks under the copy at a smaller
+     fixed height, so the grid keeps most of the screen. */
+  .guide-hero{grid-template-columns:1fr;gap:10px}
+  .guide-hero-art{width:min(100%,260px);align-self:flex-start}
+  .guide-promo{flex-wrap:wrap;row-gap:2px}
+  .guide-promo .promo-copy{flex-basis:100%;order:3}
+  .guide-hint{gap:10px 14px;letter-spacing:.16em;flex-wrap:wrap}
 }
 
 /* Mobile landscape — viewport height is the constraint. Squeeze
@@ -1362,15 +1494,17 @@ body.no-fs .logo.show{pointer-events:none}
     gap:10px;
     flex-wrap:nowrap;
   }
-  .guide-desc{
-    margin-top:6px;
-    padding:6px 10px;
-    gap:8px;
-    grid-template-columns:1fr auto;
-  }
+  /* Short landscape: art panel + promo band + hint bar all yield
+     to the schedule — the close-up keeps only its text column. */
+  .guide-hero{margin-top:6px;gap:8px}
+  .guide-hero-art{display:none}
+  .guide-desc{gap:3px}
   .guide-desc .desc-title{font-size:13px}
-  .guide-desc .desc-body{font-size:10px;margin-top:1px;line-height:1.35}
-  .guide-desc .desc-tag{font-size:8px;letter-spacing:.22em;padding:5px 8px 3px}
+  .guide-desc .desc-body{font-size:10px;line-height:1.35;-webkit-line-clamp:2}
+  .guide-desc .desc-tag{font-size:8px;letter-spacing:.22em}
+  .desc-state{font-size:8px;padding:3px 7px 2px 6px;letter-spacing:.22em}
+  .guide-promo{display:none}
+  .guide-hint{display:none}
   .guide-grid-wrap{margin-top:6px}
   .guide-cell,
   .guide-header,
@@ -1670,6 +1804,7 @@ const SHOWS = [
     metaLine:  '(12 min.) (2012)',
     duration:  '12:14',
     durationSec: 734,
+    artTime:   120,   // guide key art — bridge scene
     horizontalPbId: 'Apdb9mHDmGuMt00AVKNNVx6VZEXw7602eYCcTPJIFtpVE',
     verticalPbId:   'wdN5SRMPQ3Ql8L02Cpl5Fah5L3u00lqhY13EXcSP5x02AU',
     description:
@@ -1684,6 +1819,7 @@ const SHOWS = [
     metaLine:  '(12 min.) (2026)',  // Actual runtime: 11:39
     duration:  '11:39',
     durationSec: 699,
+    artTime:   13,    // guide key art — the two-shot, host + writer
     horizontalPbId: 'PNT1D69a02gHNLIZqx5njPOIgci2a8fW7ie4AysDi9no',
     verticalPbId:   'PeRFtO9hAOgQ3LbHBpGWvBSdIzvgnx02onzEuQiYumLA',
     description:
@@ -1699,6 +1835,7 @@ const SHOWS = [
     metaLine:  '(17 min.) (2024)',  // Actual runtime: 17:26
     duration:  '17:26',
     durationSec: 1046,
+    artTime:   600,   // guide key art — lab scene
     horizontalPbId: 'mdf00qpX9PAVttPZN7jQIHZPXT4krwqf69HGZPBuISXY',
     verticalPbId:   'yBLDE4NXOao4Uv4sYddN02mAT4bUxZ02IYd01p4Mmj5YNA',
     description:
@@ -2204,9 +2341,11 @@ customElements.whenDefined('mux-video').then(function(){
   //  mobile + landscape media queries override. Keeps the schedule
   //  layout declaratively responsive instead of computed in JS.)
 
-  // 30 days of schedule. Today is row 0 (highlighted), then 29
-  // future days. Each row carries its day-of-week + calendar date.
-  const ROW_COUNT = 30;
+  // One printed week of schedule — the TV Guide booklet rhythm.
+  // Today is row 0 (highlighted), then six future days. The lineup
+  // repeats daily, so a 30-day scroll was 29 copies of the same
+  // page; a week says "this is the standing schedule" honestly.
+  const ROW_COUNT = 7;
 
   // Time-of-day sections grouping the 15-hour broadcast day.
   // PT-hour ranges (start inclusive, end inclusive):
@@ -2381,7 +2520,31 @@ customElements.whenDefined('mux-video').then(function(){
       const nowCell = guideGrid.querySelector(
         '.guide-cell[data-row="0"][data-col="' + col + '"]'
       );
-      if (nowCell) nowCell.classList.add('now');
+      if (nowCell) {
+        nowCell.classList.add('now');
+        // Live progress strip — fills the cell across the 30-min
+        // slot so the listing visibly tracks the wall clock. Red
+        // while the show plays, gray once the slot is into its
+        // OFF AIR static gap.
+        let bar = nowCell.querySelector('.cell-progress');
+        if (!bar) {
+          bar = document.createElement('div');
+          bar.className = 'cell-progress';
+          nowCell.appendChild(bar);
+        }
+        const live = getSlotInfo();
+        if (!live.offAir) {
+          bar.style.width =
+            Math.min(100, live.tInSlot / CHANNEL.slotSec * 100) + '%';
+          bar.classList.toggle('static-gap', !live.inShow);
+        }
+      }
+      // Listings earlier today read as spent (grayed) so the eye
+      // lands on now-and-later — the modern live-guide idiom.
+      guideGrid.querySelectorAll('.guide-cell[data-row="0"][data-col]')
+        .forEach(function(c){
+          c.classList.toggle('past', Number(c.dataset.col) < col);
+        });
     }
 
     renderGuideDesc();
@@ -2393,6 +2556,37 @@ customElements.whenDefined('mux-video').then(function(){
   // day/time, or off-air for the end-of-day cell). Otherwise it
   // reflects the live channel state.
   let hoveredSlot = null; // {row, col, isOffAir} | null
+
+  // ── Featured-card state chip + key art ─────────────────────────
+  // Art is a Mux still of the featured show (image.mux.com), keyed
+  // so we only touch img.src when the show actually changes — the
+  // 1s clock tick re-renders the desc constantly and must not
+  // re-trigger image loads. `show` semantics:
+  //   a show object — feature that show's art
+  //   null          — clear the art (nothing to feature)
+  //   undefined     — leave the art as-is (chip-only update)
+  const heroArtImg   = document.getElementById('guideHeroArtImg');
+  const heroChip     = document.getElementById('guideHeroChip');
+  const heroChipLbl  = document.getElementById('guideHeroChipLabel');
+  let   heroArtKey   = null;
+  const HERO_LABELS  = { on:'ON AIR', next:'UP NEXT', sched:'SCHEDULED', off:'OFF AIR' };
+  function setHero(state, show){
+    heroChipLbl.textContent = HERO_LABELS[state];
+    heroChip.className = 'desc-state ' + (state === 'on' ? 'on' : (state === 'off' ? 'off' : ''));
+    if (show !== undefined) {
+      const key = show ? show.id : 'none';
+      if (key !== heroArtKey) {
+        heroArtKey = key;
+        if (show) {
+          heroArtImg.src = 'https://image.mux.com/' + show.horizontalPbId +
+            '/thumbnail.webp?width=640&time=' + (show.artTime || 60);
+        } else {
+          heroArtImg.removeAttribute('src');
+        }
+      }
+    }
+    heroArtImg.classList.toggle('dim', state !== 'on');
+  }
 
   function renderGuideDesc(){
     if (hoveredSlot) {
@@ -2413,6 +2607,7 @@ customElements.whenDefined('mux-video').then(function(){
           CHANNEL.startHour, 0, 0);
         const offStart = fmtSlot(new Date(endTS)).toUpperCase();
         const offEnd   = fmtSlot(new Date(resumeTS)).toUpperCase();
+        setHero('off');           // chip only — keep the last art, dimmed
         guideDescTitle.textContent = 'OFF AIR';
         // Tag each boundary with its weekday when it falls on a
         // different LOCAL calendar day than the hovered row — for
@@ -2439,6 +2634,12 @@ customElements.whenDefined('mux-video').then(function(){
                              slotPT.hour, slotPT.minute, 0);
       const slotLocal = fmtSlot(new Date(slotTS)).toUpperCase();
       const slotShow = showForSlotIndex(hoveredSlot.col);
+      // Hovering the cell that's airing RIGHT NOW keeps the red
+      // ON AIR chip; any other listing reads as SCHEDULED.
+      const isLiveCell = hoveredSlot.row === 0 &&
+        hoveredSlot.col === nowSlotCol(Date.now()) &&
+        !getSlotInfo().offAir;
+      setHero(isLiveCell ? 'on' : 'sched', slotShow);
       guideDescTitle.textContent = slotShow.titleLine;
       guideDescBody.textContent  = slotShow.description;
       guideDescTag.textContent   = dow + ' · ' + date + ' · ' + slotLocal;
@@ -2449,6 +2650,9 @@ customElements.whenDefined('mux-video').then(function(){
     const live = getSlotInfo();
     if (live.offAir) {
       const t = new Date(live.nextOnAir);
+      // Feature tomorrow's opener (dimmed) — the next thing a
+      // viewer can actually watch.
+      setHero('off', showForSlotIndex(0));
       guideDescTitle.textContent = 'CHANNEL OFF AIR';
       // fmtSlot renders in the viewer's clock; add the weekday only
       // when the return moment lands on a different LOCAL day than
@@ -2464,6 +2668,7 @@ customElements.whenDefined('mux-video').then(function(){
         'OFF AIR · BACK AT ' + fmtSlot(t).toUpperCase();
     } else if (live.inShow) {
       // The currently-airing slot's show — rotates every 30 min.
+      setHero('on', live.show);
       guideDescTitle.textContent = live.show.titleLine;
       guideDescBody.textContent  = live.show.description;
       guideDescTag.textContent   = 'ON AIR · ' + live.show.metaLine;
@@ -2476,6 +2681,7 @@ customElements.whenDefined('mux-video').then(function(){
       const ss = String(secs % 60).padStart(2, '0');
       const nextAt = fmtSlot(new Date(live.nextSlotStart));
       const nextShow = showForSlotIndex(live.slotIdx + 1);
+      setHero('next', nextShow);
       guideDescTitle.textContent = 'BETWEEN SHOWS';
       guideDescBody.textContent  =
         nextShow.title + ' is up next at ' + nextAt +
@@ -3139,17 +3345,51 @@ customElements.whenDefined('mux-video').then(function(){
       <div class="time" id="guideTime">—:—</div>
     </div>
   </div>
-  <!-- Description strip — moved ABOVE the schedule grid so the
-       program identity reads first, then you scan the slots. -->
-  <div class="guide-desc">
-    <div>
-      <div class="desc-title" id="guideDescTitle">TEARS OF STEEL—Sci-fi Short</div>
-      <div class="desc-body" id="guideDescBody">Open-source 4K sci-fi short — a fractured science team races to save humanity from its own machines.</div>
+  <!-- ── Featured close-up (hero) ─────────────────────────────────
+       The Pendry-guide split: program identity reads first as a
+       "close-up box" (TV Guide magazine idiom) — state chip + big
+       title + synopsis + meta on the left, key art on the right.
+       The art is a Mux still pulled straight off the stream
+       (image.mux.com/{playbackId}/thumbnail.webp) so the card always
+       shows the channel's own pixels; no separate asset pipeline.
+       The text trio is the same set of elements renderGuideDesc()
+       has always driven — hovering a listing swaps copy AND art. -->
+  <div class="guide-hero">
+    <div class="guide-desc">
+      <div class="desc-state" id="guideHeroChip">
+        <span class="chip-dot" aria-hidden="true"></span>
+        <span id="guideHeroChipLabel">ON AIR</span>
+      </div>
+      <div class="desc-title" id="guideDescTitle">—</div>
+      <div class="desc-body" id="guideDescBody">—</div>
+      <div class="desc-tag" id="guideDescTag">—</div>
     </div>
-    <div class="desc-tag" id="guideDescTag">ON AIR · (12 min.) (2012)</div>
+    <div class="guide-hero-art" aria-hidden="true">
+      <img id="guideHeroArtImg" alt="" draggable="false">
+    </div>
   </div>
+
+  <!-- ── Promo band ───────────────────────────────────────────────
+       Pendry runs a full-width feature band through its grid (the
+       deep-red movie strip). Ours promotes the real open call —
+       the one listing on the channel a viewer can act on. -->
+  <a class="guide-promo" href="https://interdependent.studio/submissions"
+     target="_blank" rel="noopener">
+    <span class="promo-title">Screenplay Submissions</span>
+    <span class="promo-copy">Open call — scripts in by June 19</span>
+    <span class="promo-url">interdependent.studio/submissions</span>
+  </a>
+
   <div class="guide-grid-wrap">
     <div class="guide-grid" id="guideGrid"></div>
+  </div>
+
+  <!-- ── Hint bar — the guide-channel key legend (Pendry's
+       "Press channel ▲▼ to page", Prevue's scroll prompts). -->
+  <div class="guide-hint" aria-hidden="true">
+    <span>◀ ▶ scan the day</span>
+    <span>▲ ▼ browse the week</span>
+    <span>select a listing for details</span>
   </div>
 </div>
 
