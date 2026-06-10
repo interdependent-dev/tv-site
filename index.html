@@ -1032,7 +1032,12 @@ body.no-fs .logo.show{pointer-events:none}
    `-webkit-overflow-scrolling: touch` enables momentum scrolling
    on iOS. */
 .guide-grid-wrap{
-  flex:1;
+  /* Hug the schedule: never taller than the week itself (no void
+     below Tuesday on tall displays), shrink + scroll when the
+     viewport is short. min-height:0 lets a column-flex item shrink
+     below its content so overflow:auto can take over. */
+  flex:0 1 auto;
+  min-height:0;
   margin-top:clamp(10px,2vh,18px);
   overflow:auto;
   overscroll-behavior:contain;
@@ -1938,7 +1943,14 @@ const SHOWS = [
     // Guide key art — one frame per daily occurrence, cycled so no
     // two adjacent airings show the same image. First: the canal
     // bridge — "admit it, you're freaked out by my robot arm".
-    artTimes: [ { t: 36 }, { t: 196 }, { t: 112 }, { t: 100 } ],
+    artTimes: [
+      { t: 36 },   // the bridge — the robot-arm reveal
+      { t: 196 },  // warm interior, the team
+      { t: 112 },  // ship hologram
+      { t: 100 },  // ruins
+      { t: 148 },  // command-deck machinery
+      { t: 124 },  // the old man at the gate
+    ],
     horizontalPbId: 'Apdb9mHDmGuMt00AVKNNVx6VZEXw7602eYCcTPJIFtpVE',
     verticalPbId:   'wdN5SRMPQ3Ql8L02Cpl5Fah5L3u00lqhY13EXcSP5x02AU',
     description:
@@ -1961,6 +1973,8 @@ const SHOWS = [
       { t: 140, pop: true },  // Chris at the mic
       { t: 95 },              // Davante — the saturated cam
       { t: 520, pop: true },  // Chris, laptop
+      { t: 158, pop: true },  // Chris, leaning in
+      { t: 640 },             // Davante close
     ],
     horizontalPbId: 'PNT1D69a02gHNLIZqx5njPOIgci2a8fW7ie4AysDi9no',
     verticalPbId:   'PeRFtO9hAOgQ3LbHBpGWvBSdIzvgnx02onzEuQiYumLA',
@@ -1977,7 +1991,13 @@ const SHOWS = [
     metaLine:  '(17 min.) (2024)',  // Actual runtime: 17:26
     duration:  '17:26',
     durationSec: 1046,
-    artTimes: [ { t: 600 }, { t: 200 }, { t: 320 }, { t: 120 } ],
+    artTimes: [
+      { t: 600 },  // the lab, green light
+      { t: 200 },  // radio close-up
+      { t: 320 },  // desert wide
+      { t: 120 },  // the cave
+      { t: 420 },  // car through dust
+    ],
     horizontalPbId: 'mdf00qpX9PAVttPZN7jQIHZPXT4krwqf69HGZPBuISXY',
     verticalPbId:   'yBLDE4NXOao4Uv4sYddN02mAT4bUxZ02IYd01p4Mmj5YNA',
     description:
@@ -2051,6 +2071,14 @@ function ptDatePlus(days){
   const pt = ptParts(Date.now());
   const t = new Date(Date.UTC(pt.year, pt.month - 1, pt.day + days));
   return { year: t.getUTCFullYear(), month: t.getUTCMonth() + 1, day: t.getUTCDate() };
+}
+// Whole-day ordinal for a PT calendar date (noon-anchored so DST
+// can't wobble it). Folded into the key-art variant index so the
+// same airing time shows DIFFERENT art on different days — and the
+// same art for every viewer worldwide, deterministically.
+function ptEpochDay(ptDate){
+  return Math.floor(
+    ptToUtc(ptDate.year, ptDate.month, ptDate.day, 12, 0, 0) / 86400000);
 }
 
 // Slot index for a PT moment — 0 at 6:00 AM PT, 1 at 6:15 AM PT, …
@@ -2831,8 +2859,15 @@ customElements.whenDefined('mux-video').then(function(){
           // being covered by them.
           const headRow = guideGrid.querySelector('.guide-row-head');
           const top = headRow ? headRow.offsetTop + headRow.offsetHeight : 0;
+          // Clamp to the LAST ROW's bottom edge — never let the line
+          // imply schedule beyond the final day.
+          const rows = guideGrid.querySelectorAll('.guide-row');
+          const lastRow = rows[rows.length - 1];
+          const bottom = lastRow
+            ? lastRow.offsetTop + lastRow.offsetHeight
+            : guideGrid.scrollHeight;
           line.style.top = top + 'px';
-          line.style.height = (guideGrid.scrollHeight - top) + 'px';
+          line.style.height = Math.max(0, bottom - top) + 'px';
         }
       }
     } else if (nowLine) {
@@ -2967,7 +3002,8 @@ customElements.whenDefined('mux-video').then(function(){
         return;
       }
       setHero(isLiveCell ? 'on' : 'sched', prog.show,
-              Math.floor(prog.startSlot / PATTERN.total));
+              Math.floor(prog.startSlot / PATTERN.total) +
+              ptEpochDay(ptDatePlus(hoveredSlot.row)));
       guideDescTitle.textContent = prog.show.titleLine;
       guideDescBody.textContent  = prog.show.description;
       guideDescTag.textContent   = dow + ' · ' + date + ' · ' + slotLocal;
@@ -2980,7 +3016,7 @@ customElements.whenDefined('mux-video').then(function(){
       const t = new Date(live.nextOnAir);
       // Feature tomorrow's opener (dimmed) — the next thing a
       // viewer can actually watch.
-      setHero('off', showForSlotIndex(0));
+      setHero('off', showForSlotIndex(0), ptEpochDay(ptParts(t.getTime())));
       guideDescTitle.textContent = 'CHANNEL OFF AIR';
       // fmtSlot renders in the viewer's clock; add the weekday only
       // when the return moment lands on a different LOCAL day than
@@ -3005,7 +3041,8 @@ customElements.whenDefined('mux-video').then(function(){
     } else if (live.inShow) {
       // The currently-airing program's show.
       setHero('on', live.show,
-              Math.floor(live.program.startSlot / PATTERN.total));
+              Math.floor(live.program.startSlot / PATTERN.total) +
+              ptEpochDay(ptParts(Date.now())));
       guideDescTitle.textContent = live.show.titleLine;
       guideDescBody.textContent  = live.show.description;
       guideDescTag.textContent   = 'ON AIR · ' + live.show.metaLine;
@@ -3023,7 +3060,8 @@ customElements.whenDefined('mux-video').then(function(){
       const nextName = nextProg.kind === 'event'
         ? nextProg.event.title : nextProg.show.title;
       setHero('next', nextProg.kind === 'event' ? nextProg.event : nextProg.show,
-              Math.floor(nextProg.startSlot / PATTERN.total));
+              Math.floor(nextProg.startSlot / PATTERN.total) +
+              ptEpochDay(ptParts(live.nextSlotStart)));
       guideDescTitle.textContent = 'BETWEEN SHOWS';
       guideDescBody.textContent  =
         nextName + ' is up next at ' + nextAt +
