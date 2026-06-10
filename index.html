@@ -131,13 +131,14 @@ html,body{
   --watermark-w:min(20vw,120px);
   --watermark-h:calc(var(--watermark-w) * 0.6041);
   --guide-pill-h:33px;
-  /* Slot-cell width — drives both the schedule grid and the
-     section-grouping (MORNING / AFTERNOON / EVENING) row above
-     it. Sharing one var keeps every row aligned across the cell
-     boundaries no matter the viewport. With 30-min slots there
-     are 30 cells per row (vs 60 for 15-min); cells get wider
-     accordingly so titles read comfortably without overflowing. */
-  --hour-w:180px;
+  /* Slot-column width — drives the schedule grid, the section-
+     grouping (MORNING / AFTERNOON / EVENING) row, and the spanned
+     program cells (a cell is span × this). Sharing one var keeps
+     every row aligned across cell boundaries no matter the
+     viewport. 15-min slots → 60 columns per broadcast day; a
+     one-slot show cell is one column, ASC spans two, the event
+     block spans its whole window. */
+  --hour-w:132px;
 }
 @media (max-width:480px) and (orientation:portrait){
   :root{
@@ -147,7 +148,7 @@ html,body{
   }
 }
 @media (max-width:640px){
-  :root{ --hour-w:148px }
+  :root{ --hour-w:116px }
 }
 @media (max-height:480px) and (orientation:landscape){
   :root{
@@ -157,7 +158,7 @@ html,body{
   }
 }
 @media (orientation:landscape) and (max-height:500px){
-  :root{ --hour-w:124px }
+  :root{ --hour-w:100px }
 }
 
 /* Chrome-less full-bleed playback. <media-container> is the v10
@@ -1089,9 +1090,9 @@ body.no-fs .logo.show{pointer-events:none}
    MORNING = 6 hours × 2 = 12 slots,
    AFTERNOON = 6 hours × 2 = 12 slots,
    EVENING = 3 hours × 2 = 6 slots. */
-.guide-section-morning  { flex:0 0 calc(12 * var(--hour-w)) }
-.guide-section-afternoon{ flex:0 0 calc(12 * var(--hour-w)) }
-.guide-section-evening  { flex:0 0 calc(6  * var(--hour-w)) }
+.guide-section-morning  { flex:0 0 calc(24 * var(--hour-w)) }
+.guide-section-afternoon{ flex:0 0 calc(24 * var(--hour-w)) }
+.guide-section-evening  { flex:0 0 calc(12 * var(--hour-w)) }
 /* The corner above the row-label column is sticky on both axes,
    like the regular .guide-corner — extra z-index keeps it above
    both sticky stacks. The trailing "off-air" placeholder matches
@@ -1238,9 +1239,9 @@ body.no-fs .logo.show{pointer-events:none}
   text-transform:uppercase;
 }
 .guide-cell.now{
-  background:linear-gradient(90deg, rgba(255,0,0,.32), rgba(255,0,0,.12));
+  background:linear-gradient(90deg, rgba(255,0,0,.45), rgba(255,0,0,.16));
   color:#fff;
-  box-shadow:inset 0 0 0 2px #ff0000;
+  box-shadow:inset 0 0 0 2px #ff0000, 0 0 14px rgba(255,0,0,.35);
 }
 .guide-cell.now .title{color:#fff}
 .guide-cell.static-slot{
@@ -1329,11 +1330,12 @@ body.no-fs .logo.show{pointer-events:none}
 .desc-state{
   display:inline-flex;align-items:center;gap:7px;
   width:max-content;
-  font-size:clamp(9px,1vw,10px);
+  font-size:clamp(9px,1.05vw,11px);
   font-weight:700;letter-spacing:.3em;text-transform:uppercase;
   padding:5px 9px 4px 8px;
-  border:1px solid rgba(255,255,255,.5);
-  color:rgba(255,255,255,.85);
+  border:1px solid rgba(255,255,255,.95);
+  background:rgba(255,255,255,.08);
+  color:#fff;
 }
 .desc-state .chip-dot{
   width:6px;height:6px;border-radius:50%;
@@ -1351,8 +1353,9 @@ body.no-fs .logo.show{pointer-events:none}
   50%{opacity:.25}
 }
 .desc-state.off{
-  border-color:rgba(255,255,255,.3);
-  color:rgba(255,255,255,.5);
+  border-color:rgba(255,255,255,.55);
+  background:transparent;
+  color:rgba(255,255,255,.8);
 }
 .guide-desc .desc-title{
   font-family:"Eurostile Wide","Eurostile",sans-serif;
@@ -1388,10 +1391,23 @@ body.no-fs .logo.show{pointer-events:none}
   transition:opacity .35s ease, filter .35s ease;
 }
 .guide-hero-art img.dim{
-  opacity:.5;
-  filter:saturate(.55);
+  opacity:.78;
+  filter:saturate(.85);
 }
 .guide-hero-art img:not([src]){opacity:0}
+/* Event mode — the art panel becomes a brand plate: the Plots mark
+   centered on a dark wash of its own gradient. */
+.guide-hero-art.event-art{
+  background:
+    radial-gradient(120% 140% at 15% 110%, rgba(46,230,200,.28), transparent 55%),
+    radial-gradient(120% 140% at 85% -10%, rgba(249,115,22,.26), transparent 55%),
+    radial-gradient(100% 100% at 60% 50%, rgba(168,85,247,.22), transparent 65%),
+    #0c0c12;
+}
+.guide-hero-art.event-art img{
+  object-fit:contain;
+  padding:14%;
+}
 
 /* ── Promo band — the Pendry red strip, repurposed for the open
    call. Deep-red gradient, cream copy, full width, clickable. */
@@ -1436,6 +1452,78 @@ body.no-fs .logo.show{pointer-events:none}
   letter-spacing:.28em;text-transform:uppercase;
   opacity:.5;
   white-space:nowrap;
+}
+
+/* ── Event cell — the Pendry feature-strip idiom: one wide branded
+   block across the event's whole window, badge + billing, set apart
+   from the text-only listings around it. Clickable (→ Plots). */
+.guide-cell-event{
+  display:flex;align-items:center;gap:14px;
+  cursor:pointer;
+  background:
+    radial-gradient(70% 160% at 8% 120%, rgba(46,230,200,.30), transparent 50%),
+    radial-gradient(70% 160% at 92% -20%, rgba(249,115,22,.28), transparent 50%),
+    radial-gradient(90% 130% at 50% 50%, rgba(168,85,247,.20), transparent 60%),
+    linear-gradient(90deg, rgba(236,72,153,.16), rgba(59,130,246,.14)),
+    rgba(10,10,16,.9);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.28);
+}
+.guide-cell-event:hover{filter:brightness(1.25)}
+.guide-cell-event .event-badge{
+  width:clamp(26px,2.6vw,38px);
+  height:auto;flex:0 0 auto;
+  filter:drop-shadow(0 0 6px rgba(0,0,0,.6));
+}
+.guide-cell-event .event-text{min-width:0}
+.guide-cell-event .title{
+  font-family:"Eurostile Wide","Eurostile",sans-serif;
+  letter-spacing:.1em;
+  font-size:clamp(12px,1.3vw,15px);
+}
+.guide-cell-event .meta{
+  opacity:.85;
+  letter-spacing:.14em;
+}
+/* Event cells stay bright even when "past" — the recording/recap
+   association should hold after the fact. */
+.guide-cell-event.past{opacity:.8}
+
+/* ── Plots promo band — second feature strip, in the event
+   platform's own palette on the channel's dark chrome. */
+.guide-promo-plots{
+  margin-top:clamp(6px,1vh,9px);
+  background:
+    linear-gradient(90deg, rgba(46,230,200,.16), rgba(59,130,246,.14) 30%,
+                    rgba(168,85,247,.15) 60%, rgba(249,115,22,.16)),
+    rgba(10,10,14,.92);
+  border:1px solid rgba(168,85,247,.45);
+  align-items:center;
+}
+.guide-promo-plots .promo-badge{
+  width:clamp(16px,1.6vw,22px);height:auto;
+  flex:0 0 auto;
+  align-self:center;
+}
+
+/* ── NOW line — vertical red playhead through the schedule at the
+   exact current moment, flagged at the top. Sits under the sticky
+   header (z below 3) so the flag tucks beneath the time row while
+   the line rides through every day row. */
+.guide-now-line{
+  position:absolute;top:0;
+  width:2px;
+  background:#ff0000;
+  z-index:2;
+  pointer-events:none;
+  box-shadow:0 0 8px rgba(255,0,0,.7);
+}
+.guide-now-line .now-flag{
+  position:absolute;top:0;left:50%;
+  transform:translateX(-50%);
+  background:#ff0000;color:#fff;
+  font-size:9px;font-weight:700;
+  letter-spacing:.22em;
+  padding:3px 7px 2px 8px;
 }
 
 /* Live progress strip across the bottom of the ON AIR cell — red
@@ -1725,17 +1813,17 @@ const CHANNEL = {
   // Earth is on-air during the same UTC moments. Last slot of
   // the day starts at 20:30 PT, ends at 21:00 PT.
   //
-  // Slot length is 30 MINUTES. The lineup rotates three shows
-  // (TEARS OF STEEL = 12:14, SCREENPLAY SUBMISSIONS = 11:39,
-  // ASC = 17:26) — a 30-min slot lets each show play in full and
-  // leaves OFF AIR fill for the remainder. The three-show cycle
-  // walks the half-hours (TOS · SUBMISSIONS · ASC · …), shifting
-  // by one slot each hour and repeating every 90 minutes. The
-  // 30-slot day divides evenly by 3, so every day opens with
-  // TEARS at 6:00 AM PT.
+  // Slot length is 15 MINUTES, and a program may span several
+  // slots: each show takes the minimum number of quarter-hours
+  // that holds it (TEARS 12:14 → one, SUBMISSIONS 11:39 → one,
+  // ASC 17:26 → two). The pattern totals four slots, so the hour
+  // is clock-aligned all day: TEARS at :00, SUBMISSIONS at :15,
+  // ASC at :30. Static fill shrinks to the leftover inside each
+  // program (2:46 / 3:21 / 12:34 per hour vs the old half-hour
+  // slots' ~18 min of dead air per show).
   startHour: 6,                       // 6 AM PT
   endHour:   21,                      // 9 PM PT
-  slotSec:   1800,                    // 30 min per slot
+  slotSec:   900,                     // 15 min per slot
   timezone:  'America/Los_Angeles',
 };
 
@@ -1849,15 +1937,93 @@ const SHOWS = [
 // a slot is computed), point at the first show.
 const SHOW = SHOWS[0];
 
-// Slot index for a PT moment — 0 at 6:00 AM PT, 1 at 6:30 AM PT, …
-// SHOWS rotates via this index, so the lineup cycles every
-// half-hour: TEARS → SCREENPLAY SUBMISSIONS → ASC, repeating
-// every 90 minutes across the broadcast day.
-function slotIndexInDay(pt) {
-  return (pt.hour - CHANNEL.startHour) * 2 + Math.floor(pt.minute / 30);
+// ── 15-minute slot pattern ──────────────────────────────────────────
+// Slot spans are FROZEN here from the hardcoded durations. The
+// canplay auto-correct may refine durationSec for static-gap timing,
+// but spans never move after load — every viewer worldwide computes
+// the same deterministic schedule whether or not an asset loaded.
+SHOWS.forEach(function(s){
+  s.slotSpan = Math.max(1, Math.ceil(s.durationSec / CHANNEL.slotSec));
+});
+const PATTERN = (function(){
+  const list = []; let off = 0;
+  SHOWS.forEach(function(s){
+    list.push({ show: s, start: off, slots: s.slotSpan });
+    off += s.slotSpan;
+  });
+  return { list: list, total: off };  // total = 4 → hour-aligned
+})();
+
+// ── Special events ──────────────────────────────────────────────────
+// Date-anchored takeovers of the standing rotation, keyed to the
+// channel's broadcast calendar (PT). While a window is on, nothing
+// from SHOWS plays — the player holds the interlude until the live
+// feed is pointed at the channel — and the guide renders one wide
+// branded block across the window (the Pendry feature-cell idiom).
+const EVENTS = [
+  {
+    id:        'writers-town-hall',
+    ptDate:    '2026-06-15',
+    startHour: 14,                    // 2 PM PT
+    endHour:   17,                    // 5 PM PT
+    title:     'WRITERS TOWN HALL',
+    titleLine: 'INTERDEPENDENT WRITERS TOWN HALL—Live Event',
+    badge:     'plots-logo.png',
+    url:       'https://plots.events/event/interdependentwriterstownhall',
+    description:
+      'Live from Interdependent Studios — writers present their work ' +
+      'and talk process, selection, and the open call. Streams right ' +
+      'here; request to attend in person on Plots.',
+  },
+];
+function eventForSlot(ptDate, slotIdx){
+  for (let i = 0; i < EVENTS.length; i++) {
+    const ev = EVENTS[i];
+    const p = ev.ptDate.split('-');
+    if (Number(p[0]) !== ptDate.year ||
+        Number(p[1]) !== ptDate.month ||
+        Number(p[2]) !== ptDate.day) continue;
+    const startSlot = (ev.startHour - CHANNEL.startHour) * 4;
+    const endSlot   = (ev.endHour   - CHANNEL.startHour) * 4;  // exclusive
+    if (slotIdx >= startSlot && slotIdx < endSlot) {
+      return { event: ev, startSlot: startSlot, slots: endSlot - startSlot };
+    }
+  }
+  return null;
 }
+// PT calendar date `days` days after today — feeds event lookups for
+// guide rows beyond today.
+function ptDatePlus(days){
+  const pt = ptParts(Date.now());
+  const t = new Date(Date.UTC(pt.year, pt.month - 1, pt.day + days));
+  return { year: t.getUTCFullYear(), month: t.getUTCMonth() + 1, day: t.getUTCDate() };
+}
+
+// Slot index for a PT moment — 0 at 6:00 AM PT, 1 at 6:15 AM PT, …
+function slotIndexInDay(pt) {
+  return (pt.hour - CHANNEL.startHour) * 4 + Math.floor(pt.minute / 15);
+}
+// Program (show or event) covering a slot. Pass the slot's PT
+// calendar date to apply date-anchored event takeovers; omit it for
+// the standing pattern. Returns { kind, show|event, startSlot, slots }.
+function programForSlotIndex(idx, ptDate) {
+  if (ptDate) {
+    const ev = eventForSlot(ptDate, idx);
+    if (ev) return { kind: 'event', event: ev.event, show: null,
+                     startSlot: ev.startSlot, slots: ev.slots };
+  }
+  const off = ((idx % PATTERN.total) + PATTERN.total) % PATTERN.total;
+  for (let i = 0; i < PATTERN.list.length; i++) {
+    const p = PATTERN.list[i];
+    if (off >= p.start && off < p.start + p.slots) {
+      return { kind: 'show', show: p.show, event: null,
+               startSlot: idx - (off - p.start), slots: p.slots };
+    }
+  }
+}
+// Back-compat: call sites that only need the show for a slot.
 function showForSlotIndex(idx) {
-  return SHOWS[((idx % SHOWS.length) + SHOWS.length) % SHOWS.length];
+  return programForSlotIndex(idx).show;
 }
 
 // ── Wall-clock slot math ────────────────────────────────────────────
@@ -1887,27 +2053,38 @@ function getSlotInfo(now) {
     return { offAir: true, nextOnAir: next };
   }
 
-  // On-air. Slot boundaries are at PT :00 / :30 (every half-hour).
-  const slotMin = Math.floor(pt.minute / 30) * 30;
-  const slotStart = ptToUtc(pt.year, pt.month, pt.day, pt.hour, slotMin, 0);
-  const tInSlot = (now - slotStart) / 1000;
-  const slotIdx = slotIndexInDay({ hour: pt.hour, minute: slotMin });
-  const show    = showForSlotIndex(slotIdx);
-  const showSec = show.durationSec;
-  const inShow  = tInSlot < showSec;
+  // On-air. Slot boundaries at PT :00/:15/:30/:45 — but a PROGRAM
+  // may span several slots (ASC takes two), so all timing below is
+  // measured from the program start, not the slot start. Date-
+  // anchored events take whole windows over the standing pattern.
+  const slotMin   = Math.floor(pt.minute / 15) * 15;
+  const slotIdx   = slotIndexInDay({ hour: pt.hour, minute: slotMin });
+  const prog      = programForSlotIndex(slotIdx, pt);
+  const progStart = ptToUtc(pt.year, pt.month, pt.day,
+    CHANNEL.startHour + Math.floor(prog.startSlot / 4),
+    (prog.startSlot % 4) * 15, 0);
+  const progEnd   = progStart + prog.slots * CHANNEL.slotSec * 1000;
+  const tInProg   = (now - progStart) / 1000;
+  const isEvent   = prog.kind === 'event';
+  const show      = prog.show;
+  const showSec   = isEvent ? 0 : show.durationSec;
+  const inShow    = !isEvent && tInProg < showSec;
 
   return {
     offAir: false,
+    isEvent,
+    event: prog.event,
+    program: prog,
     inShow,
-    slotStart,
+    slotStart: progStart,
     slotIdx,
     show,
     showSec,
-    nextSlotStart: slotStart + CHANNEL.slotSec * 1000,
-    showEnd:       slotStart + showSec * 1000,
-    tInSlot,
-    tInShow:    inShow ? tInSlot : showSec,
-    tInStatic:  inShow ? 0       : tInSlot - showSec,
+    nextSlotStart: progEnd,            // next PROGRAM boundary
+    showEnd:       progStart + showSec * 1000,
+    tInSlot: tInProg,
+    tInShow:    inShow ? tInProg : showSec,
+    tInStatic:  inShow ? 0       : tInProg - showSec,
   };
 }
 
@@ -2291,6 +2468,12 @@ customElements.whenDefined('mux-video').then(function(){
     if (!staticEl.classList.contains('on')) return;
     const info = getSlotInfo();
     if (info.offAir || info.inShow) return;
+    // During an event window the interlude is a placeholder for the
+    // live feed, not dead air — say so instead of counting down.
+    if (info.isEvent) {
+      staticCountdown.textContent = 'LIVE EVENT · ' + info.event.title;
+      return;
+    }
     const secs = Math.max(0, Math.ceil((info.nextSlotStart - Date.now()) / 1000));
     const mm = String(Math.floor(secs / 60)).padStart(2, '0');
     const ss = String(secs % 60).padStart(2, '0');
@@ -2306,19 +2489,17 @@ customElements.whenDefined('mux-video').then(function(){
   // structure is rebuilt only when the slot index changes (so
   // scroll position survives ticks).
   const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-  // Schedule grid is sized in 30-MIN SLOTS — each cell holds one
-  // full show. The 30-min slot length comfortably fits all three
-  // shows (TEARS 12:14, SCREENPLAY SUBMISSIONS 11:39, ASC 17:26)
-  // with OFF AIR fill for the remainder. The three-show cycle
-  // walks the half-hours: TOS · SUBMISSIONS · ASC · … 30 columns
-  // cover the 6 AM – 9 PM PT broadcast day; the trailing OFF AIR
-  // cell closes it.
-  const SLOTS_PER_DAY = (CHANNEL.endHour - CHANNEL.startHour) * 2; // 30
+  // Schedule grid is sized in 15-MIN SLOTS; a program CELL spans as
+  // many columns as its program spans slots (ASC = two, an event
+  // window = its full width), the classic EPG span idiom. 60
+  // columns cover the 6 AM – 9 PM PT broadcast day; the trailing
+  // OFF AIR cell closes it.
+  const SLOTS_PER_DAY = (CHANNEL.endHour - CHANNEL.startHour) * 4; // 60
 
-  // Returns the PT hour + minute for col-th 30-min slot.
-  // col 0 = 6:00 AM PT, col 1 = 6:30 AM PT, ... col 29 = 8:30 PM PT.
+  // Returns the PT hour + minute for col-th 15-min slot.
+  // col 0 = 6:00 AM PT, col 1 = 6:15 AM PT, ... col 59 = 8:45 PM PT.
   function slotForCol(col){
-    const totalMin = CHANNEL.startHour * 60 + col * 30;
+    const totalMin = CHANNEL.startHour * 60 + col * 15;
     return { hour: Math.floor(totalMin / 60), minute: totalMin % 60 };
   }
 
@@ -2330,7 +2511,7 @@ customElements.whenDefined('mux-video').then(function(){
     const nowMs = d instanceof Date ? d.getTime() : (typeof d === 'number' ? d : Date.now());
     const pt = ptParts(nowMs);
     if (pt.hour < CHANNEL.startHour || pt.hour >= CHANNEL.endHour) return -1;
-    return (pt.hour - CHANNEL.startHour) * 2 + Math.floor(pt.minute / 30);
+    return (pt.hour - CHANNEL.startHour) * 4 + Math.floor(pt.minute / 15);
   }
 
   // Column widths: current slot is 200px (wider, so the red
@@ -2348,16 +2529,11 @@ customElements.whenDefined('mux-video').then(function(){
   const ROW_COUNT = 7;
 
   // Time-of-day sections grouping the 15-hour broadcast day.
-  // PT-hour ranges (start inclusive, end inclusive):
-  //   MORNING   6 AM – 11 AM  (cols 0..5)
-  //   AFTERNOON 12 PM – 5 PM  (cols 6..11)
-  //   EVENING   6 PM – 8 PM   (cols 12..14)
-  // .section-end is applied to the LAST cell of MORNING and
-  // AFTERNOON in each row so the schedule renders distinct chunks.
-  // Last 30-min slot of each section: MORNING ends after 11:30 A
-  // (slot 11), AFTERNOON ends after 5:30 P (slot 23). EVENING runs
-  // through slot 29 (8:30 P) and abuts the OFF AIR end-cell.
-  const SECTION_END_COLS = new Set([11, 23]);
+  // With 15-min columns: MORNING covers cols 0..23 (6:00–11:45 A),
+  // AFTERNOON cols 24..47 (12:00–5:45 P), EVENING cols 48..59
+  // (6:00–8:45 P). .section-end marks the cell whose RIGHT edge
+  // closes MORNING / AFTERNOON so the chunks render distinctly.
+  const SECTION_END_COLS = new Set([23, 47]);
 
   function buildGuideGrid(){
     const now = new Date();
@@ -2450,20 +2626,41 @@ customElements.whenDefined('mux-video').then(function(){
       label.appendChild(dateRow);
       row.appendChild(label);
 
-      for (let c = 0; c < SLOTS_PER_DAY; c++) {
+      // Walk the row in PROGRAMS, not slots — each cell spans its
+      // program's quarter-hours (TOS 1 · SUBMISSIONS 1 · ASC 2),
+      // and a date-anchored event takes one wide branded cell
+      // across its whole window (the Pendry feature-cell idiom).
+      const rowPt = ptDatePlus(r);
+      let c = 0;
+      while (c < SLOTS_PER_DAY) {
+        const prog = programForSlotIndex(c, rowPt);
+        const span = Math.min(prog.slots, SLOTS_PER_DAY - c);
         const cell = document.createElement('div');
         cell.className = 'guide-cell' +
-          (SECTION_END_COLS.has(c) ? ' section-end' : '');
+          (SECTION_END_COLS.has(c + span - 1) ? ' section-end' : '');
+        cell.style.flex = '0 0 calc(' + span + ' * var(--hour-w))';
         cell.dataset.row = String(r);
         cell.dataset.col = String(c);
+        cell.dataset.span = String(span);
         if (!isToday) cell.style.opacity = '.65';
-        // ONE show per 30-min slot — the rotation is visible
-        // across the grid: TOS · SUBMISSIONS · ASC · TOS · …
-        const show = showForSlotIndex(c);
-        cell.innerHTML =
-          '<div class="title">' + show.titleLine + '</div>' +
-          '<div class="meta">'  + show.metaLine  + '</div>';
+        if (prog.kind === 'event') {
+          cell.className += ' guide-cell-event';
+          cell.dataset.event = prog.event.id;
+          cell.innerHTML =
+            '<img class="event-badge" src="' + prog.event.badge +
+              '" alt="" draggable="false">' +
+            '<div class="event-text">' +
+              '<div class="title">' + prog.event.title + '</div>' +
+              '<div class="meta">LIVE · IN PERSON + ON AIR · ' +
+                'REQUEST TO ATTEND ON PLOTS</div>' +
+            '</div>';
+        } else {
+          cell.innerHTML =
+            '<div class="title">' + prog.show.titleLine + '</div>' +
+            '<div class="meta">'  + prog.show.metaLine  + '</div>';
+        }
         row.appendChild(cell);
+        c += span;
       }
       // Trailing END-OF-DAY cell — matches the header marker above.
       // Visually closes each day so the table doesn't just stop
@@ -2513,38 +2710,66 @@ customElements.whenDefined('mux-video').then(function(){
       buildGuideGrid();
     }
 
-    // Refresh "now" highlight on the today row.
+    // Refresh "now" highlight on the today row. Cells span multiple
+    // columns now, so the live cell is the one whose span CONTAINS
+    // the current column.
     const prev = guideGrid.querySelector('.guide-cell.now');
     if (prev) prev.classList.remove('now');
+    const nowLine = guideGrid.querySelector('.guide-now-line');
     if (col >= 0) {
-      const nowCell = guideGrid.querySelector(
-        '.guide-cell[data-row="0"][data-col="' + col + '"]'
-      );
+      const todayCells = guideGrid.querySelectorAll(
+        '.guide-cell[data-row="0"][data-col]');
+      let nowCell = null;
+      todayCells.forEach(function(c){
+        const s = Number(c.dataset.col);
+        const n = Number(c.dataset.span) || 1;
+        // Spent listings gray out so the eye lands on now-and-later.
+        c.classList.toggle('past', s + n <= col);
+        if (col >= s && col < s + n) nowCell = c;
+      });
+      const live = getSlotInfo();
       if (nowCell) {
         nowCell.classList.add('now');
-        // Live progress strip — fills the cell across the 30-min
-        // slot so the listing visibly tracks the wall clock. Red
-        // while the show plays, gray once the slot is into its
-        // OFF AIR static gap.
+        // Live progress strip — fills the cell across the program's
+        // full span so the listing visibly tracks the wall clock.
+        // Red while the show plays, gray through the static gap.
         let bar = nowCell.querySelector('.cell-progress');
         if (!bar) {
           bar = document.createElement('div');
           bar.className = 'cell-progress';
           nowCell.appendChild(bar);
         }
-        const live = getSlotInfo();
         if (!live.offAir) {
-          bar.style.width =
-            Math.min(100, live.tInSlot / CHANNEL.slotSec * 100) + '%';
-          bar.classList.toggle('static-gap', !live.inShow);
+          const progSec = live.program.slots * CHANNEL.slotSec;
+          bar.style.width = Math.min(100, live.tInSlot / progSec * 100) + '%';
+          bar.classList.toggle('static-gap', !live.inShow && !live.isEvent);
+        }
+        // Red NOW line — a vertical playhead through every row at
+        // the exact current moment, flagged at the top. Viewers
+        // should never have to hunt for "what's on right now".
+        if (!live.offAir) {
+          let line = nowLine;
+          if (!line) {
+            line = document.createElement('div');
+            line.className = 'guide-now-line';
+            line.innerHTML = '<span class="now-flag">NOW</span>';
+            guideGrid.appendChild(line);
+          }
+          const progSec = live.program.slots * CHANNEL.slotSec;
+          const frac = Math.min(1, Math.max(0, live.tInSlot / progSec));
+          line.style.left =
+            (nowCell.offsetLeft + frac * nowCell.offsetWidth) + 'px';
+          // Start the line below the sticky section + header rows so
+          // the NOW flag sits right under the time labels instead of
+          // being covered by them.
+          const headRow = guideGrid.querySelector('.guide-row-head');
+          const top = headRow ? headRow.offsetTop + headRow.offsetHeight : 0;
+          line.style.top = top + 'px';
+          line.style.height = (guideGrid.scrollHeight - top) + 'px';
         }
       }
-      // Listings earlier today read as spent (grayed) so the eye
-      // lands on now-and-later — the modern live-guide idiom.
-      guideGrid.querySelectorAll('.guide-cell[data-row="0"][data-col]')
-        .forEach(function(c){
-          c.classList.toggle('past', Number(c.dataset.col) < col);
-        });
+    } else if (nowLine) {
+      nowLine.remove();
     }
 
     renderGuideDesc();
@@ -2566,26 +2791,36 @@ customElements.whenDefined('mux-video').then(function(){
   //   null          — clear the art (nothing to feature)
   //   undefined     — leave the art as-is (chip-only update)
   const heroArtImg   = document.getElementById('guideHeroArtImg');
+  const heroArtPanel = document.querySelector('.guide-hero-art');
   const heroChip     = document.getElementById('guideHeroChip');
   const heroChipLbl  = document.getElementById('guideHeroChipLabel');
   let   heroArtKey   = null;
-  const HERO_LABELS  = { on:'ON AIR', next:'UP NEXT', sched:'SCHEDULED', off:'OFF AIR' };
-  function setHero(state, show){
+  const HERO_LABELS  = { on:'ON AIR', live:'LIVE NOW', event:'LIVE EVENT',
+                         next:'UP NEXT', sched:'SCHEDULED', off:'OFF AIR' };
+  function setHero(state, subject){
+    // subject: a SHOW (Mux still), an EVENT (badge on brand panel),
+    // null (clear the art), or undefined (chip-only update).
     heroChipLbl.textContent = HERO_LABELS[state];
-    heroChip.className = 'desc-state ' + (state === 'on' ? 'on' : (state === 'off' ? 'off' : ''));
-    if (show !== undefined) {
-      const key = show ? show.id : 'none';
+    const isLive = state === 'on' || state === 'live';
+    heroChip.className = 'desc-state ' +
+      (isLive ? 'on' : (state === 'off' ? 'off' : ''));
+    if (subject !== undefined) {
+      const isEvent = !!(subject && subject.badge);
+      const key = subject ? subject.id : 'none';
       if (key !== heroArtKey) {
         heroArtKey = key;
-        if (show) {
-          heroArtImg.src = 'https://image.mux.com/' + show.horizontalPbId +
-            '/thumbnail.webp?width=640&time=' + (show.artTime || 60);
+        if (isEvent) {
+          heroArtImg.src = subject.badge;
+        } else if (subject) {
+          heroArtImg.src = 'https://image.mux.com/' + subject.horizontalPbId +
+            '/thumbnail.webp?width=640&time=' + (subject.artTime || 60);
         } else {
           heroArtImg.removeAttribute('src');
         }
       }
+      heroArtPanel.classList.toggle('event-art', isEvent);
     }
-    heroArtImg.classList.toggle('dim', state !== 'on');
+    heroArtImg.classList.toggle('dim', !isLive);
   }
 
   function renderGuideDesc(){
@@ -2633,15 +2868,28 @@ customElements.whenDefined('mux-video').then(function(){
                              rowDate.getMonth() + 1, rowDate.getDate(),
                              slotPT.hour, slotPT.minute, 0);
       const slotLocal = fmtSlot(new Date(slotTS)).toUpperCase();
-      const slotShow = showForSlotIndex(hoveredSlot.col);
+      const prog = programForSlotIndex(hoveredSlot.col,
+                                       ptDatePlus(hoveredSlot.row));
       // Hovering the cell that's airing RIGHT NOW keeps the red
-      // ON AIR chip; any other listing reads as SCHEDULED.
-      const isLiveCell = hoveredSlot.row === 0 &&
-        hoveredSlot.col === nowSlotCol(Date.now()) &&
-        !getSlotInfo().offAir;
-      setHero(isLiveCell ? 'on' : 'sched', slotShow);
-      guideDescTitle.textContent = slotShow.titleLine;
-      guideDescBody.textContent  = slotShow.description;
+      // live chip; any other listing reads as SCHEDULED / EVENT.
+      const liveCol = nowSlotCol(Date.now());
+      const isLiveCell = hoveredSlot.row === 0 && liveCol >= 0 &&
+        liveCol >= hoveredSlot.col &&
+        liveCol < hoveredSlot.col + (hoveredSlot.span || 1);
+      if (prog.kind === 'event') {
+        const ev = prog.event;
+        const endLocal = fmtSlot(new Date(
+          slotTS + prog.slots * CHANNEL.slotSec * 1000)).toUpperCase();
+        setHero(isLiveCell ? 'live' : 'event', ev);
+        guideDescTitle.textContent = ev.titleLine;
+        guideDescBody.textContent  = ev.description;
+        guideDescTag.textContent   =
+          dow + ' · ' + date + ' · ' + slotLocal + ' – ' + endLocal;
+        return;
+      }
+      setHero(isLiveCell ? 'on' : 'sched', prog.show);
+      guideDescTitle.textContent = prog.show.titleLine;
+      guideDescBody.textContent  = prog.show.description;
       guideDescTag.textContent   = dow + ' · ' + date + ' · ' + slotLocal;
       return;
     }
@@ -2666,25 +2914,37 @@ customElements.whenDefined('mux-video').then(function(){
         '. See the lineup below for what airs next.';
       guideDescTag.textContent   =
         'OFF AIR · BACK AT ' + fmtSlot(t).toUpperCase();
+    } else if (live.isEvent) {
+      // Event window — the channel carries the live feed.
+      const ev = live.event;
+      setHero('live', ev);
+      guideDescTitle.textContent = ev.titleLine;
+      guideDescBody.textContent  = ev.description;
+      guideDescTag.textContent   =
+        'LIVE NOW · UNTIL ' + fmtSlot(new Date(live.nextSlotStart)).toUpperCase();
     } else if (live.inShow) {
-      // The currently-airing slot's show — rotates every 30 min.
+      // The currently-airing program's show.
       setHero('on', live.show);
       guideDescTitle.textContent = live.show.titleLine;
       guideDescBody.textContent  = live.show.description;
       guideDescTag.textContent   = 'ON AIR · ' + live.show.metaLine;
     } else {
-      // Between shows in the current slot. Compute what airs NEXT
-      // (the next slot's show) — with the rotation that's the show
-      // after this one in the SHOWS cycle.
+      // Between shows in the current program. What airs NEXT is the
+      // program at the slot after this one ENDS (programs span
+      // multiple slots, and an event may be next on today's date).
       const secs = Math.max(0, Math.ceil((live.nextSlotStart - Date.now()) / 1000));
       const mm = String(Math.floor(secs / 60)).padStart(2, '0');
       const ss = String(secs % 60).padStart(2, '0');
       const nextAt = fmtSlot(new Date(live.nextSlotStart));
-      const nextShow = showForSlotIndex(live.slotIdx + 1);
-      setHero('next', nextShow);
+      const nextIdx = live.program.startSlot + live.program.slots;
+      const nextProg = programForSlotIndex(
+        nextIdx % SLOTS_PER_DAY, ptParts(live.nextSlotStart));
+      const nextName = nextProg.kind === 'event'
+        ? nextProg.event.title : nextProg.show.title;
+      setHero('next', nextProg.kind === 'event' ? nextProg.event : nextProg.show);
       guideDescTitle.textContent = 'BETWEEN SHOWS';
       guideDescBody.textContent  =
-        nextShow.title + ' is up next at ' + nextAt +
+        nextName + ' is up next at ' + nextAt +
         '. See the lineup below for what airs after.';
       guideDescTag.textContent   = 'OFF AIR · BACK IN ' + mm + ':' + ss;
     }
@@ -2733,6 +2993,7 @@ customElements.whenDefined('mux-video').then(function(){
     hoveredSlot = {
       row: parseInt(cell.dataset.row, 10),
       col: isOffAir ? -1 : parseInt(cell.dataset.col, 10),
+      span: isOffAir ? 1 : (parseInt(cell.dataset.span, 10) || 1),
       isOffAir: isOffAir,
     };
     renderGuideDesc();
@@ -2740,6 +3001,14 @@ customElements.whenDefined('mux-video').then(function(){
   guideGrid.addEventListener('mouseleave', function(){
     hoveredSlot = null;
     renderGuideDesc();
+  });
+  // Event cells are actionable — clicking one opens the event's
+  // Plots page (request-to-attend) in a new tab.
+  guideGrid.addEventListener('click', function(e){
+    const cell = e.target.closest('.guide-cell-event');
+    if (!cell || !guideGrid.contains(cell)) return;
+    const ev = EVENTS.find(function(x){ return x.id === cell.dataset.event; });
+    if (ev) window.open(ev.url, '_blank', 'noopener');
   });
 
   function closeGuide(){
@@ -2754,6 +3023,21 @@ customElements.whenDefined('mux-video').then(function(){
       ae.blur();
     }
   }
+  // Fill the live-event band with the event's window in the
+  // VIEWER's clock (a Paris viewer reads 23:00–02:00, not 2–5 PM).
+  (function(){
+    const el = document.getElementById('plotsBandWhen');
+    if (!el || !EVENTS.length) return;
+    const ev = EVENTS[0];
+    const p = ev.ptDate.split('-').map(Number);
+    const startTs = ptToUtc(p[0], p[1], p[2], ev.startHour, 0, 0);
+    const endTs   = ptToUtc(p[0], p[1], p[2], ev.endHour,   0, 0);
+    const d = new Date(startTs);
+    el.textContent = 'Live in person + on this channel — ' +
+      DAYS_SHORT[d.getDay()] + ' ' + MONTHS[d.getMonth()] + ' ' + d.getDate() +
+      ' · ' + fmtSlot(d) + ' – ' + fmtSlot(new Date(endTs));
+  })();
+
   guideBtn.addEventListener('click', openGuide);
   // Netflix-style back-to-TV button sits between the masthead IV
   // mark and the day/date/time cluster, arrow pointing at the
@@ -2958,7 +3242,9 @@ customElements.whenDefined('mux-video').then(function(){
   // through the same canplay → seek → resume routine.
   function applyShowAndOrientation(){
     const info = getSlotInfo();
-    const show = info.offAir ? SHOWS[0] : info.show;
+    // During an event window nothing from SHOWS is scheduled — keep
+    // the opener preloaded so the post-event slot starts instantly.
+    const show = (info.offAir || info.isEvent) ? SHOWS[0] : info.show;
     const want = pbIdFor(show, portraitMQ.matches);
     if (currentPbId === want) return;
 
@@ -3000,7 +3286,11 @@ customElements.whenDefined('mux-video').then(function(){
       // boundary. If the duration changed, reschedule the current
       // slot's "show end → static" transition.
       if (isFinite(mv.duration) && mv.duration > 0) {
-        const realDur = Math.min(Math.floor(mv.duration), CHANNEL.slotSec);
+        // Cap at the show's frozen slot span (NOT one slot) — the
+        // span itself never moves after load, so the deterministic
+        // schedule holds even if the real runtime differs.
+        const realDur = Math.min(Math.floor(mv.duration),
+                                 show.slotSpan * CHANNEL.slotSec);
         if (show.durationSec !== realDur) {
           show.durationSec = realDur;
           if (finished) {
@@ -3189,6 +3479,11 @@ customElements.whenDefined('mux-video').then(function(){
       playButton.disabled = false;
       // PUSH PLAY is the active CTA now — hide the toggle.
       if (autoPlayBtn) autoPlayBtn.classList.remove('show');
+    } else if (info.isEvent) {
+      ctaLabel.textContent = 'LIVE EVENT · ' + info.event.title;
+      playButton.classList.add('off-air');
+      playButton.disabled = true;
+      if (autoPlayBtn) autoPlayBtn.classList.add('show');
     } else {
       const secs = Math.max(0, Math.ceil((info.nextSlotStart - Date.now()) / 1000));
       const mm = String(Math.floor(secs / 60)).padStart(2, '0');
@@ -3378,6 +3673,16 @@ customElements.whenDefined('mux-video').then(function(){
     <span class="promo-title">Screenplay Submissions</span>
     <span class="promo-copy">Open call — scripts in by June 19</span>
     <span class="promo-url">interdependent.studio/submissions</span>
+  </a>
+  <!-- Live-event band — IRL events on Plots that also stream on this
+       channel. Times are filled by JS in the viewer's local clock. -->
+  <a class="guide-promo guide-promo-plots"
+     href="https://plots.events/event/interdependentwriterstownhall"
+     target="_blank" rel="noopener">
+    <img class="promo-badge" src="plots-logo.png" alt="" draggable="false">
+    <span class="promo-title">Writers Town Hall</span>
+    <span class="promo-copy" id="plotsBandWhen">Live event</span>
+    <span class="promo-url">request to attend on plots</span>
   </a>
 
   <div class="guide-grid-wrap">
