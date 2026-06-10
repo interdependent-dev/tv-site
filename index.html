@@ -661,9 +661,10 @@ body.no-fs .logo.show{pointer-events:none}
 /* ─────────────────────────────────────────────────────────────────────
    ── LINEAR CHANNEL UX ────────────────────────────────────────────────
    ─────────────────────────────────────────────────────────────────────
-   The site is a deterministic linear channel: every 15 minutes a new
-   slot starts (00 / 15 / 30 / 45 past the hour) between 11:00–23:00
-   local time. Each slot = 12:14 of Tears of Steel + 2:46 of static.
+   The site is a deterministic linear channel: every 30 minutes a new
+   slot starts (:00 / :30 past the hour) between 6:00–21:00 Pacific.
+   Each slot = one show from the SHOWS rotation played in full, then
+   OFF AIR static until the next half-hour.
    Every viewer worldwide computes the same in-slot position from
    their wall clock, so the channel is "live" without a server.
 
@@ -1553,9 +1554,10 @@ body.no-fs .logo.show{pointer-events:none}
 // ─────────────────────────────────────────────────────────────────────
 //
 // Schedule semantics
-//   - Channel operates 11:00–23:00 local time.
-//   - Slot length: 15 min (900s). Movie: 12:14 (734s). Static gap: 2:46.
-//   - Slot starts on every quarter-hour boundary: :00, :15, :30, :45.
+//   - Channel operates 6:00–21:00 Pacific Time.
+//   - Slot length: 30 min (1800s). Each slot airs one show from the
+//     SHOWS rotation in full; the slot remainder is OFF AIR static.
+//   - Slot starts on every half-hour boundary: :00, :30.
 //   - The "live position" inside a slot is t = (now - slotStart)/1000.
 //     If t < SHOW_SECS, the mux-video is playing at currentTime = t.
 //     If t ≥ SHOW_SECS, the #static overlay is up until the next slot.
@@ -1574,7 +1576,7 @@ body.no-fs .logo.show{pointer-events:none}
 //   after fade → handleState() takes over: ensures the movie is
 //           seeked to the live position, then schedules the next
 //           transition (show→static or static→show) precisely at
-//           its quarter-hour boundary.
+//           its half-hour boundary.
 //
 // ─────────────────────────────────────────────────────────────────────
 
@@ -1585,11 +1587,14 @@ const CHANNEL = {
   // Earth is on-air during the same UTC moments. Last slot of
   // the day starts at 20:30 PT, ends at 21:00 PT.
   //
-  // Slot length is 30 MINUTES. The lineup alternates two shows
-  // (TEARS OF STEEL = 12:14, ASC = 17:26) — neither fits in a
-  // 15-min slot, so a 30-min slot lets each show play in full
-  // and leaves OFF AIR fill for the remainder. The clock-aligned
-  // result: TEARS plays at every :00, ASC plays at every :30.
+  // Slot length is 30 MINUTES. The lineup rotates three shows
+  // (TEARS OF STEEL = 12:14, SCREENPLAY SUBMISSIONS = 11:39,
+  // ASC = 17:26) — a 30-min slot lets each show play in full and
+  // leaves OFF AIR fill for the remainder. The three-show cycle
+  // walks the half-hours (TOS · SUBMISSIONS · ASC · …), shifting
+  // by one slot each hour and repeating every 90 minutes. The
+  // 30-slot day divides evenly by 3, so every day opens with
+  // TEARS at 6:00 AM PT.
   startHour: 6,                       // 6 AM PT
   endHour:   21,                      // 9 PM PT
   slotSec:   1800,                    // 30 min per slot
@@ -1640,8 +1645,8 @@ function ptToUtc(year, month, day, hour, minute, second){
 }
 
 // ── Channel lineup ───────────────────────────────────────────────────
-// SHOWS is the rotation. Each 15-min slot picks one show via the
-// slot's index modulo SHOWS.length, so the lineup alternates evenly
+// SHOWS is the rotation. Each 30-min slot picks one show via the
+// slot's index modulo SHOWS.length, so the lineup cycles evenly
 // across the day. Each entry carries the Mux playback IDs for both
 // orientations + the TV-Guide display fields + a runtime in seconds
 // for the "show vs. between-slot static" timing.
@@ -1650,7 +1655,7 @@ function ptToUtc(year, month, day, hour, minute, second){
 //   `titleLine` — TV-Guide-styled headline (em-dash + genre tag, all caps)
 //   `metaLine`  — inline metadata stripe ("(60 min.) (1981)" idiom)
 //   `duration`  — MM:SS display string
-//   `durationSec` — show length in seconds (the rest of the 15-min slot
+//   `durationSec` — show length in seconds (the rest of the 30-min slot
 //                   plays as the inter-show static gap)
 //   `horizontalPbId` / `verticalPbId` — Mux IDs for landscape + portrait
 const SHOWS = [
@@ -1667,6 +1672,25 @@ const SHOWS = [
       'Open-source 4K sci-fi short — a fractured science team races ' +
       'to undo a future that was never theirs to write. Directed by ' +
       'Ian Hubert · Blender Foundation, 2012.',
+  },
+  {
+    id:        'screenplay-submissions',
+    title:     'SCREENPLAY SUBMISSIONS',
+    titleLine: 'SCREENPLAY SUBMISSIONS—Open Call',
+    metaLine:  '(12 min.) (2026)',  // Actual runtime: 11:39
+    duration:  '11:39',
+    durationSec: 699,
+    // Single 16:9 cut — no vertical reframe exists for this show, so
+    // both orientations resolve to the same playback ID. Rotation
+    // swaps become a no-op (`currentPbId === want`) and portrait
+    // viewports letterbox via the mux-video's object-fit:contain.
+    horizontalPbId: 'PNT1D69a02gHNLIZqx5njPOIgci2a8fW7ie4AysDi9no',
+    verticalPbId:   'PNT1D69a02gHNLIZqx5njPOIgci2a8fW7ie4AysDi9no',
+    description:
+      'INTERDEPENDENT\'s open screenplay call, walked through live — ' +
+      'a studio runner submits his own script and reads back his AI ' +
+      'evaluation, scores, and notes on camera. Submissions open ' +
+      'through June 19 at interdependent.studio/submission.',
   },
   {
     id:        'asc',
@@ -1689,9 +1713,9 @@ const SHOWS = [
 const SHOW = SHOWS[0];
 
 // Slot index for a PT moment — 0 at 6:00 AM PT, 1 at 6:30 AM PT, …
-// SHOWS rotates via this index, so the lineup alternates every
-// half-hour: TEARS at every :00, ASC at every :30, repeating
-// hourly across the broadcast day.
+// SHOWS rotates via this index, so the lineup cycles every
+// half-hour: TEARS → SCREENPLAY SUBMISSIONS → ASC, repeating
+// every 90 minutes across the broadcast day.
 function slotIndexInDay(pt) {
   return (pt.hour - CHANNEL.startHour) * 2 + Math.floor(pt.minute / 30);
 }
@@ -2145,13 +2169,13 @@ customElements.whenDefined('mux-video').then(function(){
   // structure is rebuilt only when the slot index changes (so
   // scroll position survives ticks).
   const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-  // Schedule grid is sized in HOURS, not 15-min slots. The channel
   // Schedule grid is sized in 30-MIN SLOTS — each cell holds one
-  // full show. The 30-min slot length comfortably fits both shows
-  // (TEARS 12:14, ASC 17:26) with OFF AIR fill for the remainder.
-  // Per hour: TEARS at :00, ASC at :30. 30 columns cover the
-  // 6 AM – 9 PM PT broadcast day; the trailing OFF AIR cell
-  // closes it.
+  // full show. The 30-min slot length comfortably fits all three
+  // shows (TEARS 12:14, SCREENPLAY SUBMISSIONS 11:39, ASC 17:26)
+  // with OFF AIR fill for the remainder. The three-show cycle
+  // walks the half-hours: TOS · SUBMISSIONS · ASC · … 30 columns
+  // cover the 6 AM – 9 PM PT broadcast day; the trailing OFF AIR
+  // cell closes it.
   const SLOTS_PER_DAY = (CHANNEL.endHour - CHANNEL.startHour) * 2; // 30
 
   // Returns the PT hour + minute for col-th 30-min slot.
@@ -2294,8 +2318,8 @@ customElements.whenDefined('mux-video').then(function(){
         cell.dataset.row = String(r);
         cell.dataset.col = String(c);
         if (!isToday) cell.style.opacity = '.65';
-        // ONE show per 15-min slot — alternation pattern is now
-        // visible across the grid: TOS · ASC · TOS · ASC …
+        // ONE show per 30-min slot — the rotation is visible
+        // across the grid: TOS · SUBMISSIONS · ASC · TOS · …
         const show = showForSlotIndex(c);
         cell.innerHTML =
           '<div class="title">' + show.titleLine + '</div>' +
@@ -2392,7 +2416,7 @@ customElements.whenDefined('mux-video').then(function(){
           dow + ' · ' + date + ' · ' + offStart + ' – ' + offEnd;
         return;
       }
-      // Regular 15-min slot — exactly one show per cell. Tag shows
+      // Regular 30-min slot — exactly one show per cell. Tag shows
       // the airing time (in the viewer's local format); body uses
       // that show's blurb.
       const slotPT = slotForCol(hoveredSlot.col);
@@ -2418,14 +2442,14 @@ customElements.whenDefined('mux-video').then(function(){
       guideDescTag.textContent   =
         'OFF AIR · BACK AT ' + fmtSlot(t).toUpperCase();
     } else if (live.inShow) {
-      // The currently-airing slot's show — alternates every 15 min.
+      // The currently-airing slot's show — rotates every 30 min.
       guideDescTitle.textContent = live.show.titleLine;
       guideDescBody.textContent  = live.show.description;
       guideDescTag.textContent   = 'ON AIR · ' + live.show.metaLine;
     } else {
       // Between shows in the current slot. Compute what airs NEXT
-      // (the next slot's show) — with alternation that's the OTHER
-      // show from the one that just played.
+      // (the next slot's show) — with the rotation that's the show
+      // after this one in the SHOWS cycle.
       const secs = Math.max(0, Math.ceil((live.nextSlotStart - Date.now()) / 1000));
       const mm = String(Math.floor(secs / 60)).padStart(2, '0');
       const ss = String(secs % 60).padStart(2, '0');
@@ -2724,6 +2748,10 @@ customElements.whenDefined('mux-video').then(function(){
     }
 
     currentPbId = want;
+    // Keep Mux Data's video title in step with the show actually
+    // playing (the static attribute in the markup only covers the
+    // cold-start preload).
+    mv.setAttribute('metadata-video-title', show.id.replace(/-/g, '_'));
     mv.src = muxHlsSrc(want);
 
     // Wait for the new source to be playable, then re-sync to the
