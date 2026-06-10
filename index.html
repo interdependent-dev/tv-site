@@ -139,6 +139,12 @@ html,body{
      one-slot show cell is one column, ASC spans two, the event
      block spans its whole window. */
   --hour-w:132px;
+  /* Fixed height for the MORNING/AFTERNOON/EVENING band — the time-
+     header row sticks BELOW it (top:var(--section-h)), so both stay
+     glued while the viewer scrolls the week. With auto heights the
+     two sticky rows both pinned at top:0 and the times slid under
+     the section band and vanished. */
+  --section-h:clamp(26px,3.4vh,34px);
 }
 @media (max-width:480px) and (orientation:portrait){
   :root{
@@ -870,9 +876,12 @@ body.no-fs .logo.show{pointer-events:none}
    "BACK TO PROGRAMMING" stand-in keeps the button readable. */
 .guide-back{
   appearance:none;
-  background:rgba(0,0,0,.45);
+  /* Solid broadcast red at rest — the way back to the channel is
+     the masthead's loudest control, not a ghost pill. Hover/press
+     drops to the dark treatment. */
+  background:#c00000;
   backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
-  border:1px solid rgba(255,255,255,.4);
+  border:1px solid rgba(255,90,90,.8);
   color:#fff;cursor:pointer;
   font:700 11px/1.1 "Eurostile",sans-serif;
   letter-spacing:.24em;text-transform:uppercase;
@@ -889,7 +898,7 @@ body.no-fs .logo.show{pointer-events:none}
    Gating with (hover: hover) eliminates the double-tap problem. */
 @media (hover: hover){
   .guide-back:hover{
-    background:rgba(255,255,255,.12);
+    background:rgba(0,0,0,.55);
     border-color:#fff;
     transform:scale(1.03);
   }
@@ -1060,7 +1069,7 @@ body.no-fs .logo.show{pointer-events:none}
    regular cells; the corner cell (top-left, sticky on BOTH axes)
    wins over both. */
 .guide-row-head{
-  position:sticky;top:0;
+  position:sticky;top:var(--section-h);
   z-index:3;
 }
 
@@ -1073,14 +1082,16 @@ body.no-fs .logo.show{pointer-events:none}
 .guide-row-sections{
   position:sticky;top:0;
   z-index:4;
+  height:var(--section-h);
 }
+.guide-row-sections > *{height:var(--section-h)}
 .guide-section{
   background:rgba(8,8,12,.92);
   color:rgba(255,255,255,.7);
   font:700 clamp(10px,1.1vw,12px)/1 "Eurostile",sans-serif;
   letter-spacing:.32em;
   text-transform:uppercase;
-  padding:clamp(6px,1.2vh,12px) clamp(8px,1.2vw,16px);
+  padding:0 clamp(8px,1.2vw,16px);
   border-right:1px solid rgba(255,255,255,.25);
   border-bottom:1px solid rgba(255,255,255,.35);
   display:flex;align-items:center;
@@ -1161,7 +1172,7 @@ body.no-fs .logo.show{pointer-events:none}
 .guide-row-label{
   flex:0 0 clamp(118px,13vw,168px);
   position:sticky;left:0;z-index:2;
-  background:rgba(8,8,12,.94);
+  background:rgb(10,10,14); /* opaque — scrolled cells must not bleed through */
   font-weight:700;letter-spacing:.12em;text-transform:uppercase;
 }
 /* Top-left corner — sticky on BOTH axes. Sits above row labels
@@ -1394,6 +1405,10 @@ body.no-fs .logo.show{pointer-events:none}
   opacity:.78;
   filter:saturate(.85);
 }
+/* Frames from the muted camera get their color lifted to match the
+   richly-graded angle. Stacks with .dim multiplicatively. */
+.guide-hero-art img.pop{filter:saturate(1.5) contrast(1.06)}
+.guide-hero-art img.pop.dim{filter:saturate(1.2)}
 .guide-hero-art img:not([src]){opacity:0}
 /* Event mode — the art panel becomes a brand plate: the Plots mark
    centered on a dark wash of its own gradient. */
@@ -1500,9 +1515,14 @@ body.no-fs .logo.show{pointer-events:none}
   align-items:center;
 }
 .guide-promo-plots .promo-badge{
-  width:clamp(16px,1.6vw,22px);height:auto;
+  /* Sized against the band's cap height so the mark reads as a
+     peer of the title, not a footnote; the slight optical nudge
+     compensates for the logo's tilted star leaning right. */
+  width:clamp(24px,2.3vw,32px);height:auto;
   flex:0 0 auto;
   align-self:center;
+  margin:-3px 2px -3px 0;
+  filter:drop-shadow(0 0 5px rgba(0,0,0,.5));
 }
 
 /* ── NOW line — vertical red playhead through the schedule at the
@@ -1524,6 +1544,29 @@ body.no-fs .logo.show{pointer-events:none}
   font-size:9px;font-weight:700;
   letter-spacing:.22em;
   padding:3px 7px 2px 8px;
+}
+
+/* ── Static tail — hatched sliver at the end of each program cell
+   marking where the show actually stops and the interlude runs to
+   the next boundary. Dashed left edge = the real off-air moment. */
+.cell-tail{
+  position:absolute;right:0;top:0;bottom:0;
+  border-left:1px dashed rgba(255,255,255,.35);
+  background:repeating-linear-gradient(135deg,
+    rgba(255,255,255,.05) 0 3px, transparent 3px 7px);
+  display:flex;align-items:center;justify-content:center;
+  pointer-events:none;
+  overflow:hidden;
+}
+.cell-tail span{
+  font-size:8px;font-weight:700;
+  letter-spacing:.3em;text-transform:uppercase;
+  color:rgba(255,255,255,.4);
+  white-space:nowrap;
+}
+/* Inside the live cell the tail reads over the red wash. */
+.guide-cell.now .cell-tail{
+  border-left-color:rgba(255,255,255,.6);
 }
 
 /* Live progress strip across the bottom of the ON AIR cell — red
@@ -1892,7 +1935,10 @@ const SHOWS = [
     metaLine:  '(12 min.) (2012)',
     duration:  '12:14',
     durationSec: 734,
-    artTime:   120,   // guide key art — bridge scene
+    // Guide key art — one frame per daily occurrence, cycled so no
+    // two adjacent airings show the same image. First: the canal
+    // bridge — "admit it, you're freaked out by my robot arm".
+    artTimes: [ { t: 36 }, { t: 196 }, { t: 112 }, { t: 100 } ],
     horizontalPbId: 'Apdb9mHDmGuMt00AVKNNVx6VZEXw7602eYCcTPJIFtpVE',
     verticalPbId:   'wdN5SRMPQ3Ql8L02Cpl5Fah5L3u00lqhY13EXcSP5x02AU',
     description:
@@ -1907,7 +1953,15 @@ const SHOWS = [
     metaLine:  '(12 min.) (2026)',  // Actual runtime: 11:39
     duration:  '11:39',
     durationSec: 699,
-    artTime:   13,    // guide key art — the two-shot, host + writer
+    // Key art rotation. Chris's camera runs a muted grade, so his
+    // frames carry `pop` — a saturation/contrast lift applied at
+    // render. Davante's camera is the richly-graded one as shot.
+    artTimes: [
+      { t: 13 },              // the two-shot, host + writer
+      { t: 140, pop: true },  // Chris at the mic
+      { t: 95 },              // Davante — the saturated cam
+      { t: 520, pop: true },  // Chris, laptop
+    ],
     horizontalPbId: 'PNT1D69a02gHNLIZqx5njPOIgci2a8fW7ie4AysDi9no',
     verticalPbId:   'PeRFtO9hAOgQ3LbHBpGWvBSdIzvgnx02onzEuQiYumLA',
     description:
@@ -1923,7 +1977,7 @@ const SHOWS = [
     metaLine:  '(17 min.) (2024)',  // Actual runtime: 17:26
     duration:  '17:26',
     durationSec: 1046,
-    artTime:   600,   // guide key art — lab scene
+    artTimes: [ { t: 600 }, { t: 200 }, { t: 320 }, { t: 120 } ],
     horizontalPbId: 'mdf00qpX9PAVttPZN7jQIHZPXT4krwqf69HGZPBuISXY',
     verticalPbId:   'yBLDE4NXOao4Uv4sYddN02mAT4bUxZ02IYd01p4Mmj5YNA',
     description:
@@ -2658,6 +2712,19 @@ customElements.whenDefined('mux-video').then(function(){
           cell.innerHTML =
             '<div class="title">' + prog.show.titleLine + '</div>' +
             '<div class="meta">'  + prog.show.metaLine  + '</div>';
+          // Static tail — the honest gap between where the show
+          // actually ends inside its program and the next boundary.
+          // Hatched, dashed-off, labeled when there's room (ASC's
+          // 12½-minute tail), so "ON AIR" never overstates itself.
+          const progSec = span * CHANNEL.slotSec;
+          const gapSec  = progSec - prog.show.durationSec;
+          if (gapSec > 30) {
+            const tail = document.createElement('div');
+            tail.className = 'cell-tail';
+            tail.style.width = (gapSec / progSec * 100) + '%';
+            if (gapSec >= 300) tail.innerHTML = '<span>off air</span>';
+            cell.appendChild(tail);
+          }
         }
         row.appendChild(cell);
         c += span;
@@ -2752,7 +2819,7 @@ customElements.whenDefined('mux-video').then(function(){
           if (!line) {
             line = document.createElement('div');
             line.className = 'guide-now-line';
-            line.innerHTML = '<span class="now-flag">NOW</span>';
+            line.innerHTML = '<span class="now-flag">LIVE</span>';
             guideGrid.appendChild(line);
           }
           const progSec = live.program.slots * CHANNEL.slotSec;
@@ -2797,28 +2864,40 @@ customElements.whenDefined('mux-video').then(function(){
   let   heroArtKey   = null;
   const HERO_LABELS  = { on:'ON AIR', live:'LIVE NOW', event:'LIVE EVENT',
                          next:'UP NEXT', sched:'SCHEDULED', off:'OFF AIR' };
-  function setHero(state, subject){
+  function setHero(state, subject, occurrence){
     // subject: a SHOW (Mux still), an EVENT (badge on brand panel),
     // null (clear the art), or undefined (chip-only update).
+    // `occurrence` picks the show's key-art variant — pass the
+    // airing's daily occurrence index so every timeslot of the same
+    // show presents a different frame.
     heroChipLbl.textContent = HERO_LABELS[state];
     const isLive = state === 'on' || state === 'live';
     heroChip.className = 'desc-state ' +
       (isLive ? 'on' : (state === 'off' ? 'off' : ''));
     if (subject !== undefined) {
       const isEvent = !!(subject && subject.badge);
-      const key = subject ? subject.id : 'none';
+      let variant = null;
+      if (!isEvent && subject) {
+        const arts = subject.artTimes || [{ t: 60 }];
+        variant = arts[((occurrence || 0) % arts.length + arts.length) % arts.length];
+      }
+      const key = subject
+        ? subject.id + (variant ? ':' + variant.t : '') : 'none';
       if (key !== heroArtKey) {
         heroArtKey = key;
         if (isEvent) {
           heroArtImg.src = subject.badge;
         } else if (subject) {
           heroArtImg.src = 'https://image.mux.com/' + subject.horizontalPbId +
-            '/thumbnail.webp?width=640&time=' + (subject.artTime || 60);
+            '/thumbnail.webp?width=640&time=' + variant.t;
         } else {
           heroArtImg.removeAttribute('src');
         }
       }
       heroArtPanel.classList.toggle('event-art', isEvent);
+      // `pop` lifts frames shot on the muted camera so the color
+      // reads as rich as the other angle's native grade.
+      heroArtImg.classList.toggle('pop', !!(variant && variant.pop));
     }
     heroArtImg.classList.toggle('dim', !isLive);
   }
@@ -2887,7 +2966,8 @@ customElements.whenDefined('mux-video').then(function(){
           dow + ' · ' + date + ' · ' + slotLocal + ' – ' + endLocal;
         return;
       }
-      setHero(isLiveCell ? 'on' : 'sched', prog.show);
+      setHero(isLiveCell ? 'on' : 'sched', prog.show,
+              Math.floor(prog.startSlot / PATTERN.total));
       guideDescTitle.textContent = prog.show.titleLine;
       guideDescBody.textContent  = prog.show.description;
       guideDescTag.textContent   = dow + ' · ' + date + ' · ' + slotLocal;
@@ -2924,7 +3004,8 @@ customElements.whenDefined('mux-video').then(function(){
         'LIVE NOW · UNTIL ' + fmtSlot(new Date(live.nextSlotStart)).toUpperCase();
     } else if (live.inShow) {
       // The currently-airing program's show.
-      setHero('on', live.show);
+      setHero('on', live.show,
+              Math.floor(live.program.startSlot / PATTERN.total));
       guideDescTitle.textContent = live.show.titleLine;
       guideDescBody.textContent  = live.show.description;
       guideDescTag.textContent   = 'ON AIR · ' + live.show.metaLine;
@@ -2941,7 +3022,8 @@ customElements.whenDefined('mux-video').then(function(){
         nextIdx % SLOTS_PER_DAY, ptParts(live.nextSlotStart));
       const nextName = nextProg.kind === 'event'
         ? nextProg.event.title : nextProg.show.title;
-      setHero('next', nextProg.kind === 'event' ? nextProg.event : nextProg.show);
+      setHero('next', nextProg.kind === 'event' ? nextProg.event : nextProg.show,
+              Math.floor(nextProg.startSlot / PATTERN.total));
       guideDescTitle.textContent = 'BETWEEN SHOWS';
       guideDescBody.textContent  =
         nextName + ' is up next at ' + nextAt +
@@ -3668,14 +3750,8 @@ customElements.whenDefined('mux-video').then(function(){
        Pendry runs a full-width feature band through its grid (the
        deep-red movie strip). Ours promotes the real open call —
        the one listing on the channel a viewer can act on. -->
-  <a class="guide-promo" href="https://interdependent.studio/submissions"
-     target="_blank" rel="noopener">
-    <span class="promo-title">Screenplay Submissions</span>
-    <span class="promo-copy">Open call — scripts in by June 19</span>
-    <span class="promo-url">interdependent.studio/submissions</span>
-  </a>
-  <!-- Live-event band — IRL events on Plots that also stream on this
-       channel. Times are filled by JS in the viewer's local clock. -->
+  <!-- Live-event band first — the time-sensitive, attendable thing
+       leads. Times are filled by JS in the viewer's local clock. -->
   <a class="guide-promo guide-promo-plots"
      href="https://plots.events/event/interdependentwriterstownhall"
      target="_blank" rel="noopener">
@@ -3683,6 +3759,12 @@ customElements.whenDefined('mux-video').then(function(){
     <span class="promo-title">Writers Town Hall</span>
     <span class="promo-copy" id="plotsBandWhen">Live event</span>
     <span class="promo-url">request to attend on plots</span>
+  </a>
+  <a class="guide-promo" href="https://interdependent.studio/submissions"
+     target="_blank" rel="noopener">
+    <span class="promo-title">Screenplay Submissions</span>
+    <span class="promo-copy">Open call — scripts in by June 19</span>
+    <span class="promo-url">interdependent.studio/submissions</span>
   </a>
 
   <div class="guide-grid-wrap">
