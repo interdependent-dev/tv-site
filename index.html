@@ -1433,6 +1433,91 @@ body.no-fs .logo.show{pointer-events:none}
   box-sizing:border-box;
 }
 
+/* ── Broadcast promo ticker (lower-third) ──────────────────────────
+   Sits above every playback surface (movie, static, off-air, the
+   cold-start intro at z:20) and below the guide (z:25). Floats
+   clear of the GUIDE pill. Hidden state parks the banner below the
+   viewport edge; .show slides it up with a broadcast-bug flicker
+   once it lands. */
+#promoTicker{
+  position:fixed;left:0;right:0;
+  bottom:calc(max(env(safe-area-inset-bottom,0px), var(--chrome-bottom))
+         + var(--guide-pill-h) + 14px);
+  z-index:22;
+  pointer-events:none;
+}
+.promo-banner{
+  position:absolute;bottom:0;
+  left:clamp(12px,3vw,44px);right:clamp(12px,3vw,44px);
+  display:flex;align-items:baseline;
+  gap:clamp(10px,1.8vw,20px);
+  padding:clamp(9px,1.4vh,12px) clamp(14px,1.8vw,22px) clamp(8px,1.2vh,10px);
+  text-decoration:none;color:#fff;
+  font-family:"Eurostile",sans-serif;
+  box-shadow:0 12px 40px rgba(0,0,0,.55);
+  opacity:0;transform:translateY(160%);
+  transition:transform .55s cubic-bezier(.2,.9,.25,1), opacity .4s ease;
+  pointer-events:none;
+}
+.promo-banner.show{
+  opacity:1;transform:none;
+  pointer-events:auto;
+  animation:pb-flicker .55s ease .5s 1;
+}
+@keyframes pb-flicker{
+  0%{filter:brightness(1)}
+  30%{filter:brightness(1.55)}
+  45%{filter:brightness(.92)}
+  62%{filter:brightness(1.28)}
+  100%{filter:brightness(1)}
+}
+.promo-banner:hover{filter:brightness(1.22)}
+.promo-banner .pb-title{
+  font-family:"Eurostile Wide","Eurostile",sans-serif;
+  font-weight:700;text-transform:uppercase;
+  letter-spacing:.12em;
+  font-size:clamp(11px,1.3vw,14px);
+  white-space:nowrap;
+}
+.promo-banner .pb-copy{
+  flex:1;
+  font-size:clamp(10px,1.1vw,12px);
+  letter-spacing:.06em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.promo-banner .pb-url{
+  font-size:clamp(9px,1vw,11px);
+  letter-spacing:.14em;
+  opacity:.85;
+  white-space:nowrap;
+  text-transform:lowercase;
+}
+.promo-banner-subs{
+  background:linear-gradient(90deg,#5e0000,#a40000 30%,#8a0000 70%,#4f0000);
+  border:1px solid rgba(255,90,90,.5);
+}
+.promo-banner-subs .pb-copy{color:rgba(255,233,206,.92)}
+.promo-banner-plots{
+  background:
+    linear-gradient(90deg, rgba(46,230,200,.18), rgba(59,130,246,.16) 30%,
+                    rgba(168,85,247,.17) 60%, rgba(249,115,22,.18)),
+    rgba(8,8,12,.94);
+  border:1px solid rgba(168,85,247,.5);
+  align-items:center;
+}
+.promo-banner-plots .pb-badge{
+  width:clamp(22px,2.1vw,30px);height:auto;
+  flex:0 0 auto;align-self:center;
+  margin:-3px 2px -3px 0;
+  filter:drop-shadow(0 0 5px rgba(0,0,0,.5));
+}
+@media (max-width:640px){
+  .promo-banner .pb-url{display:none}
+  .promo-banner{gap:10px;align-items:center}
+  .promo-banner .pb-copy{white-space:normal;line-height:1.3;font-size:10px}
+  .promo-banner .pb-title{font-size:11px}
+}
+
 /* ── Listing details overlay ───────────────────────────────────────
    Centered card over a blurred veil on desktop; bottom sheet on
    phones (media query below). Chip styles are the shared
@@ -3355,19 +3440,60 @@ customElements.whenDefined('mux-video').then(function(){
       ae.blur();
     }
   }
-  // Fill the live-event band with the event's window in the
-  // VIEWER's clock (a Paris viewer reads 23:00–02:00, not 2–5 PM).
+  // Fill the live-event bands (guide + lower-third) with the event's
+  // window in the VIEWER's clock (a Paris viewer reads 23:00–02:00,
+  // not 2–5 PM), and stamp expiries so promos retire themselves.
   (function(){
-    const el = document.getElementById('plotsBandWhen');
-    if (!el || !EVENTS.length) return;
+    if (!EVENTS.length) return;
     const ev = EVENTS[0];
     const p = ev.ptDate.split('-').map(Number);
     const startTs = ptToUtc(p[0], p[1], p[2], ev.startHour, 0, 0);
     const endTs   = ptToUtc(p[0], p[1], p[2], ev.endHour,   0, 0);
     const d = new Date(startTs);
-    el.textContent = 'Live in person + on this channel — ' +
+    const whenCopy = 'Live in person + on this channel — ' +
       DAYS_SHORT[d.getDay()] + ' ' + MONTHS[d.getMonth()] + ' ' + d.getDate() +
       ' · ' + fmtSlot(d) + ' – ' + fmtSlot(new Date(endTs));
+    ['plotsBandWhen', 'promoPlotsWhen'].forEach(function(id){
+      const el = document.getElementById(id);
+      if (el) el.textContent = whenCopy;
+    });
+    const plotsBanner = document.querySelector('.promo-banner-plots');
+    if (plotsBanner) plotsBanner.dataset.expires = String(endTs);
+    // The open call closes June 19 (end of day PT).
+    const subsBanner = document.querySelector('.promo-banner-subs');
+    if (subsBanner) subsBanner.dataset.expires =
+      String(ptToUtc(2026, 6, 20, 0, 0, 0));
+  })();
+
+  // ── Broadcast promo ticker ──────────────────────────────────────
+  // Wall-clock anchored so every viewer worldwide gets the banner at
+  // the same moments: each PROMO_PERIOD, the next non-expired banner
+  // in rotation slides up for PROMO_DWELL seconds (entering at :08
+  // past the boundary so it reads editorial, not metronomic). The
+  // guide suppresses it — its own bands carry the same CTAs there.
+  (function(){
+    const PROMO_PERIOD = 180;  // seconds between appearances
+    const PROMO_DWELL  = 12;   // seconds on screen
+    const PROMO_LEAD   = 8;    // seconds into the period before entry
+    const banners = Array.prototype.slice.call(
+      document.querySelectorAll('#promoTicker .promo-banner'));
+    if (!banners.length) return;
+    setInterval(function(){
+      const nowMs  = Date.now();
+      const active = banners.filter(function(b){
+        return !b.dataset.expires || nowMs < Number(b.dataset.expires);
+      });
+      const t      = Math.floor(nowMs / 1000);
+      const phase  = t % PROMO_PERIOD;
+      const onAir  = phase >= PROMO_LEAD && phase < PROMO_LEAD + PROMO_DWELL;
+      const cycle  = Math.floor(t / PROMO_PERIOD);
+      const pick   = active.length
+        ? active[cycle % active.length] : null;
+      const guideOpen = guideEl.classList.contains('on');
+      banners.forEach(function(b){
+        b.classList.toggle('show', onAir && !guideOpen && b === pick);
+      });
+    }, 1000);
   })();
 
   guideBtn.addEventListener('click', openGuide);
@@ -3933,6 +4059,33 @@ customElements.whenDefined('mux-video').then(function(){
 
 <!-- ── GUIDE button — toggles the EPG overlay ─────────────────────── -->
 <button id="guide-button" type="button" aria-label="Open TV guide">GUIDE</button>
+
+<!-- ── Broadcast promo ticker ─────────────────────────────────────
+     Lower-third CTA banners over the channel itself — the guide's
+     promo bands, stepped onto the air. Wall-clock anchored: every
+     few minutes the next active banner slides up for a dozen
+     seconds (same moments for every viewer worldwide), over
+     playback, the between-shows static, the off-air card, and the
+     cold-start intro. Suppressed while the guide is open (it has
+     its own bands). Banners carry data-expires (epoch ms) so a
+     promo retires itself the moment its event has passed. -->
+<div id="promoTicker" aria-hidden="false">
+  <a class="promo-banner promo-banner-plots"
+     href="https://plots.events/event/interdependentwriterstownhall"
+     target="_blank" rel="noopener" tabindex="-1">
+    <img class="pb-badge" src="plots-logo.png" alt="" draggable="false">
+    <span class="pb-title">Writers Town Hall</span>
+    <span class="pb-copy" id="promoPlotsWhen">Live in person + on this channel</span>
+    <span class="pb-url">request to attend on plots</span>
+  </a>
+  <a class="promo-banner promo-banner-subs"
+     href="https://interdependent.studio/submissions"
+     target="_blank" rel="noopener" tabindex="-1">
+    <span class="pb-title">Screenplay Submissions</span>
+    <span class="pb-copy">Open call — scripts in by June 19</span>
+    <span class="pb-url">interdependent.studio/submissions</span>
+  </a>
+</div>
 
 <!-- (FS toggle moved INTO the IV watermark — see the .logo button
      above. Top-left FS pill removed.) -->
