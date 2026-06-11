@@ -1446,6 +1446,18 @@ body.no-fs .logo.show{pointer-events:none}
   z-index:22;
   pointer-events:none;
 }
+/* While a lower-third is on air the corner chrome yields the stage
+   — the broadcast convention: the bug bows to the banner. The GUIDE
+   pill (bottom-left) and IV watermark (bottom-right) fade out for
+   the dwell and return through their own opacity transitions when
+   the banner leaves. Selectors out-rank the .show state classes. */
+body.promo-on #guide-button,
+body.promo-on #guide-button.show,
+body.promo-on .logo,
+body.promo-on .logo.show{
+  opacity:0;
+  pointer-events:none;
+}
 .promo-banner{
   position:absolute;bottom:0;
   left:clamp(12px,3vw,44px);right:clamp(12px,3vw,44px);
@@ -3490,9 +3502,14 @@ customElements.whenDefined('mux-video').then(function(){
       const pick   = active.length
         ? active[cycle % active.length] : null;
       const guideOpen = guideEl.classList.contains('on');
+      let anyShown = false;
       banners.forEach(function(b){
-        b.classList.toggle('show', onAir && !guideOpen && b === pick);
+        const showThis = onAir && !guideOpen && b === pick;
+        b.classList.toggle('show', showThis);
+        anyShown = anyShown || showThis;
       });
+      // Corner chrome yields while the banner is up (see CSS).
+      document.body.classList.toggle('promo-on', anyShown);
     }, 1000);
   })();
 
