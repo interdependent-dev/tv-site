@@ -1530,6 +1530,83 @@ body.promo-on .logo.show{
   .promo-banner .pb-title{font-size:11px}
 }
 
+/* ── Mobile lineup list ────────────────────────────────────────────
+   The phone guide: a chronological list instead of a miniaturized
+   grid. Hidden everywhere else; the ≤640px media block below swaps
+   the grid out for it. */
+.guide-list{display:none}
+.list-day{
+  font:700 clamp(10px,2.8vw,12px)/1 "Eurostile",sans-serif;
+  letter-spacing:.28em;text-transform:uppercase;
+  opacity:.75;
+  padding:18px 2px 9px;
+  border-bottom:1px solid rgba(255,255,255,.3);
+}
+.list-day.today{color:#ff5a5a;opacity:1}
+.list-row{
+  position:relative;
+  display:flex;align-items:center;
+  gap:12px;
+  padding:11px 2px;
+  border-bottom:1px solid rgba(255,255,255,.12);
+  cursor:pointer;
+}
+.list-row .lr-time{
+  flex:0 0 58px;
+  font-weight:700;font-size:12px;
+  letter-spacing:.04em;
+  font-variant-numeric:tabular-nums;font-feature-settings:"tnum";
+}
+.list-row .lr-main{flex:1;min-width:0}
+.list-row .lr-title{
+  font-weight:700;font-size:13px;letter-spacing:.04em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.list-row .lr-meta{
+  display:flex;align-items:center;gap:7px;
+  font-size:9px;opacity:.65;margin-top:3px;
+  letter-spacing:.08em;text-transform:uppercase;
+  white-space:nowrap;overflow:hidden;
+}
+.list-row .lr-art{
+  flex:0 0 auto;
+  width:74px;aspect-ratio:16/9;
+  object-fit:cover;display:block;
+  border:1px solid rgba(255,255,255,.3);
+}
+.list-row .lr-art.pop{filter:saturate(1.5) contrast(1.06)}
+.list-row .lr-art-badge{
+  width:40px;aspect-ratio:auto;
+  border:none;object-fit:contain;
+}
+.list-row.past{opacity:.4}
+.list-row.live{
+  background:linear-gradient(90deg, rgba(255,0,0,.28), transparent 70%);
+  box-shadow:inset 3px 0 0 #ff0000;
+  padding-left:8px;
+}
+.list-row.live .lr-time{color:#ff5a5a}
+.list-row-event{
+  background:
+    radial-gradient(70% 160% at 8% 120%, rgba(46,230,200,.26), transparent 50%),
+    radial-gradient(70% 160% at 92% -20%, rgba(249,115,22,.24), transparent 50%),
+    rgba(10,10,16,.9);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.25);
+  padding:13px 10px;
+  margin:7px 0;
+  border-bottom:none;
+}
+.list-row-event .lr-title{
+  font-family:"Eurostile Wide","Eurostile",sans-serif;
+  letter-spacing:.08em;
+}
+.list-summary{
+  font-size:11px;opacity:.55;
+  padding:9px 2px 3px;
+  letter-spacing:.06em;
+  line-height:1.4;
+}
+
 /* ── Listing details overlay ───────────────────────────────────────
    Centered card over a blurred veil on desktop; bottom sheet on
    phones (media query below). Chip styles are the shared
@@ -1741,6 +1818,56 @@ body.promo-on .logo.show{
   padding:3px 7px 2px 8px;
 }
 
+/* ── Role badge — the slot's primary audience as a rating-box chip
+   on its OWN line (the PG-13 idiom: bordered, boxed, deliberate —
+   never overlaid on content or the OFF AIR tail). Desaturated at
+   rest; full color on hover and on the live cell. */
+.cell-badge{
+  display:inline-flex;align-items:center;gap:5px;
+  width:max-content;max-width:100%;
+  margin-top:6px;
+  padding:2px 7px 2px 3px;
+  border:1px solid rgba(255,255,255,.35);
+  background:rgba(0,0,0,.45);
+  box-sizing:border-box;
+}
+.cell-badge img{
+  height:14px;width:auto;display:block;
+  opacity:.7;
+  filter:grayscale(.6);
+  transition:opacity .2s ease, filter .2s ease;
+}
+.cell-badge span{
+  font-size:8px;font-weight:700;
+  letter-spacing:.14em;text-transform:uppercase;
+  color:rgba(255,255,255,.6);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  transition:color .2s ease;
+}
+@media (hover: hover){
+  .guide-cell:hover .cell-badge img{opacity:1;filter:none}
+  .guide-cell:hover .cell-badge span{color:rgba(255,255,255,.95)}
+  .guide-cell:hover .cell-badge{border-color:rgba(255,255,255,.6)}
+}
+.guide-cell.now .cell-badge img{opacity:1;filter:none}
+.guide-cell.now .cell-badge span{color:#fff}
+.guide-cell.now .cell-badge{border-color:rgba(255,255,255,.7)}
+.guide-cell.past .cell-badge{opacity:.5}
+/* Same chip inside mobile lineup rows. */
+.list-row .cell-badge{margin-top:5px}
+.list-row.live .cell-badge img{opacity:1;filter:none}
+.list-row.live .cell-badge span{color:#fff}
+/* Details card spells the roles out. */
+.listing-roles{display:flex;align-items:center;gap:8px}
+.listing-roles:empty{display:none}
+.listing-roles .lr-icons{display:inline-flex;gap:5px}
+.listing-roles .lr-icons img{height:18px;width:auto;display:block}
+.listing-roles .lr-label{
+  font-size:clamp(9px,1vw,11px);
+  letter-spacing:.22em;text-transform:uppercase;
+  opacity:.7;
+}
+
 /* ── Static tail — hatched sliver at the end of each program cell
    marking where the show actually stops and the interlude runs to
    the next boundary. Dashed left edge = the real off-air moment. */
@@ -1811,12 +1938,9 @@ body.promo-on .logo.show{
     margin:-18px -16px 0;
     padding:14px 16px 10px;
   }
-  .guide-grid-wrap{
-    flex:none;          /* full height in flow — the page scrolls */
-    min-height:auto;
-    overflow-y:visible;
-    overflow-x:auto;
-  }
+  /* Phones get the lineup LIST; the 2D grid is a desktop idiom. */
+  .guide-grid-wrap{display:none}
+  .guide-list{display:block;margin-top:4px}
   /* Bottom sheet for the listing details. */
   .listing-backdrop{align-items:flex-end;padding:0}
   .listing-card{
@@ -1846,7 +1970,7 @@ body.promo-on .logo.show{
   .guide-hero-art{width:min(100%,260px);align-self:flex-start}
   .guide-promo{flex-wrap:wrap;row-gap:2px}
   .guide-promo .promo-copy{flex-basis:100%;order:3}
-  .guide-hint{gap:10px 14px;letter-spacing:.16em;flex-wrap:wrap}
+  .guide-hint{display:none}  /* the list needs no grid legend */
 }
 
 /* Mobile landscape — viewport height is the constraint. Squeeze
@@ -2172,6 +2296,7 @@ const SHOWS = [
     // Guide key art — one frame per daily occurrence, cycled so no
     // two adjacent airings show the same image. First: the canal
     // bridge — "admit it, you're freaked out by my robot arm".
+    roles: ['cineaste'],
     artTimes: [
       { t: 36 },   // the bridge — the robot-arm reveal
       { t: 196 },  // warm interior, the team
@@ -2197,6 +2322,9 @@ const SHOWS = [
     // Key art rotation. Chris's camera runs a muted grade, so his
     // frames carry `pop` — a saturation/contrast lift applied at
     // render. Davante's camera is the richly-graded one as shot.
+    // Writers first; directors too — the open call's equity path
+    // lets the writer elect to direct.
+    roles: ['scriptographer', 'director'],
     artTimes: [
       { t: 13 },              // the two-shot, host + writer
       { t: 140, pop: true },  // Chris at the mic
@@ -2220,6 +2348,9 @@ const SHOWS = [
     metaLine:  '(17 min.) (2024)',  // Actual runtime: 17:26
     duration:  '17:26',
     durationSec: 1046,
+    // ASC test content — camera and craft are the point, so the
+    // cinematographer mark leads (the badge wears roles[0]).
+    roles: ['cinematographer', 'scenographer', 'cineaste'],
     artTimes: [
       { t: 600 },  // the lab, green light
       { t: 200 },  // radio close-up
@@ -2272,6 +2403,7 @@ const EVENTS = [
     title:     'WRITERS TOWN HALL',
     titleLine: 'INTERDEPENDENT WRITERS TOWN HALL—Live Event',
     badge:     'plots-logo.png',
+    roles:     ['scriptographer'],
     url:       'https://plots.events/event/interdependentwriterstownhall',
     description:
       'Live from Interdependent Studios — writers present their work ' +
@@ -2301,6 +2433,41 @@ function ptDatePlus(days){
   const t = new Date(Date.UTC(pt.year, pt.month - 1, pt.day + days));
   return { year: t.getUTCFullYear(), month: t.getUTCMonth() + 1, day: t.getUTCDate() };
 }
+// ── Role badges ─────────────────────────────────────────────────────
+// THE LOT's role marks, worn by listings the way HBO wore its
+// AC/AL/V advisory codes: tiny glyphs that say who a slot is FOR.
+// Grid cells wear them quiet (desaturated until hovered or live);
+// the details card spells them out with names.
+// `code` is the rating-box form (the PG-13 / AC / AL idiom) worn in
+// grid cells where width is scarce; `badge` is the full singular
+// name for lineup rows; `label` the plural for the details card.
+const ROLE_META = {
+  scriptographer:  { img: 'role-scriptographer.png',  label: 'Scriptographers',  badge: 'Scriptographer',  code: 'SCR' },
+  director:        { img: 'role-director.png',        label: 'Directors',        badge: 'Director',        code: 'DIR' },
+  cineaste:        { img: 'role-cineaste.png',        label: 'Cineastes',        badge: 'Cineaste',        code: 'CIN' },
+  cinematographer: { img: 'role-cinematographer.png', label: 'Cinematographers', badge: 'Cinematographer', code: 'DP'  },
+  scenographer:    { img: 'role-scenographer.png',    label: 'Scenographers',    badge: 'Scenographer',    code: 'SCN' },
+};
+function rolesHtml(roles, cls){
+  if (!roles || !roles.length) return '';
+  return '<span class="' + cls + '">' + roles.map(function(r){
+    const m = ROLE_META[r];
+    return m ? '<img src="' + m.img + '" alt="' + m.label +
+               '" draggable="false">' : '';
+  }).join('') + '</span>';
+}
+// The slot wears ONE badge — its primary audience (roles[0]) as a
+// rating-box-style chip on its own line. The full roles list lives
+// in the details card. Sparingly worn = actually noticed: a future
+// auditions listing wearing the actor mark alone is unmistakable.
+function roleBadgeHtml(roles, compact){
+  const m = roles && roles.length ? ROLE_META[roles[0]] : null;
+  if (!m) return '';
+  return '<div class="cell-badge">' +
+    '<img src="' + m.img + '" alt="" draggable="false">' +
+    '<span>' + (compact ? m.code : m.badge) + '</span></div>';
+}
+
 // Whole-day ordinal for a PT calendar date (noon-anchored so DST
 // can't wobble it). Folded into the key-art variant index so the
 // same airing time shows DIFFERENT art on different days — and the
@@ -2968,19 +3135,25 @@ customElements.whenDefined('mux-video').then(function(){
         } else {
           cell.innerHTML =
             '<div class="title">' + prog.show.titleLine + '</div>' +
-            '<div class="meta">'  + prog.show.metaLine  + '</div>';
+            '<div class="meta">'  + prog.show.metaLine  + '</div>' +
+            roleBadgeHtml(prog.show.roles, true);
           // Static tail — the honest gap between where the show
           // actually ends inside its program and the next boundary.
           // Hatched, dashed-off, labeled when there's room (ASC's
           // 12½-minute tail), so "ON AIR" never overstates itself.
+          // Cell content (title/meta/badge) is padded clear of the
+          // tail so nothing ever sits on the OFF AIR hatch.
           const progSec = span * CHANNEL.slotSec;
           const gapSec  = progSec - prog.show.durationSec;
           if (gapSec > 30) {
+            const gapFrac = gapSec / progSec;
             const tail = document.createElement('div');
             tail.className = 'cell-tail';
-            tail.style.width = (gapSec / progSec * 100) + '%';
+            tail.style.width = (gapFrac * 100) + '%';
             if (gapSec >= 300) tail.innerHTML = '<span>off air</span>';
             cell.appendChild(tail);
+            cell.style.paddingRight =
+              'calc(' + (gapFrac * 100) + '% + 6px)';
           }
         }
         row.appendChild(cell);
@@ -3013,6 +3186,94 @@ customElements.whenDefined('mux-video').then(function(){
     // cell, no ticking creep line.)
   }
 
+  // ── Mobile lineup builder ────────────────────────────────────────
+  // Same program walk as the grid, rendered as a vertical list.
+  // Rows carry the same data-row/col/span/event datasets, so the
+  // listing-details delegate works on both surfaces unchanged.
+  const guideList = document.getElementById('guideList');
+  const LIST_FULL_DAYS = 2;   // today + tomorrow in full detail
+  function buildGuideList(){
+    if (!guideList) return;
+    guideList.innerHTML = '';
+    const now = new Date();
+    for (let r = 0; r < ROW_COUNT; r++) {
+      const rowDate = new Date(now);
+      rowDate.setDate(now.getDate() + r);
+      const rowPt = ptDatePlus(r);
+
+      const head = document.createElement('div');
+      head.className = 'list-day' + (r === 0 ? ' today' : '');
+      head.textContent =
+        (r === 0 ? 'TODAY — ' : (r === 1 ? 'TOMORROW — ' : '')) +
+        DAYS_LONG[rowDate.getDay()] + ' ' +
+        MONTHS[rowDate.getMonth()] + ' ' + rowDate.getDate();
+      guideList.appendChild(head);
+
+      // Later days: the rotation repeats, so don't make thumbs
+      // scroll through five copies of the same lineup — compress to
+      // a one-line note, but keep any special event as a real row.
+      const compressed = r >= LIST_FULL_DAYS;
+      if (compressed) {
+        const dayStart = ptToUtc(rowPt.year, rowPt.month, rowPt.day,
+                                 CHANNEL.startHour, 0, 0);
+        const dayEnd   = ptToUtc(rowPt.year, rowPt.month, rowPt.day,
+                                 CHANNEL.endHour, 0, 0);
+        const note = document.createElement('div');
+        note.className = 'list-summary';
+        note.textContent = 'Standing lineup · ' +
+          SHOWS.map(function(s){ return s.title; }).join(' · ') +
+          ' hourly · ' + fmtSlot(new Date(dayStart)) + ' – ' +
+          fmtSlot(new Date(dayEnd));
+        guideList.appendChild(note);
+      }
+
+      let c = 0;
+      while (c < SLOTS_PER_DAY) {
+        const prog = programForSlotIndex(c, rowPt);
+        const span = Math.min(prog.slots, SLOTS_PER_DAY - c);
+        if (compressed && prog.kind !== 'event') { c += span; continue; }
+        const s = slotForCol(c);
+        const startTS = ptToUtc(rowPt.year, rowPt.month, rowPt.day,
+                                s.hour, s.minute, 0);
+        const row = document.createElement('div');
+        row.className = 'list-row';
+        row.dataset.row = String(r);
+        row.dataset.col = String(c);
+        row.dataset.span = String(span);
+        if (prog.kind === 'event') {
+          row.className += ' list-row-event';
+          row.dataset.event = prog.event.id;
+          row.innerHTML =
+            '<div class="lr-time">' + fmtSlot(new Date(startTS)) + '</div>' +
+            '<div class="lr-main">' +
+              '<div class="lr-title">' + prog.event.title + '</div>' +
+              '<div class="lr-meta">live · in person + on air</div>' +
+              roleBadgeHtml(prog.event.roles) +
+            '</div>' +
+            '<img class="lr-art lr-art-badge" src="' + prog.event.badge +
+              '" alt="" loading="lazy" draggable="false">';
+        } else {
+          const occ = Math.floor(prog.startSlot / PATTERN.total) +
+                      ptEpochDay(rowPt);
+          const arts = prog.show.artTimes || [{ t: 60 }];
+          const variant = arts[((occ % arts.length) + arts.length) % arts.length];
+          row.innerHTML =
+            '<div class="lr-time">' + fmtSlot(new Date(startTS)) + '</div>' +
+            '<div class="lr-main">' +
+              '<div class="lr-title">' + prog.show.titleLine + '</div>' +
+              '<div class="lr-meta">' + prog.show.metaLine + '</div>' +
+              roleBadgeHtml(prog.show.roles) +
+            '</div>' +
+            '<img class="lr-art' + (variant.pop ? ' pop' : '') +
+              '" src="' + muxArtUrl(prog.show, variant) +
+              '" alt="" loading="lazy" draggable="false">';
+        }
+        guideList.appendChild(row);
+        c += span;
+      }
+    }
+  }
+
   // Tracks the slot index the grid was built for. When the live
   // slot crosses a quarter-hour boundary, we rebuild so the wider
   // "current" column moves to the new slot. In between, only the
@@ -3028,10 +3289,11 @@ customElements.whenDefined('mux-video').then(function(){
     guideTime.textContent = fmtClockSeconds(now);
 
     const col = nowSlotCol(now);
-    // Slot rolled over → rebuild grid so the wider column moves.
+    // Slot rolled over → rebuild both surfaces.
     if (col !== lastBuiltSlot) {
       lastBuiltSlot = col;
       buildGuideGrid();
+      buildGuideList();
     }
 
     // Refresh "now" highlight on the today row. Cells span multiple
@@ -3101,6 +3363,35 @@ customElements.whenDefined('mux-video').then(function(){
       }
     } else if (nowLine) {
       nowLine.remove();
+    }
+
+    // Mobile lineup mirrors the same live state: dim spent rows,
+    // flag the live one, drive its progress strip.
+    if (guideList) {
+      const liveInfo = col >= 0 ? getSlotInfo() : null;
+      guideList.querySelectorAll('.list-row[data-row="0"]').forEach(function(rw){
+        const s = Number(rw.dataset.col);
+        const n = Number(rw.dataset.span) || 1;
+        const isPast = col >= 0 ? s + n <= col : false;
+        const isLive = col >= 0 && col >= s && col < s + n;
+        rw.classList.toggle('past', isPast);
+        rw.classList.toggle('live', isLive);
+        let bar = rw.querySelector('.cell-progress');
+        if (isLive && liveInfo && !liveInfo.offAir) {
+          if (!bar) {
+            bar = document.createElement('div');
+            bar.className = 'cell-progress';
+            rw.appendChild(bar);
+          }
+          const progSec = liveInfo.program.slots * CHANNEL.slotSec;
+          bar.style.width =
+            Math.min(100, liveInfo.tInSlot / progSec * 100) + '%';
+          bar.classList.toggle('static-gap',
+            !liveInfo.inShow && !liveInfo.isEvent);
+        } else if (bar) {
+          bar.remove();
+        }
+      });
     }
 
     renderGuideDesc();
@@ -3347,6 +3638,13 @@ customElements.whenDefined('mux-video').then(function(){
     // than requestAnimationFrame because hidden tabs throttle rAF
     // to ~500ms intervals; the macrotask queue fires reliably.
     setTimeout(function(){
+      // Mobile lineup visible → bring the live row into view there.
+      if (guideList && guideList.offsetParent !== null) {
+        const liveRow = guideList.querySelector('.list-row.live');
+        if (liveRow) liveRow.scrollIntoView({ block: 'center' });
+        else guideEl.scrollTop = 0;
+        return;
+      }
       const wrap = document.querySelector('.guide-grid-wrap');
       const nowCell = guideGrid.querySelector('.guide-cell.now');
       const labelCol = guideGrid.querySelector('.guide-row-label');
@@ -3399,6 +3697,15 @@ customElements.whenDefined('mux-video').then(function(){
   const listingActions = document.getElementById('listingActions');
 
   function closeListing(){ listingEl.hidden = true; }
+  const listingRoles = document.getElementById('listingRoles');
+  function setListingRoles(roles){
+    if (!roles || !roles.length) { listingRoles.innerHTML = ''; return; }
+    const labels = roles.map(function(r){
+      return ROLE_META[r] ? ROLE_META[r].label : r;
+    });
+    listingRoles.innerHTML = rolesHtml(roles, 'lr-icons') +
+      '<span class="lr-label">for ' + labels.join(' · ') + '</span>';
+  }
   // Swap the card's art without ever showing the PREVIOUS listing's
   // frame: hide, set src, fade in on load (instant when the prefetch
   // already warmed the frame). The panel shimmers while rendering.
@@ -3447,6 +3754,7 @@ customElements.whenDefined('mux-video').then(function(){
       listingDesc.textContent =
         'No programming overnight. The channel returns at ' +
         fmtSlot(new Date(resumeTS)) + ' with the standing lineup.';
+      setListingRoles(null);
       listingArt.style.display = 'none';
       listingEl.hidden = false;
       return;
@@ -3474,6 +3782,7 @@ customElements.whenDefined('mux-video').then(function(){
       listingTitle.textContent = ev.title;
       listingWhen.textContent = when;
       listingDesc.textContent = ev.description;
+      setListingRoles(ev.roles);
       listingArt.classList.add('event-art');
       setListingArt(ev.badge);
       const a = document.createElement('a');
@@ -3495,6 +3804,7 @@ customElements.whenDefined('mux-video').then(function(){
     listingTitle.textContent = show.titleLine;
     listingWhen.textContent = when + ' · runs ' + show.duration;
     listingDesc.textContent = show.description;
+    setListingRoles(show.roles);
     setListingArt(muxArtUrl(show, variant));
     listingArtImg.classList.toggle('pop', !!variant.pop);
     if (isLiveCell) addWatchButton();
@@ -3504,6 +3814,12 @@ customElements.whenDefined('mux-video').then(function(){
     const cell = e.target.closest('.guide-cell');
     if (!cell || !guideGrid.contains(cell)) return;
     openListingFromCell(cell);
+  });
+  // The mobile lineup rows carry the same datasets — same overlay.
+  guideList.addEventListener('click', function(e){
+    const row = e.target.closest('.list-row');
+    if (!row || !guideList.contains(row)) return;
+    openListingFromCell(row);
   });
   document.getElementById('listingClose')
     .addEventListener('click', closeListing);
@@ -4267,6 +4583,15 @@ customElements.whenDefined('mux-video').then(function(){
     <div class="guide-grid" id="guideGrid"></div>
   </div>
 
+  <!-- ── Mobile lineup ─────────────────────────────────────────────
+       Phones don't get a miniaturized grid: a single channel has no
+       channel axis, so the native idiom is a chronological list.
+       Today + tomorrow in full (time · title · roles · art thumb);
+       later days compress to a standing-lineup note, except days
+       carrying a special event, which keep their event row. Tap
+       opens the same details sheet. Built by buildGuideList(). -->
+  <div class="guide-list" id="guideList"></div>
+
   <!-- ── Hint bar — the guide-channel key legend (Pendry's
        "Press channel ▲▼ to page", Prevue's scroll prompts). -->
   <div class="guide-hint" aria-hidden="true">
@@ -4296,6 +4621,7 @@ customElements.whenDefined('mux-video').then(function(){
         </div>
         <div class="listing-title" id="listingTitle">—</div>
         <div class="listing-when" id="listingWhen">—</div>
+        <div class="listing-roles" id="listingRoles"></div>
         <div class="listing-desc" id="listingDesc">—</div>
         <div class="listing-actions" id="listingActions"></div>
       </div>
