@@ -3152,8 +3152,11 @@ customElements.whenDefined('mux-video').then(function(){
             tail.style.width = (gapFrac * 100) + '%';
             if (gapSec >= 300) tail.innerHTML = '<span>off air</span>';
             cell.appendChild(tail);
+            // Pad in slot-width units, NOT percent — percentage
+            // padding resolves against the PARENT row's width
+            // (thousands of px), which exploded the cells.
             cell.style.paddingRight =
-              'calc(' + (gapFrac * 100) + '% + 6px)';
+              'calc(' + (gapFrac * span) + ' * var(--hour-w) + 6px)';
           }
         }
         row.appendChild(cell);
