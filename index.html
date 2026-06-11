@@ -1569,9 +1569,27 @@ body.promo-on .logo.show{
   font-size:19px;line-height:1;
 }
 .listing-close:hover{background:#c00000;border-color:#ff5a5a}
-.listing-art{aspect-ratio:16/9;background:#000}
-.listing-art img{width:100%;height:100%;object-fit:cover;display:block}
+.listing-art{aspect-ratio:16/9;background:#000;position:relative;overflow:hidden}
+.listing-art img{
+  width:100%;height:100%;object-fit:cover;display:block;
+  opacity:0;transition:opacity .28s ease;
+}
+.listing-art img.loaded{opacity:1}
 .listing-art img.pop{filter:saturate(1.5) contrast(1.06)}
+/* Shimmer while a frame renders — a slow light sweep on the dark
+   panel, gone the moment the image fades in. */
+.listing-art.loading::after{
+  content:"";
+  position:absolute;inset:0;
+  background:linear-gradient(105deg,
+    transparent 38%, rgba(255,255,255,.07) 50%, transparent 62%);
+  background-size:240% 100%;
+  animation:art-sweep 1.1s linear infinite;
+}
+@keyframes art-sweep{
+  from{background-position:130% 0}
+  to{background-position:-110% 0}
+}
 .listing-body{
   padding:clamp(14px,2vh,18px) clamp(14px,2vw,20px) clamp(16px,2.4vh,22px);
   display:flex;flex-direction:column;gap:10px;
@@ -1808,6 +1826,14 @@ body.promo-on .logo.show{
     border-radius:14px 14px 0 0;
     animation:sheet-in .26s ease;
   }
+  /* Art yields screen to the copy on small screens; the body clears
+     the home indicator; the close button is a real thumb target. */
+  .listing-art{aspect-ratio:auto;height:min(38dvh,46vw)}
+  .listing-body{
+    padding-bottom:calc(env(safe-area-inset-bottom,0px) + 20px);
+  }
+  .listing-close{width:44px;height:44px;font-size:22px}
+  .listing-cta{padding:14px 18px 13px}
   .guide-row-label,
   .guide-corner{flex-basis:112px}
   .guide-row-label{letter-spacing:.08em}
@@ -3100,6 +3126,38 @@ customElements.whenDefined('mux-video').then(function(){
   const heroChip     = document.getElementById('guideHeroChip');
   const heroChipLbl  = document.getElementById('guideHeroChipLabel');
   let   heroArtKey   = null;
+
+  // ONE url builder for every key-art consumer (hero, listing
+  // overlay, prefetch) — identical URLs mean identical CDN cache
+  // keys, so a frame rendered once is instant everywhere after.
+  // Mux renders thumbnails on demand: the first hit on a given
+  // (asset, time, width) is a cold frame-render, every hit after is
+  // edge-cached. 640 is plenty for the 520px card.
+  function muxArtUrl(show, variant){
+    return 'https://image.mux.com/' + show.horizontalPbId +
+      '/thumbnail.webp?width=640&time=' + variant.t;
+  }
+  // Pre-warm the WHOLE art library (a dozen-odd frames, <1 MB)
+  // during idle so listing cards open instantly even for frames the
+  // hero never showed. Runs once, well after the player's own
+  // preload has had the network to itself.
+  (function(){
+    let warmed = false;
+    function warmArt(){
+      if (warmed) return; warmed = true;
+      SHOWS.forEach(function(s){
+        (s.artTimes || []).forEach(function(v){
+          new Image().src = muxArtUrl(s, v);
+        });
+      });
+      EVENTS.forEach(function(ev){ new Image().src = ev.badge; });
+    }
+    if ('requestIdleCallback' in window) {
+      setTimeout(function(){ requestIdleCallback(warmArt, { timeout: 8000 }); }, 6000);
+    } else {
+      setTimeout(warmArt, 8000);
+    }
+  })();
   const HERO_LABELS  = { on:'ON AIR', live:'LIVE NOW', event:'LIVE EVENT',
                          next:'UP NEXT', sched:'SCHEDULED', off:'OFF AIR' };
   function setHero(state, subject, occurrence){
@@ -3126,8 +3184,7 @@ customElements.whenDefined('mux-video').then(function(){
         if (isEvent) {
           heroArtImg.src = subject.badge;
         } else if (subject) {
-          heroArtImg.src = 'https://image.mux.com/' + subject.horizontalPbId +
-            '/thumbnail.webp?width=640&time=' + variant.t;
+          heroArtImg.src = muxArtUrl(subject, variant);
         } else {
           heroArtImg.removeAttribute('src');
         }
@@ -3342,6 +3399,21 @@ customElements.whenDefined('mux-video').then(function(){
   const listingActions = document.getElementById('listingActions');
 
   function closeListing(){ listingEl.hidden = true; }
+  // Swap the card's art without ever showing the PREVIOUS listing's
+  // frame: hide, set src, fade in on load (instant when the prefetch
+  // already warmed the frame). The panel shimmers while rendering.
+  function setListingArt(src){
+    listingArtImg.classList.remove('loaded');
+    listingArt.classList.add('loading');
+    listingArtImg.onload = function(){
+      listingArtImg.classList.add('loaded');
+      listingArt.classList.remove('loading');
+    };
+    listingArtImg.src = src;
+    if (listingArtImg.complete && listingArtImg.naturalWidth > 0) {
+      listingArtImg.onload();
+    }
+  }
   function addWatchButton(){
     const b = document.createElement('button');
     b.className = 'listing-cta listing-watch';
@@ -3403,7 +3475,7 @@ customElements.whenDefined('mux-video').then(function(){
       listingWhen.textContent = when;
       listingDesc.textContent = ev.description;
       listingArt.classList.add('event-art');
-      listingArtImg.src = ev.badge;
+      setListingArt(ev.badge);
       const a = document.createElement('a');
       a.className = 'listing-cta';
       a.href = ev.url; a.target = '_blank'; a.rel = 'noopener';
@@ -3423,8 +3495,7 @@ customElements.whenDefined('mux-video').then(function(){
     listingTitle.textContent = show.titleLine;
     listingWhen.textContent = when + ' · runs ' + show.duration;
     listingDesc.textContent = show.description;
-    listingArtImg.src = 'https://image.mux.com/' + show.horizontalPbId +
-      '/thumbnail.webp?width=800&time=' + variant.t;
+    setListingArt(muxArtUrl(show, variant));
     listingArtImg.classList.toggle('pop', !!variant.pop);
     if (isLiveCell) addWatchButton();
     listingEl.hidden = false;
