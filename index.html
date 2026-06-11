@@ -1550,6 +1550,8 @@ body.promo-on .logo.show{
   padding:11px 2px;
   border-bottom:1px solid rgba(255,255,255,.12);
   cursor:pointer;
+  touch-action:manipulation; /* no double-tap-zoom hesitation */
+  -webkit-tap-highlight-color:rgba(255,255,255,.08);
 }
 .list-row .lr-time{
   flex:0 0 58px;
@@ -1932,7 +1934,8 @@ body.promo-on .logo.show{
     -webkit-overflow-scrolling:touch;
   }
   .guide-mast{
-    position:sticky;top:-18px;  /* cancels #guide's padding-top */
+    position:sticky;top:0;   /* flush with the scrollport — nothing
+                                ghosts above it while scrolling */
     z-index:30;
     background:rgba(5,5,8,.97);
     margin:-18px -16px 0;
@@ -3194,7 +3197,7 @@ customElements.whenDefined('mux-video').then(function(){
   // Rows carry the same data-row/col/span/event datasets, so the
   // listing-details delegate works on both surfaces unchanged.
   const guideList = document.getElementById('guideList');
-  const LIST_FULL_DAYS = 2;   // today + tomorrow in full detail
+  const LIST_FULL_DAYS = 1;   // today in full; every later day condenses
   function buildGuideList(){
     if (!guideList) return;
     guideList.innerHTML = '';
@@ -3207,7 +3210,7 @@ customElements.whenDefined('mux-video').then(function(){
       const head = document.createElement('div');
       head.className = 'list-day' + (r === 0 ? ' today' : '');
       head.textContent =
-        (r === 0 ? 'TODAY — ' : (r === 1 ? 'TOMORROW — ' : '')) +
+        (r === 0 ? 'TODAY — ' : '') +
         DAYS_LONG[rowDate.getDay()] + ' ' +
         MONTHS[rowDate.getMonth()] + ' ' + rowDate.getDate();
       guideList.appendChild(head);
@@ -3641,11 +3644,24 @@ customElements.whenDefined('mux-video').then(function(){
     // than requestAnimationFrame because hidden tabs throttle rAF
     // to ~500ms intervals; the macrotask queue fires reliably.
     setTimeout(function(){
-      // Mobile lineup visible → bring the live row into view there.
+      // Mobile lineup visible → land the viewer on NOW. Computed
+      // scrollTop (not scrollIntoView) so the sticky masthead is
+      // accounted for, re-asserted once after late layout settles.
       if (guideList && guideList.offsetParent !== null) {
-        const liveRow = guideList.querySelector('.list-row.live');
-        if (liveRow) liveRow.scrollIntoView({ block: 'center' });
-        else guideEl.scrollTop = 0;
+        const toLive = function(){
+          const liveRow = guideList.querySelector('.list-row.live');
+          if (!liveRow) { guideEl.scrollTop = 0; return; }
+          const mast = document.querySelector('.guide-mast');
+          const mastH = mast ? mast.offsetHeight : 0;
+          // Rect-based: current visual distance + current scroll =
+          // absolute target, minus the pinned masthead's height.
+          guideEl.scrollTop = Math.max(0,
+            liveRow.getBoundingClientRect().top -
+            guideEl.getBoundingClientRect().top +
+            guideEl.scrollTop - mastH - 12);
+        };
+        toLive();
+        setTimeout(toLive, 400);
         return;
       }
       const wrap = document.querySelector('.guide-grid-wrap');
@@ -3819,9 +3835,16 @@ customElements.whenDefined('mux-video').then(function(){
     openListingFromCell(cell);
   });
   // The mobile lineup rows carry the same datasets — same overlay.
+  // EXCEPT event rows: the spotlight goes straight to the event's
+  // Plots page (the point of the spotlight is the RSVP).
   guideList.addEventListener('click', function(e){
     const row = e.target.closest('.list-row');
     if (!row || !guideList.contains(row)) return;
+    if (row.dataset.event) {
+      const ev = EVENTS.find(function(x){ return x.id === row.dataset.event; });
+      if (ev) window.open(ev.url, '_blank', 'noopener');
+      return;
+    }
     openListingFromCell(row);
   });
   document.getElementById('listingClose')
@@ -4603,31 +4626,36 @@ customElements.whenDefined('mux-video').then(function(){
     <span>select a listing for details</span>
   </div>
 
-  <!-- ── Listing details overlay ──────────────────────────────────
-       Every cell in the schedule opens this on click/tap: key art,
-       state chip, full description, the airing window in the
-       viewer's clock, and an action row (WATCH NOW when the listing
-       is live; the Plots request-to-attend CTA on events). Centered
-       card on desktop, bottom sheet on phones. -->
-  <div id="listing" class="listing-backdrop" hidden>
-    <div class="listing-card" role="dialog" aria-modal="true"
-         aria-label="Program details">
-      <button class="listing-close" id="listingClose" type="button"
-              aria-label="Close details">×</button>
-      <div class="listing-art" id="listingArt">
-        <img id="listingArtImg" alt="" draggable="false">
+</div>
+
+<!-- ── Listing details overlay ────────────────────────────────────
+     Every cell/row in the schedule opens this on click/tap: key
+     art, state chip, full description, the airing window in the
+     viewer's clock, and an action row (WATCH NOW when the listing
+     is live; the Plots request-to-attend CTA on events). Centered
+     card on desktop, bottom sheet on phones.
+     SIBLING of #guide, not a child: #guide carries backdrop-filter,
+     which makes it the containing block for fixed descendants — on
+     a scrolled phone guide the sheet anchored to the scrolled-away
+     top of the list and opened out of view. -->
+<div id="listing" class="listing-backdrop" hidden>
+  <div class="listing-card" role="dialog" aria-modal="true"
+       aria-label="Program details">
+    <button class="listing-close" id="listingClose" type="button"
+            aria-label="Close details">×</button>
+    <div class="listing-art" id="listingArt">
+      <img id="listingArtImg" alt="" draggable="false">
+    </div>
+    <div class="listing-body">
+      <div class="desc-state" id="listingChip">
+        <span class="chip-dot" aria-hidden="true"></span>
+        <span id="listingChipLabel">—</span>
       </div>
-      <div class="listing-body">
-        <div class="desc-state" id="listingChip">
-          <span class="chip-dot" aria-hidden="true"></span>
-          <span id="listingChipLabel">—</span>
-        </div>
-        <div class="listing-title" id="listingTitle">—</div>
-        <div class="listing-when" id="listingWhen">—</div>
-        <div class="listing-roles" id="listingRoles"></div>
-        <div class="listing-desc" id="listingDesc">—</div>
-        <div class="listing-actions" id="listingActions"></div>
-      </div>
+      <div class="listing-title" id="listingTitle">—</div>
+      <div class="listing-when" id="listingWhen">—</div>
+      <div class="listing-roles" id="listingRoles"></div>
+      <div class="listing-desc" id="listingDesc">—</div>
+      <div class="listing-actions" id="listingActions"></div>
     </div>
   </div>
 </div>
