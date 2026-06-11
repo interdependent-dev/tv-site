@@ -1223,7 +1223,7 @@ body.no-fs .logo.show{pointer-events:none}
    long nowrap title (e.g. SCREENPLAY SUBMISSIONS—Open Call) silently
    FORCES its cell wider than --hour-w, sliding every later column off
    its time header. With it, the title's own ellipsis takes over. */
-.guide-cell{flex:0 0 var(--hour-w);min-width:0;background:rgba(0,0,0,.35);cursor:default}
+.guide-cell{flex:0 0 var(--hour-w);min-width:0;background:rgba(0,0,0,.35);cursor:pointer}
 /* Hover preview — only on mouse devices (touch sticks :hover after
    a tap). Subtle background lightening + cursor:pointer so cells
    feel selectable. The JS paired with this updates the description
@@ -1416,18 +1416,93 @@ body.no-fs .logo.show{pointer-events:none}
 .guide-hero-art img.pop.dim{filter:saturate(1.2)}
 .guide-hero-art img:not([src]){opacity:0}
 /* Event mode — the art panel becomes a brand plate: the Plots mark
-   centered on a dark wash of its own gradient. */
-.guide-hero-art.event-art{
+   centered on a dark wash of its own gradient. Shared by the hero
+   panel and the listing-details card. */
+.guide-hero-art.event-art,
+.listing-art.event-art{
   background:
     radial-gradient(120% 140% at 15% 110%, rgba(46,230,200,.28), transparent 55%),
     radial-gradient(120% 140% at 85% -10%, rgba(249,115,22,.26), transparent 55%),
     radial-gradient(100% 100% at 60% 50%, rgba(168,85,247,.22), transparent 65%),
     #0c0c12;
 }
-.guide-hero-art.event-art img{
+.guide-hero-art.event-art img,
+.listing-art.event-art img{
   object-fit:contain;
   padding:14%;
+  box-sizing:border-box;
 }
+
+/* ── Listing details overlay ───────────────────────────────────────
+   Centered card over a blurred veil on desktop; bottom sheet on
+   phones (media query below). Chip styles are the shared
+   .desc-state vocabulary. */
+.listing-backdrop{
+  position:fixed;inset:0;z-index:40;
+  background:rgba(0,0,0,.65);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  display:flex;align-items:center;justify-content:center;
+  padding:clamp(14px,4vw,40px);
+}
+.listing-backdrop[hidden]{display:none}
+.listing-card{
+  position:relative;
+  width:min(520px,100%);
+  max-height:100%;
+  overflow:auto;
+  background:#0c0c12;
+  border:1px solid rgba(255,255,255,.4);
+  box-shadow:0 30px 80px rgba(0,0,0,.7);
+  animation:listing-in .22s ease;
+}
+@keyframes listing-in{
+  from{opacity:0;transform:translateY(10px)}
+  to{opacity:1;transform:none}
+}
+@keyframes sheet-in{
+  from{opacity:0;transform:translateY(40px)}
+  to{opacity:1;transform:none}
+}
+.listing-close{
+  position:absolute;top:10px;right:10px;z-index:2;
+  appearance:none;cursor:pointer;
+  width:36px;height:36px;border-radius:50%;
+  border:1px solid rgba(255,255,255,.5);
+  background:rgba(0,0,0,.55);color:#fff;
+  font-size:19px;line-height:1;
+}
+.listing-close:hover{background:#c00000;border-color:#ff5a5a}
+.listing-art{aspect-ratio:16/9;background:#000}
+.listing-art img{width:100%;height:100%;object-fit:cover;display:block}
+.listing-art img.pop{filter:saturate(1.5) contrast(1.06)}
+.listing-body{
+  padding:clamp(14px,2vh,18px) clamp(14px,2vw,20px) clamp(16px,2.4vh,22px);
+  display:flex;flex-direction:column;gap:10px;
+}
+.listing-title{
+  font-family:"Eurostile Wide","Eurostile",sans-serif;
+  font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+  font-size:clamp(16px,2.2vw,22px);
+}
+.listing-when{
+  font-size:clamp(9px,1vw,11px);
+  letter-spacing:.24em;text-transform:uppercase;
+  opacity:.75;
+}
+.listing-desc{font-size:clamp(12px,1.3vw,14px);line-height:1.5;opacity:.85}
+.listing-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}
+.listing-actions:empty{display:none}
+.listing-cta{
+  display:inline-block;appearance:none;cursor:pointer;
+  font:700 11px/1 "Eurostile",sans-serif;
+  letter-spacing:.22em;text-transform:uppercase;
+  padding:12px 16px 11px;
+  border:1px solid rgba(255,255,255,.6);
+  color:#fff;background:transparent;text-decoration:none;
+}
+.listing-cta:hover{border-color:#fff;background:rgba(255,255,255,.1)}
+.listing-watch{background:#c00000;border-color:#ff5a5a}
+.listing-watch:hover{background:#e00000}
 
 /* ── Promo band — the Pendry red strip, repurposed for the open
    call. Deep-red gradient, cream copy, full width, clickable. */
@@ -1604,7 +1679,38 @@ body.no-fs .logo.show{pointer-events:none}
    day-label column widens to fit fully-spelled day names
    ("WEDNESDAY"). */
 @media (max-width:640px){
-  #guide{padding:18px 16px}
+  /* Phones scroll the guide like a normal page: masthead pins to
+     the top, hero + bands + the WHOLE week flow underneath, and the
+     timeline still swipes sideways (day labels stay stuck left).
+     No more letterboxed inner table showing two days at a time. */
+  #guide{
+    padding:18px 16px;
+    overflow-y:auto;overflow-x:hidden;
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
+  }
+  .guide-mast{
+    position:sticky;top:-18px;  /* cancels #guide's padding-top */
+    z-index:30;
+    background:rgba(5,5,8,.97);
+    margin:-18px -16px 0;
+    padding:14px 16px 10px;
+  }
+  .guide-grid-wrap{
+    flex:none;          /* full height in flow — the page scrolls */
+    min-height:auto;
+    overflow-y:visible;
+    overflow-x:auto;
+  }
+  /* Bottom sheet for the listing details. */
+  .listing-backdrop{align-items:flex-end;padding:0}
+  .listing-card{
+    width:100%;
+    max-height:88dvh;
+    border-left:none;border-right:none;border-bottom:none;
+    border-radius:14px 14px 0 0;
+    animation:sheet-in .26s ease;
+  }
   .guide-row-label,
   .guide-corner{flex-basis:112px}
   .guide-row-label{letter-spacing:.08em}
@@ -3122,13 +3228,119 @@ customElements.whenDefined('mux-video').then(function(){
     hoveredSlot = null;
     renderGuideDesc();
   });
-  // Event cells are actionable — clicking one opens the event's
-  // Plots page (request-to-attend) in a new tab.
+  // ── Listing details overlay ─────────────────────────────────────
+  // Every cell is actionable: click/tap opens the details card with
+  // the airing's own key art, full description, and the window in
+  // the viewer's clock. The live listing adds WATCH NOW; events add
+  // the Plots request-to-attend CTA. On touch devices (no hover)
+  // this IS the detail mechanism.
+  const listingEl      = document.getElementById('listing');
+  const listingArt     = document.getElementById('listingArt');
+  const listingArtImg  = document.getElementById('listingArtImg');
+  const listingChip    = document.getElementById('listingChip');
+  const listingChipLbl = document.getElementById('listingChipLabel');
+  const listingTitle   = document.getElementById('listingTitle');
+  const listingWhen    = document.getElementById('listingWhen');
+  const listingDesc    = document.getElementById('listingDesc');
+  const listingActions = document.getElementById('listingActions');
+
+  function closeListing(){ listingEl.hidden = true; }
+  function addWatchButton(){
+    const b = document.createElement('button');
+    b.className = 'listing-cta listing-watch';
+    b.type = 'button';
+    b.textContent = 'Watch now';
+    b.addEventListener('click', function(){ closeListing(); closeGuide(); });
+    listingActions.appendChild(b);
+  }
+  function openListingFromCell(cell){
+    const row = parseInt(cell.dataset.row, 10);
+    const rowDate = new Date();
+    rowDate.setDate(rowDate.getDate() + row);
+    const dow  = DAYS_LONG[rowDate.getDay()];
+    const date = MONTHS[rowDate.getMonth()] + ' ' + rowDate.getDate();
+    const rowPt = ptDatePlus(row);
+    listingActions.innerHTML = '';
+    listingArt.classList.remove('event-art');
+    listingArtImg.classList.remove('pop');
+
+    if (cell.classList.contains('guide-end-cell')) {
+      const endTS    = ptToUtc(rowPt.year, rowPt.month, rowPt.day,
+                               CHANNEL.endHour, 0, 0);
+      const resumeTS = ptToUtc(rowPt.year, rowPt.month, rowPt.day + 1,
+                               CHANNEL.startHour, 0, 0);
+      listingChipLbl.textContent = 'OFF AIR';
+      listingChip.className = 'desc-state off';
+      listingTitle.textContent = 'END OF BROADCAST DAY';
+      listingWhen.textContent = dow + ' · ' + date + ' · ' +
+        fmtSlot(new Date(endTS)).toUpperCase() + ' – ' +
+        fmtSlot(new Date(resumeTS)).toUpperCase();
+      listingDesc.textContent =
+        'No programming overnight. The channel returns at ' +
+        fmtSlot(new Date(resumeTS)) + ' with the standing lineup.';
+      listingArt.style.display = 'none';
+      listingEl.hidden = false;
+      return;
+    }
+    listingArt.style.display = '';
+
+    const col  = parseInt(cell.dataset.col, 10);
+    const span = parseInt(cell.dataset.span, 10) || 1;
+    const prog = programForSlotIndex(col, rowPt);
+    const s = slotForCol(col);
+    const startTS = ptToUtc(rowPt.year, rowPt.month, rowPt.day,
+                            s.hour, s.minute, 0);
+    const endTS = startTS + span * CHANNEL.slotSec * 1000;
+    const when = dow + ' · ' + date + ' · ' +
+      fmtSlot(new Date(startTS)).toUpperCase() + ' – ' +
+      fmtSlot(new Date(endTS)).toUpperCase();
+    const liveCol = nowSlotCol(Date.now());
+    const isLiveCell = row === 0 && liveCol >= 0 &&
+      liveCol >= col && liveCol < col + span;
+
+    if (prog.kind === 'event') {
+      const ev = prog.event;
+      listingChipLbl.textContent = isLiveCell ? 'LIVE NOW' : 'LIVE EVENT';
+      listingChip.className = 'desc-state' + (isLiveCell ? ' on' : '');
+      listingTitle.textContent = ev.title;
+      listingWhen.textContent = when;
+      listingDesc.textContent = ev.description;
+      listingArt.classList.add('event-art');
+      listingArtImg.src = ev.badge;
+      const a = document.createElement('a');
+      a.className = 'listing-cta';
+      a.href = ev.url; a.target = '_blank'; a.rel = 'noopener';
+      a.textContent = 'Request to attend on Plots →';
+      listingActions.appendChild(a);
+      if (isLiveCell) addWatchButton();
+      listingEl.hidden = false;
+      return;
+    }
+
+    const show = prog.show;
+    const occ = Math.floor(prog.startSlot / PATTERN.total) + ptEpochDay(rowPt);
+    const arts = show.artTimes || [{ t: 60 }];
+    const variant = arts[((occ % arts.length) + arts.length) % arts.length];
+    listingChipLbl.textContent = isLiveCell ? 'ON AIR' : 'SCHEDULED';
+    listingChip.className = 'desc-state' + (isLiveCell ? ' on' : '');
+    listingTitle.textContent = show.titleLine;
+    listingWhen.textContent = when + ' · runs ' + show.duration;
+    listingDesc.textContent = show.description;
+    listingArtImg.src = 'https://image.mux.com/' + show.horizontalPbId +
+      '/thumbnail.webp?width=800&time=' + variant.t;
+    listingArtImg.classList.toggle('pop', !!variant.pop);
+    if (isLiveCell) addWatchButton();
+    listingEl.hidden = false;
+  }
   guideGrid.addEventListener('click', function(e){
-    const cell = e.target.closest('.guide-cell-event');
+    const cell = e.target.closest('.guide-cell');
     if (!cell || !guideGrid.contains(cell)) return;
-    const ev = EVENTS.find(function(x){ return x.id === cell.dataset.event; });
-    if (ev) window.open(ev.url, '_blank', 'noopener');
+    openListingFromCell(cell);
+  });
+  document.getElementById('listingClose')
+    .addEventListener('click', closeListing);
+  listingEl.addEventListener('click', function(e){
+    if (e.target === listingEl) closeListing();
   });
 
   function closeGuide(){
@@ -3175,7 +3387,12 @@ customElements.whenDefined('mux-video').then(function(){
     if (e.target === guideEl) closeGuide();
   });
   document.addEventListener('keydown', function(e){
-    if (e.key === 'Escape') closeGuide();
+    if (e.key === 'Escape') {
+      // Details overlay closes first; a second ESC closes the guide.
+      const listing = document.getElementById('listing');
+      if (listing && !listing.hidden) { listing.hidden = true; return; }
+      closeGuide();
+    }
   });
 
   // ── Channel boot sequence ──────────────────────────────────────
@@ -3815,6 +4032,33 @@ customElements.whenDefined('mux-video').then(function(){
     <span>◀ ▶ scan the day</span>
     <span>▲ ▼ browse the week</span>
     <span>select a listing for details</span>
+  </div>
+
+  <!-- ── Listing details overlay ──────────────────────────────────
+       Every cell in the schedule opens this on click/tap: key art,
+       state chip, full description, the airing window in the
+       viewer's clock, and an action row (WATCH NOW when the listing
+       is live; the Plots request-to-attend CTA on events). Centered
+       card on desktop, bottom sheet on phones. -->
+  <div id="listing" class="listing-backdrop" hidden>
+    <div class="listing-card" role="dialog" aria-modal="true"
+         aria-label="Program details">
+      <button class="listing-close" id="listingClose" type="button"
+              aria-label="Close details">×</button>
+      <div class="listing-art" id="listingArt">
+        <img id="listingArtImg" alt="" draggable="false">
+      </div>
+      <div class="listing-body">
+        <div class="desc-state" id="listingChip">
+          <span class="chip-dot" aria-hidden="true"></span>
+          <span id="listingChipLabel">—</span>
+        </div>
+        <div class="listing-title" id="listingTitle">—</div>
+        <div class="listing-when" id="listingWhen">—</div>
+        <div class="listing-desc" id="listingDesc">—</div>
+        <div class="listing-actions" id="listingActions"></div>
+      </div>
+    </div>
   </div>
 </div>
 
