@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="111px" height="131px" viewBox="0 0 111 131" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>Scenographer</title>
+    <g id="Roles-(Official---Clean-Version)" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="Clapper_Head" transform="translate(1, 1)">
+            <path d="M2.12093023,59.7309106 C0.795348837,64.5088518 0,69.5522341 0,74.8610577 C0,104.855911 24.3906977,129.276499 54.3488372,129.276499 C84.3069767,129.276499 108.697674,104.855911 108.697674,74.8610577 C108.697674,69.5522341 107.902326,64.5088518 106.576744,59.7309106 L2.12093023,59.7309106 L2.12093023,59.7309106 Z" id="Shape" stroke="#010101" fill="#FF0000"></path>
+            <g id="clapBottom_1_" transform="translate(1.8558, 43.2736)">
+                <path d="M96.2372093,0 L8.21860465,0 C4.50697674,5.04338235 1.85581395,10.6176471 0,16.4573529 L104.190698,16.4573529 C102.6,10.6176471 99.9488372,5.04338235 96.2372093,0 L96.2372093,0 Z" id="clapBottom" stroke="#231F20" stroke-width="0.25" fill="#231F20"></path>
+                <polygon id="Shape" fill="#FFFFFF" points="39.7674419 14.0683824 26.2465116 14.0683824 30.4883721 1.85808824 44.2744186 1.85808824"></polygon>
+                <polygon id="Shape" fill="#FFFFFF" points="63.3627907 14.0683824 49.5767442 14.0683824 54.0837209 1.85808824 67.8697674 1.85808824"></polygon>
+                <polygon id="Shape" fill="#FFFFFF" points="86.6930233 14.0683824 73.172093 14.0683824 77.4139535 1.85808824 91.2 1.85808824"></polygon>
+            </g>
+            <g id="clapTop_1_" transform="translate(9.014, 0)">
+                <path d="M77.1488372,5.31546942 C62.0372093,-1.85144234 43.744186,-2.11688352 27.8372093,6.64267531 C11.9302326,15.4022341 2.12093023,30.7978224 0,47.5206165 L77.1488372,5.31546942 L77.1488372,5.31546942 Z" id="clapTop" stroke="#231F20" stroke-width="0.25" fill="#231F20"></path>
+                <polygon id="Shape" stroke="#FFFFFF" fill="#FFFFFF" points="69.1953488 6.64267531 60.1813953 11.4206165 50.6372093 2.66105766 62.0372093 3.19194001"></polygon>
+                <polygon id="Shape" stroke="#FFFFFF" fill="#FFFFFF" points="48.5162791 17.7912047 39.5023256 22.8345871 24.3906977 11.9514988 34.4651163 6.37723413"></polygon>
+                <polygon id="Shape" stroke="#FFFFFF" fill="#FFFFFF" points="28.1023256 28.9397341 19.0883721 33.9831165 10.6046512 26.2853224 14.5813953 20.4456165"></polygon>
+            </g>
+            <ellipse id="Hinge" stroke="#231F20" stroke-width="0.25" fill="#FFFFFF" cx="12.9906977" cy="43.2735577" rx="7.15813953" ry="7.16691176"></ellipse>
+        </g>
+    </g>
+</svg>

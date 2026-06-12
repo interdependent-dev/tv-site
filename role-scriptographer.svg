@@ -1,0 +1,17 @@
+<svg viewBox="0 0 13 13" xmlns="http://www.w3.org/2000/svg" fill="none" role="img" aria-label="Scriptographer">
+  <g stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke">
+    <!-- Badge -->
+    <path
+      d="M6.07447 11.2328C9.15316 11.2328 11.6489 8.83015 11.6489 5.86638C11.6489 2.90261 9.15316 0.5 6.07447 0.5C2.99577 0.5 0.5 2.90261 0.5 5.86638C0.5 8.83015 2.99577 11.2328 6.07447 11.2328Z"
+      fill="var(--icon-cutout, #fff)"
+      stroke-width="1.2"
+    />
+
+    <!-- Marker / folded page -->
+    <path fill-rule="evenodd" clip-rule="evenodd"
+      d="M4.30697 10.4163L1.76245 11.6263L1.97705 8.91113"
+      fill="var(--icon-cutout, #fff)"
+      stroke-width="1.0"
+    />
+  </g>
+</svg>

@@ -1858,12 +1858,9 @@ body.promo-on .logo.show{
   filter:grayscale(.6);
   transition:opacity .2s ease, filter .2s ease;
 }
-/* Optical correction — the popcorn is a tall narrow silhouette
-   while the other marks are full circles; at equal cap height it
-   reads ~30% lighter. Run it larger so the SET looks even (same
-   reason round letterforms overshoot the cap line). */
-.cell-badge img[src*="cineaste"]{height:17px;margin:-2px 0}
-.listing-roles .lr-icons img[src*="cineaste"]{height:22px;margin:-2px 0}
+/* (The cineaste no longer needs an optical size boost — the SVG
+   master carries the full near-square glyph: bucket, popcorn
+   spill, and 3D glasses.) */
 .cell-badge span{
   font-size:8px;font-weight:700;
   letter-spacing:.14em;text-transform:uppercase;
@@ -1952,19 +1949,22 @@ body.promo-on .logo.show{
      the top, hero + bands + the WHOLE week flow underneath, and the
      timeline still swipes sideways (day labels stay stuck left).
      No more letterboxed inner table showing two days at a time. */
+  /* NO top padding on the scroll container: iOS WebKit pins sticky
+     elements to the CONTENT edge (inside the padding), so any top
+     padding became a strip above the masthead where scrolled rows
+     showed through. The masthead owns its own top space instead. */
   #guide{
-    padding:18px 16px;
+    padding:0 16px 18px;
     overflow-y:auto;overflow-x:hidden;
     overscroll-behavior:contain;
     -webkit-overflow-scrolling:touch;
   }
   .guide-mast{
-    position:sticky;top:0;   /* flush with the scrollport — nothing
-                                ghosts above it while scrolling */
+    position:sticky;top:0;
     z-index:30;
     background:rgba(5,5,8,.97);
-    margin:-18px -16px 0;
-    padding:14px 16px 10px;
+    margin:0 -16px 0;
+    padding:max(16px, env(safe-area-inset-top, 0px)) 16px 10px;
   }
   /* Phones get the lineup LIST; the 2D grid is a desktop idiom. */
   .guide-grid-wrap{display:none}
@@ -2473,11 +2473,11 @@ function ptDatePlus(days){
 // grid cells where width is scarce; `badge` is the full singular
 // name for lineup rows; `label` the plural for the details card.
 const ROLE_META = {
-  scriptographer:  { img: 'role-scriptographer.png',  label: 'Scriptographers',  badge: 'Scriptographer',  code: 'SCR' },
-  director:        { img: 'role-director.png',        label: 'Directors',        badge: 'Director',        code: 'DIR' },
-  cineaste:        { img: 'role-cineaste.png',        label: 'Cineastes',        badge: 'Cineaste',        code: 'CIN' },
-  cinematographer: { img: 'role-cinematographer.png', label: 'Cinematographers', badge: 'Cinematographer', code: 'DP'  },
-  scenographer:    { img: 'role-scenographer.png',    label: 'Scenographers',    badge: 'Scenographer',    code: 'SCN' },
+  scriptographer:  { img: 'role-scriptographer.svg',  label: 'Scriptographers',  badge: 'Scriptographer',  code: 'SCR' },
+  director:        { img: 'role-director.svg',        label: 'Directors',        badge: 'Director',        code: 'DIR' },
+  cineaste:        { img: 'role-cineaste.svg',        label: 'Cineastes',        badge: 'Cineaste',        code: 'CIN' },
+  cinematographer: { img: 'role-cinematographer.svg', label: 'Cinematographers', badge: 'Cinematographer', code: 'DP'  },
+  scenographer:    { img: 'role-scenographer.svg',    label: 'Scenographers',    badge: 'Scenographer',    code: 'SCN' },
 };
 function rolesHtml(roles, cls){
   if (!roles || !roles.length) return '';

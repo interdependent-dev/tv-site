@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="520" height="566" viewBox="700 714 520 566" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>Cineaste</title>
+    <defs>
+        <path d="M0,0 L1920,0 L1920,1994 L0,1994 L0,0 Z" id="path-1"></path>
+    </defs>
+    <g id="Cineaste" stroke="none" fill="none" fill-rule="evenodd">
+        
+        <g id="Cineaste-Big-Hair" stroke-width="1" transform="translate(710, 725)">
+            <g id="Popcorn-Bucket" transform="translate(54.7035, 244.8875)">
+                <polygon id="Rectangle" fill="#FF0000" points="0 6.65225657e-14 372.188139 6.65225657e-14 306.034699 299.591002 76.1020337 299.591002"></polygon>
+                <polygon id="Rectangle" fill="#000000" points="81.8028436 5.82711134 124.294991 5.82711134 124.294991 229.677047 124.294991 293.470921 81.8028436 293.470921"></polygon>
+                <polygon id="Rectangle" fill="#000000" points="166.787139 5.82711134 209.279287 5.82711134 209.279287 229.677047 209.279287 293.470921 166.787139 293.470921"></polygon>
+                <polygon id="Rectangle" fill="#000000" points="257.841741 5.82711134 300.333889 5.82711134 300.333889 229.677047 300.333889 293.470921 257.841741 293.470921"></polygon>
+            </g>
+            <g id="3D-Glasses" transform="translate(44.4785, 299.591)">
+                <g id="Glasses_2_" fill="#FFFFFF" stroke="#000000" stroke-width="3">
+                    <path d="M372.188139,0 L0.00486694267,0 C-0.00608367833,13.4880722 0.00486694267,5.99469875 0.00486694267,13.4880722 L0.00486694267,67.4403609 C0.00486694267,74.9337344 0,61.5960133 0.00486694267,81.7984229 C48.2922578,81.7992017 86.5331219,81.7992017 114.727459,81.7984229 C132.388604,81.7976913 154.660042,59.7166926 165.805696,54.0799828 C171.914194,50.9907222 180.948097,48.7411836 186.429079,48.7411836 C192.967858,48.7411836 201.668267,50.5885321 207.939566,54.0799828 C217.836378,59.5898839 235.696494,81.7984229 253.918955,81.7984229 C283.095919,81.7984229 322.518981,81.7984229 372.188139,81.7984229 C372.188139,54.0799828 372.188139,74.9337344 372.188139,67.4403609 L372.188139,13.4880722 C372.188139,5.99469875 372.188139,26.7022793 372.188139,0 Z" id="Shape"></path>
+                </g>
+                <path d="M263.325191,6.29225377 L340.075139,6.29225377 C341.731993,6.29225377 343.075139,7.63539952 343.075139,9.29225377 L343.075139,72.5070452 C343.075139,74.1638995 341.731993,75.5070452 340.075139,75.5070452 L263.325191,75.5070452 C244.212054,75.5070452 228.717795,60.0127864 228.717795,40.8996495 C228.717795,21.7865126 244.212054,6.29225377 263.325191,6.29225377 Z" id="Rectangle" fill="#FF0000"></path>
+                <path d="M64.704542,6.29225377 L141.45449,6.29225377 C143.111344,6.29225377 144.45449,7.63539952 144.45449,9.29225377 L144.45449,72.5070452 C144.45449,74.1638995 143.111344,75.5070452 141.45449,75.5070452 L64.704542,75.5070452 C45.5914051,75.5070452 30.0971463,60.0127864 30.0971463,40.8996495 C30.0971463,21.7865126 45.5914051,6.29225377 64.704542,6.29225377 Z" id="Rectangle" fill="#000000" transform="translate(87.2758, 40.8996) scale(-1, 1) translate(-87.2758, -40.8996)"></path>
+            </g>
+            <circle id="Oval" stroke="#000000" stroke-width="2" fill="#FF0000" cx="86.9120654" cy="221.881391" r="22.006135"></circle>
+            <circle id="Oval" stroke="#000000" stroke-width="2" fill="#FF0000" cx="131.390593" cy="221.881391" r="22.006135"></circle>
+            <circle id="Oval" stroke="#000000" stroke-width="2" fill="#FF0000" cx="177.402863" cy="221.881391" r="22.006135"></circle>
+            <circle id="Oval" stroke="#000000" stroke-width="2" fill="#FF0000" cx="231.595092" cy="221.881391" r="22.006135"></circle>
+            <circle id="Oval" stroke="#000000" stroke-width="2" fill="#FF0000" cx="231.595092" cy="221.881391" r="22.006135"></circle>
+            <circle id="Oval" stroke="#000000" stroke-width="2" fill="#FF0000" cx="276.584867" cy="221.881391" r="22.006135"></circle>
+            <circle id="Oval" stroke="#000000" stroke-width="2" fill="#FF0000" cx="331.799591" cy="221.881391" r="22.006135"></circle>
+            <circle id="Oval" stroke="#000000" stroke-width="2" fill="#FF0000" cx="384.458078" cy="221.881391" r="22.006135"></circle>
+            <circle id="Oval" stroke="#000000" stroke-width="2" fill="#FF0000" cx="431.492843" cy="221.881391" r="22.006135"></circle>
+            <circle id="Oval" stroke="#000000" stroke-width="2" fill="#FF0000" cx="112.985685" cy="185.582822" r="22.006135"></circle>
+            <circle id="Oval" stroke="#000000" stroke-width="2" fill="#FF0000" cx="160.02045" cy="185.582822" r="22.006135"></circle>
+            <circle id="Oval" stroke="#000000" stroke-width="2" fill="#FF0000" cx="23.006135" cy="240.797546" r="22.006135"></circle>
+            <circle id="Oval" stroke="#000000" stroke-width="2" fill="#FF0000" cx="59.3047035" cy="185.582822" r="22.006135"></circle>
+            <circle id="Oval" stroke="#000000" stroke-width="2" fill="#FF0000" cx="204.498978" cy="185.582822" r="22.006135"></circle>
+            <circle id="Oval" stroke="#000000" stroke-width="2" fill="#FF0000" cx="259.202454" cy="185.582822" r="22.006135"></circle>
+            <circle id="Oval" stroke="#000000" stroke-width="2" fill="#FF0000" cx="303.680982" cy="185.582822" r="22.006135"></circle>
+            <circle id="Oval" stroke="#000000" stroke-width="2" fill="#FF0000" cx="358.895706" cy="185.582822" r="22.006135"></circle>
+            <circle id="Oval" stroke="#000000" stroke-width="2" fill="#FF0000" cx="413.087935" cy="185.582822" r="22.006135"></circle>
+            <circle id="Oval" stroke="#000000" stroke-width="2" fill="#FF0000" cx="476.993865" cy="250" r="22.006135"></circle>
+            <circle id="Oval" stroke="#000000" stroke-width="2" fill="#FF0000" cx="240.797546" cy="23.006135" r="22.006135"></circle>
+            <circle id="Oval" stroke="#000000" stroke-width="2" fill="#FF0000" cx="131.390593" cy="140.0818" r="22.006135"></circle>
+            <circle id="Oval" stroke="#000000" stroke-width="2" fill="#FF0000" cx="160.02045" cy="104.805726" r="22.006135"></circle>
+            <circle id="Oval" stroke="#000000" stroke-width="2" fill="#FF0000" cx="376.278119" cy="140.0818" r="22.006135"></circle>
+            <circle id="Oval" stroke="#000000" stroke-width="2" fill="#FF0000" cx="339.97955" cy="95.0920245" r="22.006135"></circle>
+            <circle id="Oval" stroke="#000000" stroke-width="2" fill="#FF0000" cx="294.478528" cy="59.3047035" r="22.006135"></circle>
+            <circle id="Oval" stroke="#000000" stroke-width="2" fill="#FF0000" cx="185.582822" cy="59.3047035" r="22.006135"></circle>
+            <circle id="Oval" stroke="#000000" stroke-width="2" fill="#FF0000" cx="185.582822" cy="59.3047035" r="22.006135"></circle>
+            <circle id="Oval" stroke="#000000" stroke-width="2" fill="#FF0000" cx="95.0920245" cy="140.0818" r="22.006135"></circle>
+            <circle id="Oval" stroke="#000000" stroke-width="2" fill="#FF0000" cx="131.390593" cy="95.0920245" r="22.006135"></circle>
+            <circle id="Oval" stroke="#000000" stroke-width="2" fill="#FF0000" cx="185.582822" cy="140.0818" r="22.006135"></circle>
+            <circle id="Oval" stroke="#000000" stroke-width="2" fill="#FF0000" cx="221.881391" cy="140.0818" r="22.006135"></circle>
+            <circle id="Oval" stroke="#000000" stroke-width="2" fill="#FF0000" cx="204.498978" cy="95.0920245" r="22.006135"></circle>
+            <circle id="Oval" stroke="#000000" stroke-width="2" fill="#FF0000" cx="250" cy="95.0920245" r="22.006135"></circle>
+            <circle id="Oval" stroke="#000000" stroke-width="2" fill="#FF0000" cx="294.478528" cy="95.0920245" r="22.006135"></circle>
+            <circle id="Oval" stroke="#000000" stroke-width="2" fill="#FF0000" cx="240.797546" cy="59.3047035" r="22.006135"></circle>
+            <circle id="Oval" stroke="#000000" stroke-width="2" fill="#FF0000" cx="276.584867" cy="140.0818" r="22.006135"></circle>
+            <circle id="Oval" stroke="#000000" stroke-width="2" fill="#FF0000" cx="331.799591" cy="140.0818" r="22.006135"></circle>
+        </g>
+    </g>
+</svg>

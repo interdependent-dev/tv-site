@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="104px" height="104px" viewBox="0 0 104 104" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>Cinematographer</title>
+    <g id="Roles-(Official---Clean-Version)" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="Cinematographer" transform="translate(3.285, 3)">
+            <circle id="Head_50_" stroke="#010101" stroke-width="5" fill="#FF0000" cx="49" cy="49" r="49"></circle>
+            <g id="Camera_3_" transform="translate(17, 17)">
+                <ellipse id="Oval" stroke="#010101" stroke-width="7" fill="#231F20" cx="31.3193117" cy="32.5440613" rx="29.873805" ry="29.4559387"></ellipse>
+                <polygon id="Shape" stroke="#FFFFFF" fill="#FFFFFF" points="30.0558862 41.0831499 22.8086291 33.9372654 27.6401339 25.43026 37.3031433 27.1316611 39.0286807 36.6595071"></polygon>
+                <line x1="40.4741874" y1="36.3448276" x2="35.1739962" y2="0" id="Shape" stroke="#FFFFFF" stroke-width="3" fill="#FFFFFF"></line>
+                <line x1="63" y1="23.2796935" x2="29.5124283" y2="40.8582375" id="Shape" stroke="#FFFFFF" stroke-width="3" fill="#FFFFFF"></line>
+                <line x1="7.46845124" y1="56.0613027" x2="26.9827916" y2="23.2796935" id="Shape" stroke="#FFFFFF" stroke-width="3" fill="#FFFFFF"></line>
+                <line x1="47.4608031" y1="61.7624521" x2="20.2370937" y2="33.256705" id="Shape" stroke="#FFFFFF" stroke-width="3" fill="#FFFFFF"></line>
+                <line x1="39.5105163" y1="26.605364" x2="0" y2="17.5785441" id="Shape" stroke="#FFFFFF" stroke-width="3" fill="#FFFFFF"></line>
+            </g>
+        </g>
+    </g>
+</svg>
