@@ -195,16 +195,31 @@ document.title = show.title.replace(/—.*/, '').trim() + ' — INTERDEPENDENT T
 poster.style.backgroundImage =
   'url(https://image.mux.com/' + pbId() + '/thumbnail.jpg?time=' + (show.posterT || 0) + '&width=1280)';
 
-applyOrientation(true);
-portraitMQ.addEventListener('change', function(){ applyOrientation(false); });
+// <mux-video> arrives as a module from the CDN, so this inline script runs
+// before the custom element is defined. Setting .src on the un-upgraded
+// element shadows the class accessor and the source never reaches the
+// player — every player call must wait for the definition.
+const playerReady = customElements.whenDefined('mux-video');
+
+playerReady.then(function(){
+  applyOrientation(true);
+  portraitMQ.addEventListener('change', function(){ applyOrientation(false); });
+  // Tap the video to toggle, in case the UA doesn't render native
+  // controls on the custom element.
+  mv.addEventListener('click', function(){
+    if (mv.paused) mv.play().catch(function(){}); else mv.pause();
+  });
+});
 
 // One tap: hide the poster, start with sound. (Autoplay with audio is
 // blocked without a gesture — same activation idiom as the live page.)
 poster.addEventListener('click', function(){
   poster.classList.add('gone');
-  mv.muted = false;
-  mv.volume = 1;
-  mv.play().catch(function(){});
+  playerReady.then(function(){
+    mv.muted = false;
+    mv.volume = 1;
+    mv.play().catch(function(){});
+  });
 });
 </script>
 </body>
