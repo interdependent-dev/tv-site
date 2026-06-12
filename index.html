@@ -1608,6 +1608,18 @@ body.promo-on .logo.show{
   letter-spacing:.06em;
   line-height:1.4;
 }
+/* "Earlier today" — spent listings fold behind one slim line. */
+.list-earlier{
+  font:700 10px/1 "Eurostile",sans-serif;
+  letter-spacing:.2em;text-transform:uppercase;
+  color:rgba(255,255,255,.55);
+  padding:11px 2px 9px;
+  border-bottom:1px solid rgba(255,255,255,.12);
+  cursor:pointer;
+  touch-action:manipulation;
+}
+.guide-list .list-row.spent{display:none}
+.guide-list.show-spent .list-row.spent{display:flex}
 
 /* ── Listing details overlay ───────────────────────────────────────
    Centered card over a blurred veil on desktop; bottom sheet on
@@ -1839,6 +1851,12 @@ body.promo-on .logo.show{
   filter:grayscale(.6);
   transition:opacity .2s ease, filter .2s ease;
 }
+/* Optical correction — the popcorn is a tall narrow silhouette
+   while the other marks are full circles; at equal cap height it
+   reads ~30% lighter. Run it larger so the SET looks even (same
+   reason round letterforms overshoot the cap line). */
+.cell-badge img[src*="cineaste"]{height:17px;margin:-2px 0}
+.listing-roles .lr-icons img[src*="cineaste"]{height:22px;margin:-2px 0}
 .cell-badge span{
   font-size:8px;font-weight:700;
   letter-spacing:.14em;text-transform:uppercase;
@@ -3233,6 +3251,20 @@ customElements.whenDefined('mux-video').then(function(){
         guideList.appendChild(note);
       }
 
+      // Today's already-aired programs collapse behind a slim
+      // toggle: the guide opens on identity and NOW, never on a
+      // scroll-back through spent listings. (After sign-off the
+      // whole day is spent; before sign-on nothing is.)
+      let spentBefore = -1;
+      if (r === 0) {
+        const liveCol = nowSlotCol(Date.now());
+        if (liveCol >= 0) spentBefore = liveCol;
+        else if (ptParts(Date.now()).hour >= CHANNEL.endHour)
+          spentBefore = SLOTS_PER_DAY;
+      }
+      let spentCount = 0;
+      let earlierToggle = null;
+
       let c = 0;
       while (c < SLOTS_PER_DAY) {
         const prog = programForSlotIndex(c, rowPt);
@@ -3246,6 +3278,22 @@ customElements.whenDefined('mux-video').then(function(){
         row.dataset.row = String(r);
         row.dataset.col = String(c);
         row.dataset.span = String(span);
+        if (spentBefore >= 0 && c + span <= spentBefore &&
+            prog.kind !== 'event') {
+          row.className += ' spent';
+          spentCount++;
+          if (!earlierToggle) {
+            earlierToggle = document.createElement('div');
+            earlierToggle.className = 'list-earlier';
+            earlierToggle.addEventListener('click', function(){
+              guideList.classList.toggle('show-spent');
+              earlierToggle.textContent =
+                (guideList.classList.contains('show-spent') ? '▾' : '▸') +
+                ' earlier today — ' + spentCount + ' aired';
+            });
+            guideList.appendChild(earlierToggle);
+          }
+        }
         if (prog.kind === 'event') {
           row.className += ' list-row-event';
           row.dataset.event = prog.event.id;
@@ -3276,6 +3324,11 @@ customElements.whenDefined('mux-video').then(function(){
         }
         guideList.appendChild(row);
         c += span;
+      }
+      if (earlierToggle) {
+        earlierToggle.textContent =
+          (guideList.classList.contains('show-spent') ? '▾' : '▸') +
+          ' earlier today — ' + spentCount + ' aired';
       }
     }
   }
@@ -3644,24 +3697,12 @@ customElements.whenDefined('mux-video').then(function(){
     // than requestAnimationFrame because hidden tabs throttle rAF
     // to ~500ms intervals; the macrotask queue fires reliably.
     setTimeout(function(){
-      // Mobile lineup visible → land the viewer on NOW. Computed
-      // scrollTop (not scrollIntoView) so the sticky masthead is
-      // accounted for, re-asserted once after late layout settles.
+      // Mobile lineup: open at the TOP — identity, featured card,
+      // and the CTA bands first, with NOW immediately below (spent
+      // listings collapse behind the "earlier today" toggle, so
+      // nothing dead sits between the masthead and the live row).
       if (guideList && guideList.offsetParent !== null) {
-        const toLive = function(){
-          const liveRow = guideList.querySelector('.list-row.live');
-          if (!liveRow) { guideEl.scrollTop = 0; return; }
-          const mast = document.querySelector('.guide-mast');
-          const mastH = mast ? mast.offsetHeight : 0;
-          // Rect-based: current visual distance + current scroll =
-          // absolute target, minus the pinned masthead's height.
-          guideEl.scrollTop = Math.max(0,
-            liveRow.getBoundingClientRect().top -
-            guideEl.getBoundingClientRect().top +
-            guideEl.scrollTop - mastH - 12);
-        };
-        toLive();
-        setTimeout(toLive, 400);
+        guideEl.scrollTop = 0;
         return;
       }
       const wrap = document.querySelector('.guide-grid-wrap');
