@@ -4566,6 +4566,13 @@ customElements.whenDefined('mux-video').then(function(){
     <span class="pb-copy">Open call — scripts in by June 19</span>
     <span class="pb-url">interdependent.studio/submissions</span>
   </a>
+  <!-- Season banner — copy + expiry maintained by season.js init at
+       the end of <body>; always points at the next timeline event. -->
+  <a class="promo-banner promo-banner-season" href="/timeline" tabindex="-1">
+    <span class="pb-title">Season 1</span>
+    <span class="pb-copy" id="seasonPbCopy">Twelve events, from Signing Day to Premiere</span>
+    <span class="pb-url">interdependent.tv/timeline</span>
+  </a>
 </div>
 
 <!-- (FS toggle moved INTO the IV watermark — see the .logo button
@@ -4656,6 +4663,20 @@ customElements.whenDefined('mux-video').then(function(){
     <span class="promo-url">interdependent.studio/submissions</span>
   </a>
 
+  <!-- ── SEASON strip ──────────────────────────────────────────────
+       The 12-event timeline as a swipeable rail — the whole studio
+       cycle in one band. Cells are built from season.js (the single
+       source for the band, the ticker banner, and /timeline); state
+       coloring: past dims, the next event glows red with a countdown,
+       Proposed dates render dashed. -->
+  <div id="seasonBand">
+    <div class="season-head">
+      <span class="season-title">Season 1 · Old Hollywood Reborn</span>
+      <a class="season-all" href="/timeline">Full timeline →</a>
+    </div>
+    <div class="season-rail" id="seasonRail" role="list"></div>
+  </div>
+
   <div class="guide-grid-wrap">
     <div class="guide-grid" id="guideGrid"></div>
   </div>
@@ -4710,6 +4731,145 @@ customElements.whenDefined('mux-video').then(function(){
     </div>
   </div>
 </div>
+
+<!-- ── SEASON strip + season banner (self-contained add-on) ─────────
+     Everything season-related lives in this block + season.js + the
+     two HTML stubs above (#seasonBand in the guide, .promo-banner-
+     season in the ticker). Kill switch: SEASON_ENABLED in season.js.
+     Removing this block + the two stubs restores the page exactly. -->
+<style id="seasonCss">
+#seasonBand{margin-top:clamp(6px,1vh,9px)}
+.season-head{
+  display:flex;align-items:baseline;justify-content:space-between;
+  gap:12px;margin-bottom:clamp(5px,.8vh,8px);
+}
+.season-title{
+  font-family:"Eurostile Wide","Eurostile",sans-serif;font-weight:700;
+  font-size:clamp(10px,1.1vw,12px);letter-spacing:.22em;
+  text-transform:uppercase;color:rgba(255,255,255,.85);
+}
+.season-all{
+  font-size:clamp(9px,1vw,11px);letter-spacing:.16em;text-transform:uppercase;
+  color:rgba(255,120,120,.95);text-decoration:none;white-space:nowrap;
+}
+.season-all:hover{color:#fff}
+.season-rail{
+  display:flex;gap:6px;
+  overflow-x:auto;-webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
+  padding-bottom:2px;
+}
+.season-rail::-webkit-scrollbar{display:none}
+.season-cell{
+  flex:0 0 auto;width:clamp(118px,12vw,156px);
+  display:flex;flex-direction:column;gap:3px;
+  padding:clamp(7px,1vh,10px) clamp(9px,1vw,12px) clamp(6px,.9vh,9px);
+  background:rgba(12,12,16,.92);
+  border:1px solid rgba(255,255,255,.22);
+  text-decoration:none;color:#fff;
+  transition:filter .15s ease;
+}
+.season-cell:hover{filter:brightness(1.35)}
+.season-cell .sc-num{
+  font-family:"Eurostile Wide","Eurostile",sans-serif;font-weight:700;
+  font-size:clamp(9px,.9vw,10px);letter-spacing:.3em;color:#ff3b3b;
+}
+.season-cell .sc-name{
+  font-family:"Eurostile","Eurostile Wide",sans-serif;font-weight:700;
+  font-size:clamp(10px,1.05vw,12px);letter-spacing:.08em;line-height:1.25;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.season-cell .sc-date{
+  font-size:clamp(8px,.85vw,10px);letter-spacing:.14em;
+  color:rgba(255,255,255,.55);white-space:nowrap;
+}
+.season-cell.proposed{border-style:dashed}
+.season-cell.past{opacity:.42}
+.season-cell.now,
+.season-cell.next{
+  border-color:#ff0000;border-style:solid;
+  box-shadow:0 0 10px rgba(255,0,0,.35), inset 0 0 0 1px rgba(255,0,0,.55);
+}
+.season-cell.now .sc-date,
+.season-cell.next .sc-date{color:#ff5a5a}
+/* The ticker's season banner — the channel's own deep-red strip. */
+.promo-banner-season{
+  background:linear-gradient(90deg,#5e0000,#a40000 30%,#8a0000 70%,#4f0000);
+  border:1px solid rgba(255,90,90,.45);
+}
+.promo-banner-season .pb-copy{color:rgba(255,233,206,.92)}
+/* Short-landscape phones: yield to the schedule like .guide-promo. */
+@media (orientation:landscape) and (max-height:500px){
+  #seasonBand{display:none}
+}
+</style>
+<script src="season.js"></script>
+<script>
+(function(){
+  if (!window.SEASON_ENABLED) {
+    var band = document.getElementById('seasonBand');
+    if (band) band.remove();
+    var sb = document.querySelector('.promo-banner-season');
+    if (sb) sb.remove();
+    return;
+  }
+
+  // Guide rail — one cell per event, state-colored, → /timeline#eNN.
+  // Rebuilt only when an event's state flips, so a 60s tick never
+  // resets the user's swipe position mid-browse.
+  var lastSig = '';
+  function buildRail(){
+    var states = window.seasonStates(Date.now());
+    var sig = states.join(',');
+    if (sig === lastSig) return;
+    lastSig = sig;
+    var rail = document.getElementById('seasonRail');
+    if (!rail) return;
+    rail.innerHTML = window.SEASON.events.map(function(ev, i){
+      var st = states[i];
+      var nn = (ev.n < 10 ? '0' : '') + ev.n;
+      var date = st === 'now'  ? 'NOW' :
+                 st === 'next' ? window.seasonCountdown(ev.start, Date.now()) :
+                 ev.date.toUpperCase();
+      var cls = 'season-cell ' + st + (ev.status === 'proposed' ? ' proposed' : '');
+      return '<a class="' + cls + '" role="listitem" href="/timeline#e' + nn + '">' +
+        '<span class="sc-num">' + nn + (st === 'now' ? ' · ON NOW' : st === 'next' ? ' · NEXT' : '') + '</span>' +
+        '<span class="sc-name">' + ev.short + '</span>' +
+        '<span class="sc-date">' + date + '</span></a>';
+    }).join('');
+  }
+
+  // Ticker banner — always points at the current/next event; retires
+  // itself only when the whole season has played out.
+  function refreshBanner(){
+    var copyEl = document.getElementById('seasonPbCopy');
+    var banner = document.querySelector('.promo-banner-season');
+    if (!copyEl || !banner) return;
+    var states = window.seasonStates(Date.now());
+    var i = states.indexOf('now');
+    if (i === -1) i = states.indexOf('next');
+    if (i === -1) {
+      var last = window.SEASON.events[window.SEASON.events.length - 1];
+      if (!last.start) {
+        copyEl.textContent = '12 · PREMIERE! — release season, dates to come';
+      } else {
+        banner.dataset.expires = '1'; // season over — retire from rotation
+      }
+      return;
+    }
+    var ev = window.SEASON.events[i];
+    var nn = (ev.n < 10 ? '0' : '') + ev.n;
+    var lead = states[i] === 'now' ? 'ON NOW' : 'NEXT';
+    var when = states[i] === 'now' ? ev.date : ev.date +
+      ' · ' + window.seasonCountdown(ev.start, Date.now());
+    copyEl.textContent = lead + ' — ' + nn + ' · ' + ev.name.toUpperCase() + ' · ' + when;
+  }
+
+  buildRail();
+  refreshBanner();
+  setInterval(function(){ buildRail(); refreshBanner(); }, 60000);
+})();
+</script>
 
 </body>
 </html>
