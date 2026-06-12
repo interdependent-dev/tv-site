@@ -1969,13 +1969,16 @@ body.promo-on .logo.show{
   /* Phones get the lineup LIST; the 2D grid is a desktop idiom. */
   .guide-grid-wrap{display:none}
   .guide-list{display:block;margin-top:4px}
-  /* Bottom sheet for the listing details. */
-  .listing-backdrop{align-items:flex-end;padding:0}
+  /* Phones: the details are a FULL-SCREEN takeover from the top —
+     art, then content scrolling beneath, native-app style. No
+     partial sheet, no dependence on where Safari's toolbar puts
+     the bottom edge. */
+  .listing-backdrop{align-items:stretch;padding:0}
   .listing-card{
     width:100%;
-    max-height:88dvh;
-    border-left:none;border-right:none;border-bottom:none;
-    border-radius:14px 14px 0 0;
+    height:100%;
+    max-height:none;
+    border:none;border-radius:0;
     animation:sheet-in .26s ease;
   }
   /* Art yields screen to the copy on small screens; the body clears
