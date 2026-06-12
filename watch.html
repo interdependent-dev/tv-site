@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="format-detection" content="telephone=no">
+<meta name="description" content="INTERDEPENDENT TV — On Demand">
+<title>INTERDEPENDENT TV — On Demand</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+
+<!-- Same player stack as the live channel (index.html) — v10 store +
+     the mux-video media element. Pinned to the identical beta build so
+     the two pages never drift apart. -->
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preconnect" href="https://stream.mux.com" crossorigin>
+<link rel="preconnect" href="https://image.mux.com" crossorigin>
+<script type="module" src="https://cdn.jsdelivr.net/npm/@videojs/html@10.0.0-beta.23/cdn/video.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/npm/@videojs/html@10.0.0-beta.23/cdn/media/mux-video.js"></script>
+
+<style>
+@font-face{
+  font-family:"Eurostile";
+  src:url("fonts/EurostileNextPro-Regular.ttf") format("truetype");
+  font-weight:400;font-style:normal;font-display:swap;
+}
+@font-face{
+  font-family:"Eurostile";
+  src:url("fonts/EurostileNextPro-Bold.ttf") format("truetype");
+  font-weight:700;font-style:normal;font-display:swap;
+}
+@font-face{
+  font-family:"Eurostile Wide";
+  src:url("fonts/EurostileNextPro-WideBold.ttf") format("truetype");
+  font-weight:700;font-style:normal;font-display:swap;
+}
+
+*{margin:0;box-sizing:border-box}
+html{color-scheme:dark}
+html,body{background:#000;color:#fff;font-family:"Eurostile",-apple-system,BlinkMacSystemFont,system-ui,sans-serif;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+body{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column}
+
+header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px clamp(16px,4vw,40px);
+}
+.brand{display:flex;align-items:center;gap:12px;text-decoration:none}
+.brand svg{width:26px;height:auto}
+.brand span{font-family:"Eurostile Wide","Eurostile",sans-serif;font-weight:700;font-size:11px;letter-spacing:.28em;color:#999;text-transform:uppercase}
+.live-link{
+  font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;
+  color:#fff;text-decoration:none;border:1px solid #333;padding:9px 16px;
+  display:flex;align-items:center;gap:8px;transition:border-color .15s;white-space:nowrap
+}
+.live-link:hover{border-color:#777}
+.live-dot{width:7px;height:7px;border-radius:50%;background:#FF0000;animation:blink 1.6s ease-in-out infinite}
+@keyframes blink{50%{opacity:.35}}
+
+main{flex:1;width:100%;max-width:1100px;margin:0 auto;padding:0 clamp(16px,4vw,40px) 48px}
+
+.player-wrap{position:relative;background:#000;border:1px solid #181818}
+mux-video{display:block;width:100%;aspect-ratio:12/5;max-height:72vh;object-fit:contain;background:#000}
+mux-video.portrait{aspect-ratio:9/16;max-height:78vh}
+
+/* Tap-to-play poster — same one-gesture activation idiom as the
+   live channel's intro overlay: one tap starts playback with sound. */
+.poster{
+  position:absolute;inset:0;cursor:pointer;border:none;padding:0;
+  background:#000 center/cover no-repeat;display:flex;align-items:center;justify-content:center
+}
+.poster::after{content:'';position:absolute;inset:0;background:rgba(0,0,0,.35)}
+.poster.gone{display:none}
+.play-btn{
+  position:relative;z-index:1;width:84px;height:84px;border-radius:50%;
+  background:rgba(0,0,0,.55);border:2px solid #fff;
+  display:flex;align-items:center;justify-content:center
+}
+.play-btn::after{
+  content:'';display:block;margin-left:7px;
+  border-left:26px solid #fff;border-top:16px solid transparent;border-bottom:16px solid transparent
+}
+
+.meta{padding:26px 2px 0}
+.eyebrow{font-size:10px;letter-spacing:.25em;color:#FF0000;text-transform:uppercase;font-weight:700;margin-bottom:10px}
+h1{font-family:"Eurostile Wide","Eurostile",sans-serif;font-size:clamp(18px,3.4vw,26px);letter-spacing:.06em;line-height:1.25;text-transform:uppercase}
+.metaline{font-size:11px;letter-spacing:.12em;color:#777;text-transform:uppercase;margin-top:8px}
+.desc{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;line-height:1.75;color:#bbb;max-width:640px;margin-top:16px}
+
+.ctas{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}
+.cta{
+  font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;
+  text-decoration:none;padding:14px 22px;transition:opacity .15s,border-color .15s
+}
+.cta-red{background:#FF0000;color:#fff}
+.cta-red:hover{opacity:.85}
+.cta-ghost{border:1px solid #333;color:#999}
+.cta-ghost:hover{border-color:#777;color:#fff}
+</style>
+</head>
+<body>
+
+<header>
+  <a class="brand" href="/">
+    <svg viewBox="0 0 74.6 89.4" fill-rule="evenodd" aria-hidden="true">
+      <path fill="#FF0000" d="M9.3 28a28 28 0 1 0 56 0 28 28 0 1 0-56 0M20 64.9a7.5 7.3 0 1 0 15 0 7.5 7.3 0 1 0-15 0M23.2 64.7a4.1 4.1 0 1 0 8.2 0 4.1 4.1 0 1 0-8.2 0M43.9 60a4 4 0 1 0 8 0 4 4 0 1 0-8 0M45.5 60a2.4 2.4 0 1 0 4.8 0 2.4 2.4 0 1 0-4.8 0M37.3 72.7a3.3 3.3 0 1 0 6.6 0 3.3 3.3 0 1 0-6.6 0M29.3 85.4a4 4 0 1 0 8 0 4 4 0 1 0-8 0M0 50.7a6.7 6.7 0 1 0 13.4 0 6.7 6.7 0 1 0-13.4 0M61.3 49.3a6.7 6.7 0 1 0 13.3 0 6.7 6.7 0 1 0-13.3 0"/>
+    </svg>
+    <span>Interdependent.TV</span>
+  </a>
+  <a class="live-link" href="/"><span class="live-dot" aria-hidden="true"></span>Watch Live TV</a>
+</header>
+
+<main>
+  <div class="player-wrap">
+    <video-player>
+      <media-container>
+        <mux-video id="vod" controls preload="auto" playsinline crossorigin="anonymous"></mux-video>
+      </media-container>
+    </video-player>
+    <button class="poster" id="poster" aria-label="Play"><span class="play-btn" aria-hidden="true"></span></button>
+  </div>
+
+  <div class="meta">
+    <div class="eyebrow">On Demand · Interdependent.TV</div>
+    <h1 id="vTitle"></h1>
+    <div class="metaline" id="vMeta"></div>
+    <p class="desc" id="vDesc"></p>
+    <div class="ctas" id="vCtas"></div>
+  </div>
+</main>
+
+<script>
+// ── On-demand catalog ────────────────────────────────────────────────
+// Deep-linkable cuts from the channel lineup: /watch?s=<id>.
+// Playback IDs mirror SHOWS in index.html — if a lineup entry's IDs
+// change there, change them here too.
+const VOD = {
+  'screenplay-submissions': {
+    title: 'SCREENPLAY SUBMISSIONS — Open Call',
+    metaLine: '11:39 · 2026',
+    horizontalPbId: 'PNT1D69a02gHNLIZqx5njPOIgci2a8fW7ie4AysDi9no',
+    verticalPbId:   'PeRFtO9hAOgQ3LbHBpGWvBSdIzvgnx02onzEuQiYumLA',
+    posterT: 13,
+    description: 'INTERDEPENDENT’s open screenplay call, walked through live — ' +
+      'a studio runner submits his own script and reads back his AI evaluation, ' +
+      'scores, and notes on camera. Submissions open through June 19.',
+    ctas: [
+      { label: 'Submit Your Script', href: 'https://interdependent.studio/submissions', red: true },
+      { label: 'Watch Live TV', href: '/' },
+    ],
+  },
+};
+const DEFAULT_ID = 'screenplay-submissions';
+
+const params = new URLSearchParams(location.search);
+const show = VOD[params.get('s')] || VOD[DEFAULT_ID];
+
+// Same manifest params as the live channel.
+const muxHlsSrc = function(id){
+  return 'https://stream.mux.com/' + id +
+         '.m3u8?rendition_order=desc&max_resolution_tier=1080p';
+};
+
+const mv = document.getElementById('vod');
+const poster = document.getElementById('poster');
+const portraitMQ = window.matchMedia('(orientation: portrait)');
+
+function pbId(){ return portraitMQ.matches ? show.verticalPbId : show.horizontalPbId; }
+
+function applyOrientation(initial){
+  const t = initial ? 0 : mv.currentTime;
+  const wasPlaying = !initial && !mv.paused && !mv.ended;
+  mv.classList.toggle('portrait', portraitMQ.matches);
+  mv.src = muxHlsSrc(pbId());
+  if (!initial) {
+    const onCanplay = function(){
+      mv.removeEventListener('canplay', onCanplay);
+      try { mv.currentTime = t; } catch (e) { /* not seekable yet */ }
+      if (wasPlaying) mv.play().catch(function(){});
+    };
+    mv.addEventListener('canplay', onCanplay);
+  }
+}
+
+document.getElementById('vTitle').textContent = show.title;
+document.getElementById('vMeta').textContent = show.metaLine;
+document.getElementById('vDesc').textContent = show.description;
+document.getElementById('vCtas').innerHTML = show.ctas.map(function(c){
+  return '<a class="cta ' + (c.red ? 'cta-red' : 'cta-ghost') + '" href="' + c.href + '">' + c.label + '</a>';
+}).join('');
+document.title = show.title.replace(/—.*/, '').trim() + ' — INTERDEPENDENT TV';
+
+poster.style.backgroundImage =
+  'url(https://image.mux.com/' + pbId() + '/thumbnail.jpg?time=' + (show.posterT || 0) + '&width=1280)';
+
+applyOrientation(true);
+portraitMQ.addEventListener('change', function(){ applyOrientation(false); });
+
+// One tap: hide the poster, start with sound. (Autoplay with audio is
+// blocked without a gesture — same activation idiom as the live page.)
+poster.addEventListener('click', function(){
+  poster.classList.add('gone');
+  mv.muted = false;
+  mv.volume = 1;
+  mv.play().catch(function(){});
+});
+</script>
+</body>
+</html>
