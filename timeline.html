@@ -7,8 +7,8 @@
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <meta name="format-detection" content="telephone=no">
-<meta name="description" content="SEASON 1 · OLD HOLLYWOOD REBORN — the 12-event timeline. Watch a movie get made, from Signing Day to Premiere.">
-<title>SEASON 1 — The Timeline · INTERDEPENDENT TV</title>
+<meta name="description" content="WATCH MOVIES, GET MADE. SEASON 1 — the 12-event timeline, from Signing Day to Premiere.">
+<title>WATCH MOVIES, GET MADE. SEASON 1 · INTERDEPENDENT TV</title>
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
@@ -54,28 +54,36 @@ main{flex:1;width:100%;max-width:860px;margin:0 auto;padding:8px clamp(16px,4vw,
 .hero{padding:26px 0 38px;border-bottom:1px solid #181818;margin-bottom:38px}
 .eyebrow{font-size:10px;font-weight:700;letter-spacing:.25em;color:#FF0000;text-transform:uppercase;margin-bottom:12px}
 h1{font-family:"Eurostile Wide","Eurostile",sans-serif;font-size:clamp(22px,5vw,38px);letter-spacing:.05em;line-height:1.15;text-transform:uppercase}
+h1 .s1{color:#FF0000;white-space:nowrap}
 .hero-sub{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:15px;line-height:1.7;color:#bbb;max-width:560px;margin-top:18px}
 .hero-legend{display:flex;gap:22px;flex-wrap:wrap;margin-top:22px;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:#666}
 .hero-legend b{color:#ff5a5a;font-weight:700}
 
 /* ── The spine ── */
-.tl{position:relative;padding-left:34px}
+.tl{position:relative;padding-left:40px}
 .tl::before{
-  content:'';position:absolute;left:9px;top:6px;bottom:6px;width:2px;
+  content:'';position:absolute;left:13px;top:6px;bottom:6px;width:2px;
   background:linear-gradient(#ff0000, #3a0000 70%, #1c1c1c);
 }
 .ev{
-  position:relative;padding:0 0 34px 14px;
+  position:relative;padding:0 0 36px 14px;
   scroll-margin-top:90px;
 }
-.ev::before{
-  content:'';position:absolute;left:-34px;top:4px;
-  width:20px;height:20px;border-radius:50%;
+/* The node is a role medallion — the event's primary mark (who the
+   night is FOR) sits inside the circle on the spine. */
+.ev-node{
+  position:absolute;left:-41px;top:2px;
+  width:30px;height:30px;border-radius:50%;
   background:#000;border:2px solid #444;
+  display:flex;align-items:center;justify-content:center;
 }
-.ev.past::before{border-color:#333;background:#1a1a1a}
-.ev.now::before,
-.ev.next::before{border-color:#ff0000;box-shadow:0 0 12px rgba(255,0,0,.6);background:#2a0000}
+.ev-node img{width:16px;height:16px;display:block;opacity:.75}
+.ev.past .ev-node{border-color:#333;background:#141414}
+.ev.past .ev-node img{opacity:.4}
+.ev.now .ev-node,
+.ev.next .ev-node{border-color:#ff0000;box-shadow:0 0 12px rgba(255,0,0,.6);background:#2a0000}
+.ev.now .ev-node img,
+.ev.next .ev-node img{opacity:1}
 .ev-chip{
   display:inline-flex;align-items:center;gap:8px;
   font-size:9px;font-weight:700;letter-spacing:.24em;text-transform:uppercase;
@@ -92,6 +100,12 @@ h1{font-family:"Eurostile Wide","Eurostile",sans-serif;font-size:clamp(22px,5vw,
 .ev .when{font-size:11px;letter-spacing:.14em;color:#ff5a5a;text-transform:uppercase;margin-top:9px}
 .ev .when .prop{color:#777;border:1px dashed #444;padding:2px 7px;margin-left:8px;font-size:9px;letter-spacing:.18em}
 .ev p{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;line-height:1.7;color:#aaa;max-width:560px;margin-top:10px}
+/* Role marks, spelled out the way the guide's details card wears
+   them: glyph row + uppercase names of who the event is FOR. */
+.ev-roles{display:flex;align-items:center;gap:9px;margin-top:11px}
+.ev-roles img{height:17px;width:auto;display:block;opacity:.8}
+.ev-roles .er-label{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:#777}
+.ev.past .ev-roles{opacity:.55}
 .ev.past h2{color:#888}
 .ev.past p{color:#666}
 
@@ -122,8 +136,8 @@ h1{font-family:"Eurostile Wide","Eurostile",sans-serif;font-size:clamp(22px,5vw,
 
 <main>
   <div class="hero">
-    <div class="eyebrow">Season 1 · Old Hollywood Reborn</div>
-    <h1>Watch a movie get made.</h1>
+    <div class="eyebrow">Old Hollywood Reborn</div>
+    <h1>Watch movies, get made. <span class="s1">Season&nbsp;1</span></h1>
     <p class="hero-sub">Twelve live events, from open call to opening night — every one
       of them an episode on this channel. Scripts come in, the audience greenlights,
       and the cameras never stop. This is the season.</p>
@@ -159,11 +173,28 @@ h1{font-family:"Eurostile Wide","Eurostile",sans-serif;font-size:clamp(22px,5vw,
       st === 'next' ? '<span class="state">Next · ' + window.seasonCountdown(ev.start, Date.now()) + '</span>' :
       st === 'past' ? '<span class="state dim">Aired</span>' : '';
     var prop = ev.status === 'proposed' ? '<span class="prop">Proposed</span>' : '';
-    return '<div class="ev ' + st + '" id="e' + nn + '">' +
+
+    var roles = ev.roles || [];
+    var primary = roles.length ? window.SEASON_ROLES[roles[0]] : null;
+    var node = '<span class="ev-node" aria-hidden="true">' +
+      (primary ? '<img src="' + primary.img + '" alt="">' : '') + '</span>';
+    var rolesRow = roles.length
+      ? '<div class="ev-roles">' +
+          roles.map(function(r){
+            var m = window.SEASON_ROLES[r];
+            return m ? '<img src="' + m.img + '" alt="' + m.label + '">' : '';
+          }).join('') +
+          '<span class="er-label">' +
+          roles.map(function(r){ return window.SEASON_ROLES[r].label; }).join(' · ') +
+          '</span></div>'
+      : '';
+
+    return '<div class="ev ' + st + '" id="e' + nn + '">' + node +
       '<div class="ev-chip"><span class="num">EVENT ' + nn + '</span>' + chip + '</div>' +
       '<h2>' + ev.name + '</h2>' +
       '<div class="tagline">' + ev.tag + '</div>' +
       '<div class="when">' + ev.date + prop + '</div>' +
+      rolesRow +
       '<p>' + ev.produces + '</p>' +
       '</div>';
   }).join('');

@@ -4646,8 +4646,15 @@ customElements.whenDefined('mux-video').then(function(){
        Pendry runs a full-width feature band through its grid (the
        deep-red movie strip). Ours promotes the real open call —
        the one listing on the channel a viewer can act on. -->
-  <!-- Live-event band first — the time-sensitive, attendable thing
-       leads. Times are filled by JS in the viewer's local clock. -->
+  <!-- Submissions band leads; the Plots band's cooler palette sits
+       between it and the red-accented Season strip below, so three
+       stacked bands don't read as one red mass. -->
+  <a class="guide-promo" href="https://interdependent.studio/submissions"
+     target="_blank" rel="noopener">
+    <span class="promo-title">Screenplay Submissions</span>
+    <span class="promo-copy">Open call — scripts in by June 19</span>
+    <span class="promo-url">interdependent.studio/submissions</span>
+  </a>
   <a class="guide-promo guide-promo-plots"
      href="https://plots.events/event/interdependentwriterstownhall"
      target="_blank" rel="noopener">
@@ -4655,12 +4662,6 @@ customElements.whenDefined('mux-video').then(function(){
     <span class="promo-title">Writers Town Hall</span>
     <span class="promo-copy" id="plotsBandWhen">Live event</span>
     <span class="promo-url">request to attend on plots</span>
-  </a>
-  <a class="guide-promo" href="https://interdependent.studio/submissions"
-     target="_blank" rel="noopener">
-    <span class="promo-title">Screenplay Submissions</span>
-    <span class="promo-copy">Open call — scripts in by June 19</span>
-    <span class="promo-url">interdependent.studio/submissions</span>
   </a>
 
   <!-- ── SEASON strip ──────────────────────────────────────────────
@@ -4761,9 +4762,12 @@ customElements.whenDefined('mux-video').then(function(){
 }
 .season-rail::-webkit-scrollbar{display:none}
 .season-cell{
-  flex:0 0 auto;width:clamp(118px,12vw,156px);
+  /* Cells size to their event's full name — the strip exists to be
+     READ, so nothing ever truncates. min-width keeps short names
+     (CAST PARTY) from collapsing into slivers. */
+  flex:0 0 auto;min-width:clamp(108px,11vw,144px);
   display:flex;flex-direction:column;gap:3px;
-  padding:clamp(7px,1vh,10px) clamp(9px,1vw,12px) clamp(6px,.9vh,9px);
+  padding:clamp(7px,1vh,10px) clamp(10px,1.1vw,14px) clamp(6px,.9vh,9px);
   background:rgba(12,12,16,.92);
   border:1px solid rgba(255,255,255,.22);
   text-decoration:none;color:#fff;
@@ -4773,11 +4777,12 @@ customElements.whenDefined('mux-video').then(function(){
 .season-cell .sc-num{
   font-family:"Eurostile Wide","Eurostile",sans-serif;font-weight:700;
   font-size:clamp(9px,.9vw,10px);letter-spacing:.3em;color:#ff3b3b;
+  white-space:nowrap;
 }
 .season-cell .sc-name{
   font-family:"Eurostile","Eurostile Wide",sans-serif;font-weight:700;
   font-size:clamp(10px,1.05vw,12px);letter-spacing:.08em;line-height:1.25;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap;
 }
 .season-cell .sc-date{
   font-size:clamp(8px,.85vw,10px);letter-spacing:.14em;
