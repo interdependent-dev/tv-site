@@ -138,7 +138,7 @@ html,body{
      viewport. 15-min slots → 60 columns per broadcast day; a
      one-slot show cell is one column, ASC spans two, the event
      block spans its whole window. */
-  --hour-w:132px;
+  --hour-w:172px;
   /* Fixed height for the MORNING/AFTERNOON/EVENING band — the time-
      header row sticks BELOW it (top:var(--section-h)), so both stay
      glued while the viewer scrolls the week. With auto heights the
@@ -831,17 +831,36 @@ body.no-fs .logo.show{pointer-events:none}
   -webkit-backdrop-filter:blur(40px) saturate(.5);
   display:none;
   flex-direction:column;
-  padding:clamp(16px,3.5vh,32px) clamp(16px,3vw,40px);
+  /* Zero top padding: the sticky masthead owns the top space (like
+     the phone guide) so scrolled listings never show in a gap above
+     it. */
+  padding:0 clamp(16px,3vw,40px) clamp(16px,3.5vh,32px);
   opacity:0;transform:translateY(8px);
   transition:opacity .35s ease, transform .35s ease;
-  overflow:hidden;
+  /* The whole guide scrolls as one page and the schedule grid renders
+     at full height (all seven days) instead of being trapped in a
+     starved inner scroll box that collapsed to 1–2 rows on short
+     windows. The phone guide already worked exactly this way. */
+  overflow-y:auto;overflow-x:hidden;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
   font-family:"Eurostile",sans-serif;
 }
 #guide.on{display:flex;opacity:1;transform:translateY(0)}
 
 .guide-mast{
   display:flex;align-items:center;justify-content:space-between;
-  padding-bottom:clamp(8px,1.4vh,14px);
+  /* Sticky header bar — stays pinned while the guide scrolls as a
+     page, so the way back to the channel (and the live clock) is
+     always reachable. The near-opaque bg + full-width divider (bled
+     past the panel's side padding) mask the listings sliding under
+     it. The mast carries the top padding the panel no longer has. */
+  position:sticky;top:0;z-index:30;
+  /* Near-solid so a bright listing (the red Submissions band) can't
+     ghost through as it scrolls under the pinned header. */
+  background:rgba(6,6,10,.985);
+  margin:0 calc(-1 * clamp(16px,3vw,40px));
+  padding:clamp(16px,3.5vh,32px) clamp(16px,3vw,40px) clamp(8px,1.4vh,14px);
   border-bottom:1px solid rgba(255,255,255,.5);
   gap:16px;flex-wrap:wrap;
 }
@@ -1032,15 +1051,20 @@ body.no-fs .logo.show{pointer-events:none}
    `-webkit-overflow-scrolling: touch` enables momentum scrolling
    on iOS. */
 .guide-grid-wrap{
-  /* Hug the schedule: never taller than the week itself (no void
-     below Tuesday on tall displays), shrink + scroll when the
-     viewport is short. min-height:0 lets a column-flex item shrink
-     below its content so overflow:auto can take over. */
-  flex:0 1 auto;
-  min-height:0;
+  /* Render the whole week at full height (all seven day-rows) and let
+     the PAGE scroll bring it into view — the guide no longer traps the
+     schedule in a short inner box. flex:0 0 auto stops it from
+     shrinking; the week is only ~7 rows tall, so it shows at a glance
+     once scrolled to. Still scrolls horizontally for the time axis. */
+  flex:0 0 auto;
   margin-top:clamp(10px,2vh,18px);
-  overflow:auto;
-  overscroll-behavior:contain;
+  /* Horizontal-only scroller: the time axis scrolls inside here, but a
+     vertical wheel/swipe passes straight through to the page so you're
+     never trapped mid-guide. overflow-y:hidden (not auto) is what lets
+     the vertical gesture chain to #guide; contain-x stops a sideways
+     swipe from triggering browser back-navigation. */
+  overflow-x:auto;overflow-y:hidden;
+  overscroll-behavior-x:contain;
   -webkit-overflow-scrolling:touch;
   border:1px solid rgba(255,255,255,.35);
   border-radius:2px;
@@ -1109,6 +1133,15 @@ body.no-fs .logo.show{pointer-events:none}
 .guide-section-morning  { flex:0 0 calc(24 * var(--hour-w)) }
 .guide-section-afternoon{ flex:0 0 calc(24 * var(--hour-w)) }
 .guide-section-evening  { flex:0 0 calc(12 * var(--hour-w)) }
+/* Each section's label sticks to the left of the scrollport (just past
+   the day-label column) so MORNING / AFTERNOON / EVENING stays visible
+   the whole time you scan across that block of the day, then hands off
+   to the next section as its columns scroll in. */
+.section-label{
+  position:sticky;
+  left:clamp(118px,13vw,168px);
+  white-space:nowrap;
+}
 /* The corner above the row-label column is sticky on both axes,
    like the regular .guide-corner — extra z-index keeps it above
    both sticky stacks. The trailing "off-air" placeholder matches
@@ -1116,7 +1149,7 @@ body.no-fs .logo.show{pointer-events:none}
    total width as the hours row + day rows. */
 .guide-section-corner{
   flex:0 0 clamp(118px,13vw,168px);
-  position:sticky;left:0;top:0;
+  position:sticky;left:0;top:0;z-index:5;  /* above the sticky section labels */
   background:rgba(8,8,12,.97);
   border-right:1px solid rgba(255,255,255,.25);
   border-bottom:1px solid rgba(255,255,255,.35);
@@ -1224,6 +1257,15 @@ body.no-fs .logo.show{pointer-events:none}
    FORCES its cell wider than --hour-w, sliding every later column off
    its time header. With it, the title's own ellipsis takes over. */
 .guide-cell{flex:0 0 var(--hour-w);min-width:0;background:rgba(0,0,0,.35);cursor:pointer}
+/* Today's row carries a soft red wash so the live day reads as one
+   band. Excludes the NOW cell (it keeps its own brighter overlay — "the
+   rest of the programming" gets this one), event cells (keep their art),
+   and the off-air end cell. */
+.guide-cell.today-cell:not(.now):not(.guide-cell-event):not(.guide-end-cell){
+  background:
+    linear-gradient(rgba(255,0,0,.12), rgba(255,0,0,.12)),
+    rgba(8,8,12,.94);
+}
 /* Hover preview — only on mouse devices (touch sticks :hover after
    a tap). Subtle background lightening + cursor:pointer so cells
    feel selectable. The JS paired with this updates the description
@@ -1246,8 +1288,13 @@ body.no-fs .logo.show{pointer-events:none}
 }
 .guide-cell .title{
   font-weight:700;font-size:clamp(11px,1.2vw,13px);
-  letter-spacing:.04em;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  letter-spacing:.04em;line-height:1.18;
+  /* Wrap instead of truncating — with the wider columns this keeps long
+     titles ("TEARS OF STEEL—Sci-fi Short", "SCREENPLAY SUBMISSIONS—Open
+     Call") fully readable. Capped at three lines so the longest can't
+     blow out a row, but nothing gets an ellipsis. */
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;
+  overflow:hidden;
 }
 .guide-cell .meta{
   font-size:clamp(9px,1vw,11px);
@@ -1751,6 +1798,35 @@ body.promo-on .logo.show{
   white-space:nowrap;
 }
 
+/* One cycling banner slot — both CTA bands overlaid in a single grid
+   cell, so the container is the height of ONE band (the second band's
+   vertical space goes back to the schedule). The active band fades in,
+   the other fades out; the cycle script flips .active every 5s,
+   starting on the live dated event. Lives above the Season strip. */
+.guide-promo-cycle{
+  position:relative;
+  display:grid;        /* both bands share one cell; sizes to the taller */
+  overflow:hidden;     /* clips the parked / exiting band out of view */
+  /* Don't let the page-scroll flex column squeeze this to nothing:
+     overflow:hidden zeroes a flex item's auto min-height, so without
+     this the band collapsed to 0 and clipped itself away. */
+  flex:0 0 auto;
+  margin-top:clamp(8px,1.6vh,14px);
+}
+.guide-promo-cycle > .guide-promo{
+  grid-area:1 / 1;     /* stack both bands in the same cell */
+  margin-top:0;        /* the container owns the spacing */
+  transform:translateY(100%);   /* parked just below, clipped away */
+  transition:transform .55s cubic-bezier(.2,.9,.25,1);
+  pointer-events:none;
+}
+.guide-promo-cycle > .guide-promo.active{
+  transform:translateY(0);      /* on stage */
+  z-index:2;
+  pointer-events:auto;
+  animation:pb-flicker .55s ease .12s 1;   /* the channel's broadcast-bug flicker */
+}
+
 /* ── Hint bar — guide-channel key legend. */
 .guide-hint{
   margin-top:clamp(6px,1.2vh,10px);
@@ -2023,7 +2099,7 @@ body.promo-on .logo.show{
   .guide-desc .desc-body{font-size:10px;line-height:1.35;-webkit-line-clamp:2}
   .guide-desc .desc-tag{font-size:8px;letter-spacing:.22em}
   .desc-state{font-size:8px;padding:3px 7px 2px 6px;letter-spacing:.22em}
-  .guide-promo{display:none}
+  .guide-promo,.guide-promo-cycle{display:none}
   .guide-hint{display:none}
   .guide-grid-wrap{margin-top:6px}
   .guide-cell,
@@ -3065,7 +3141,9 @@ customElements.whenDefined('mux-video').then(function(){
     ].forEach(function(spec){
       const sec = document.createElement('div');
       sec.className = 'guide-section ' + spec[1];
-      sec.textContent = spec[0];
+      // Label in a sticky-left span so it stays put while its block of
+      // the day scrolls past underneath it.
+      sec.innerHTML = '<span class="section-label">' + spec[0] + '</span>';
       sectionRow.appendChild(sec);
     });
     const sectionEnd = document.createElement('div');
@@ -3146,6 +3224,7 @@ customElements.whenDefined('mux-video').then(function(){
         const span = Math.min(prog.slots, SLOTS_PER_DAY - c);
         const cell = document.createElement('div');
         cell.className = 'guide-cell' +
+          (isToday ? ' today-cell' : '') +
           (SECTION_END_COLS.has(c + span - 1) ? ' section-end' : '');
         cell.style.flex = '0 0 calc(' + span + ' * var(--hour-w))';
         cell.dataset.row = String(r);
@@ -3707,14 +3786,14 @@ customElements.whenDefined('mux-video').then(function(){
     // than requestAnimationFrame because hidden tabs throttle rAF
     // to ~500ms intervals; the macrotask queue fires reliably.
     setTimeout(function(){
-      // Mobile lineup: open at the TOP — identity, featured card,
-      // and the CTA bands first, with NOW immediately below (spent
-      // listings collapse behind the "earlier today" toggle, so
-      // nothing dead sits between the masthead and the live row).
-      if (guideList && guideList.offsetParent !== null) {
-        guideEl.scrollTop = 0;
-        return;
-      }
+      // Always open at the top of the page scroll — identity, the
+      // season strip, and the featured card read first, never mid-
+      // scroll. (The guide is one page scroll now, on desktop too.)
+      guideEl.scrollTop = 0;
+      // Mobile lineup stops there: the live row sits just below the
+      // bands; spent listings collapse behind the "earlier today"
+      // toggle, so nothing dead sits between masthead and live row.
+      if (guideList && guideList.offsetParent !== null) return;
       const wrap = document.querySelector('.guide-grid-wrap');
       const nowCell = guideGrid.querySelector('.guide-cell.now');
       const labelCol = guideGrid.querySelector('.guide-row-label');
@@ -3996,9 +4075,30 @@ customElements.whenDefined('mux-video').then(function(){
   document.addEventListener('keydown', function(e){
     if (e.key === 'Escape') {
       // Details overlay closes first; a second ESC closes the guide.
-      const listing = document.getElementById('listing');
-      if (listing && !listing.hidden) { listing.hidden = true; return; }
+      if (listingEl && !listingEl.hidden) { listingEl.hidden = true; return; }
       closeGuide();
+      return;
+    }
+    // Arrow keys steer the open guide (the hint bar's ◀▶ / ▲▼). Ignore
+    // them when the guide is closed or a detail sheet is up.
+    if (!guideEl.classList.contains('on')) return;
+    if (listingEl && !listingEl.hidden) return;
+    const wrap = document.querySelector('.guide-grid-wrap');
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      // ◀ ▶ SCAN THE DAY — page the schedule sideways ~one hour. Only
+      // on the desktop grid; the phone list has no horizontal axis.
+      if (!wrap || wrap.offsetParent === null) return;
+      const hdr = wrap.querySelector('.guide-header');
+      const step = hdr ? hdr.offsetWidth * 4 : wrap.clientWidth * 0.5;
+      e.preventDefault();
+      wrap.scrollBy({ left: e.key === 'ArrowRight' ? step : -step, behavior: 'smooth' });
+    } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+      // ▲ ▼ BROWSE THE WEEK — page the whole guide vertically ~one row.
+      const row = guideGrid.querySelector(
+        '.guide-row:not(.guide-row-head):not(.guide-row-sections)');
+      const step = row ? row.offsetHeight : 120;
+      e.preventDefault();
+      guideEl.scrollBy({ top: e.key === 'ArrowDown' ? step : -step, behavior: 'smooth' });
     }
   });
 
@@ -4618,6 +4718,20 @@ customElements.whenDefined('mux-video').then(function(){
       <div class="time" id="guideTime">—:—</div>
     </div>
   </div>
+  <!-- ── SEASON strip ──────────────────────────────────────────────
+       The 12-event timeline as a swipeable rail — the whole studio
+       cycle in one band. Cells are built from season.js (the single
+       source for the band, the ticker banner, and /timeline); state
+       coloring: past dims, the next event glows red with a countdown,
+       Proposed dates render dashed. -->
+  <div id="seasonBand">
+    <div class="season-head">
+      <span class="season-title">Season 1 · Old Hollywood Reborn</span>
+      <a class="season-all" href="/timeline">Full timeline →</a>
+    </div>
+    <div class="season-rail" id="seasonRail" role="list"></div>
+  </div>
+
   <!-- ── Featured close-up (hero) ─────────────────────────────────
        The Pendry-guide split: program identity reads first as a
        "close-up box" (TV Guide magazine idiom) — state chip + big
@@ -4642,40 +4756,29 @@ customElements.whenDefined('mux-video').then(function(){
     </div>
   </div>
 
-  <!-- ── Promo band ───────────────────────────────────────────────
-       Pendry runs a full-width feature band through its grid (the
-       deep-red movie strip). Ours promotes the real open call —
-       the one listing on the channel a viewer can act on. -->
-  <!-- Submissions band leads; the Plots band's cooler palette sits
-       between it and the red-accented Season strip below, so three
-       stacked bands don't read as one red mass. -->
-  <a class="guide-promo" href="https://interdependent.studio/submissions"
-     target="_blank" rel="noopener">
-    <span class="promo-title">Screenplay Submissions</span>
-    <span class="promo-copy">Open call — scripts in by June 19</span>
-    <span class="promo-url">interdependent.studio/submissions</span>
-  </a>
-  <a class="guide-promo guide-promo-plots"
-     href="https://plots.events/event/interdependentwriterstownhall"
-     target="_blank" rel="noopener">
-    <img class="promo-badge" src="plots-logo.png" alt="" draggable="false">
-    <span class="promo-title">Writers Town Hall</span>
-    <span class="promo-copy" id="plotsBandWhen">Live event</span>
-    <span class="promo-url">request to attend on plots</span>
-  </a>
-
-  <!-- ── SEASON strip ──────────────────────────────────────────────
-       The 12-event timeline as a swipeable rail — the whole studio
-       cycle in one band. Cells are built from season.js (the single
-       source for the band, the ticker banner, and /timeline); state
-       coloring: past dims, the next event glows red with a countdown,
-       Proposed dates render dashed. -->
-  <div id="seasonBand">
-    <div class="season-head">
-      <span class="season-title">Season 1 · Old Hollywood Reborn</span>
-      <a class="season-all" href="/timeline">Full timeline →</a>
-    </div>
-    <div class="season-rail" id="seasonRail" role="list"></div>
+  <!-- ── Promo banner — one cycling band ───────────────────────────
+       Sits right above the schedule. A single full-width band that
+       slides — the channel's lower-third motion: the current CTA rides
+       up and off while the next rises in from below — between Writers
+       Town Hall and Screenplay Submissions every 10s, starting on the
+       live dated event. One slot (not two stacked) keeps the schedule's
+       vertical room. Both anchors stay in the DOM so the date-fill
+       (#plotsBandWhen) still lands. The cycle script drives the slide. -->
+  <div class="guide-promo-cycle" id="guidePromoCycle">
+    <a class="guide-promo guide-promo-plots active"
+       href="https://plots.events/event/interdependentwriterstownhall"
+       target="_blank" rel="noopener">
+      <img class="promo-badge" src="plots-logo.png" alt="" draggable="false">
+      <span class="promo-title">Writers Town Hall</span>
+      <span class="promo-copy" id="plotsBandWhen">Live event</span>
+      <span class="promo-url">request to attend on plots</span>
+    </a>
+    <a class="guide-promo" href="https://interdependent.studio/submissions"
+       target="_blank" rel="noopener">
+      <span class="promo-title">Screenplay Submissions</span>
+      <span class="promo-copy">Open call — scripts in by June 19</span>
+      <span class="promo-url">interdependent.studio/submissions</span>
+    </a>
   </div>
 
   <div class="guide-grid-wrap">
@@ -4739,7 +4842,7 @@ customElements.whenDefined('mux-video').then(function(){
      season in the ticker). Kill switch: SEASON_ENABLED in season.js.
      Removing this block + the two stubs restores the page exactly. -->
 <style id="seasonCss">
-#seasonBand{margin-top:clamp(6px,1vh,9px)}
+#seasonBand{margin-top:clamp(10px,1.8vh,16px)}
 .season-head{
   display:flex;align-items:baseline;justify-content:space-between;
   gap:12px;margin-bottom:clamp(5px,.8vh,8px);
@@ -4833,12 +4936,16 @@ customElements.whenDefined('mux-video').then(function(){
     rail.innerHTML = window.SEASON.events.map(function(ev, i){
       var st = states[i];
       var nn = (ev.n < 10 ? '0' : '') + ev.n;
+      // Episode-style label — S{studio/season}.E{event}, both zero-padded
+      // to two digits (S01.E01 … S01.E12), a twist on the S01E01 idiom.
+      var sn = (window.SEASON.number < 10 ? '0' : '') + window.SEASON.number;
+      var ep = 'S' + sn + '.E' + nn;
       var date = st === 'now'  ? 'NOW' :
                  st === 'next' ? window.seasonCountdown(ev.start, Date.now()) :
                  ev.date.toUpperCase();
       var cls = 'season-cell ' + st + (ev.status === 'proposed' ? ' proposed' : '');
       return '<a class="' + cls + '" role="listitem" href="/timeline#e' + nn + '">' +
-        '<span class="sc-num">' + nn + (st === 'now' ? ' · ON NOW' : st === 'next' ? ' · NEXT' : '') + '</span>' +
+        '<span class="sc-num">' + ep + (st === 'now' ? ' · ON NOW' : st === 'next' ? ' · NEXT' : '') + '</span>' +
         '<span class="sc-name">' + ev.short + '</span>' +
         '<span class="sc-date">' + date + '</span></a>';
     }).join('');
@@ -4873,6 +4980,57 @@ customElements.whenDefined('mux-video').then(function(){
   buildRail();
   refreshBanner();
   setInterval(function(){ buildRail(); refreshBanner(); }, 60000);
+})();
+</script>
+<script>
+/* Cycling guide banner — cross-fade the single promo slot between its
+   two CTA bands every 5s, ALWAYS starting on the live dated event
+   (Writers Town Hall) each time the guide opens. One slot is more
+   eye-catching and frees the vertical space two stacked bands used to
+   take from the schedule. Independent of the lower-third video ticker
+   (which alternates every 3 min). The interval only runs while the
+   guide is open. */
+(function(){
+  var guide = document.getElementById('guide');
+  var cycle = document.getElementById('guidePromoCycle');
+  if (!guide || !cycle) return;
+  var bands = Array.prototype.slice.call(cycle.querySelectorAll('.guide-promo'));
+  if (bands.length < 2) return;
+  var i = 0, timer = null;
+  // Snap a band to a position with no animation (resets the off-stage
+  // band before it slides in, so it always enters from below).
+  function place(b, y){
+    b.style.transition = 'none';
+    b.style.transform = 'translateY(' + y + ')';
+    void b.offsetWidth;             // flush so the next change animates
+    b.style.transition = '';
+  }
+  function init(){
+    bands.forEach(function(b, k){
+      place(b, k === 0 ? '0' : '100%');
+      b.classList.toggle('active', k === 0);   // start on Writers Town Hall
+    });
+    i = 0;
+  }
+  // Conveyor: the current band rides up and off the top while the next
+  // rises into view from below — the channel lower-third's motion.
+  function tick(){
+    var cur = bands[i];
+    var nxt = bands[(i + 1) % bands.length];
+    place(nxt, '100%');             // ensure it enters from below
+    cur.classList.remove('active');
+    nxt.classList.add('active');    // on top + re-fires the flicker
+    cur.style.transform = 'translateY(-100%)';   // exit up
+    nxt.style.transform = 'translateY(0)';       // rise into view
+    i = (i + 1) % bands.length;
+  }
+  function start(){ stop(); init(); timer = setInterval(tick, 10000); }
+  function stop(){ if (timer) { clearInterval(timer); timer = null; } }
+  // Restart the cycle (from WTH) whenever the guide opens; idle when closed.
+  new MutationObserver(function(){
+    guide.classList.contains('on') ? start() : stop();
+  }).observe(guide, { attributes:true, attributeFilter:['class'] });
+  if (guide.classList.contains('on')) start();
 })();
 </script>
 
