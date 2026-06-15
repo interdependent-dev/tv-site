@@ -1266,6 +1266,24 @@ body.no-fs .logo.show{pointer-events:none}
     linear-gradient(rgba(255,0,0,.12), rgba(255,0,0,.12)),
     rgba(8,8,12,.94);
 }
+/* ── Hover feedback — the whole cell reacts, not just the role badge:
+   the show name flips gray→white and the background lifts. The today-
+   row wash is highly specific, so its hover override has to out-specify
+   it (the :not()-chain + :hover) or the highlight stays suppressed. */
+@media (hover:hover){
+  /* The show name flips from its resting gray to bright white on the
+     slot you're pointing at — the clear, legible change you wanted. */
+  .guide-cell:not(.guide-end-cell):hover .title{ color:#fff; }
+  .guide-cell:not(.guide-end-cell):hover .meta{ opacity:.9; }
+  /* A whisper of background lift marks the hovered slot — kept subtle,
+     and out-specified so it reads over the today-row red wash too. */
+  .guide-cell.today-cell:not(.now):not(.guide-cell-event):not(.guide-end-cell):hover{
+    background:
+      linear-gradient(rgba(255,255,255,.06), rgba(255,255,255,.06)),
+      linear-gradient(rgba(255,0,0,.12), rgba(255,0,0,.12)),
+      rgba(8,8,12,.94);
+  }
+}
 /* Hover preview — only on mouse devices (touch sticks :hover after
    a tap). Subtle background lightening + cursor:pointer so cells
    feel selectable. The JS paired with this updates the description
@@ -1289,6 +1307,9 @@ body.no-fs .logo.show{pointer-events:none}
 .guide-cell .title{
   font-weight:700;font-size:clamp(11px,1.2vw,13px);
   letter-spacing:.04em;line-height:1.18;
+  /* Resting state is a calm gray (so today's red row doesn't shout
+     white); hover flips it to #fff and the live cell stays white. */
+  color:rgba(255,255,255,.62);
   /* Wrap instead of truncating — with the wider columns this keeps long
      titles ("TEARS OF STEEL—Sci-fi Short", "SCREENPLAY SUBMISSIONS—Open
      Call") fully readable. Capped at three lines so the longest can't
@@ -3829,6 +3850,24 @@ customElements.whenDefined('mux-video').then(function(){
     hoveredSlot = null;
     renderGuideDesc();
   });
+  // ── Axis-lock the day-scan ───────────────────────────────────────
+  // The grid only scrolls sideways (overflow-y:hidden) so a vertical
+  // gesture falls through to the page (no scroll-trap). Downside: a
+  // trackpad swipe is never perfectly horizontal, so scanning left/
+  // right used to bleed its small vertical component into the page and
+  // bob the whole guide. When a gesture is mostly horizontal we now
+  // keep it IN the grid and stop it reaching the page; mostly-vertical
+  // gestures still fall through, so you're never trapped.
+  (function(){
+    const gw = document.querySelector('.guide-grid-wrap');
+    if (!gw) return;
+    gw.addEventListener('wheel', function(e){
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+        e.preventDefault();
+        gw.scrollLeft += e.deltaX;
+      }
+    }, { passive: false });
+  })();
   // ── Listing details overlay ─────────────────────────────────────
   // Every cell is actionable: click/tap opens the details card with
   // the airing's own key art, full description, and the window in
@@ -4936,16 +4975,12 @@ customElements.whenDefined('mux-video').then(function(){
     rail.innerHTML = window.SEASON.events.map(function(ev, i){
       var st = states[i];
       var nn = (ev.n < 10 ? '0' : '') + ev.n;
-      // Episode-style label — S{studio/season}.E{event}, both zero-padded
-      // to two digits (S01.E01 … S01.E12), a twist on the S01E01 idiom.
-      var sn = (window.SEASON.number < 10 ? '0' : '') + window.SEASON.number;
-      var ep = 'S' + sn + '.E' + nn;
       var date = st === 'now'  ? 'NOW' :
                  st === 'next' ? window.seasonCountdown(ev.start, Date.now()) :
                  ev.date.toUpperCase();
       var cls = 'season-cell ' + st + (ev.status === 'proposed' ? ' proposed' : '');
       return '<a class="' + cls + '" role="listitem" href="/timeline#e' + nn + '">' +
-        '<span class="sc-num">' + ep + (st === 'now' ? ' · ON NOW' : st === 'next' ? ' · NEXT' : '') + '</span>' +
+        '<span class="sc-num">' + nn + (st === 'now' ? ' · ON NOW' : st === 'next' ? ' · NEXT' : '') + '</span>' +
         '<span class="sc-name">' + ev.short + '</span>' +
         '<span class="sc-date">' + date + '</span></a>';
     }).join('');
