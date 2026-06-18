@@ -2524,19 +2524,20 @@ const PATTERN = (function(){
 // branded block across the window (the Pendry feature-cell idiom).
 const EVENTS = [
   {
-    id:        'writers-town-hall',
-    ptDate:    '2026-06-15',
-    startHour: 14,                    // 2 PM PT
-    endHour:   17,                    // 5 PM PT
-    title:     'WRITERS TOWN HALL',
-    titleLine: 'INTERDEPENDENT WRITERS TOWN HALL—Live Event',
+    id:        'town-hall',
+    ptDate:    '2026-06-19',
+    startHour: 11,                    // 11 AM PT = 2 PM EDT (event is in PA)
+    endHour:   14,                    // 2 PM PT  = 5 PM EDT
+    title:     'TOWN HALL',
+    titleLine: 'INTERDEPENDENT TOWN HALL—Live Event',
     badge:     'plots-logo.png',
     roles:     ['scriptographer'],
-    url:       'https://plots.events/event/interdependentwriterstownhall',
+    url:       'https://www.plots.events/interdependent',
     description:
-      'Live from Interdependent Studios — writers present their work ' +
-      'and talk process, selection, and the open call. Streams right ' +
-      'here; request to attend in person on Plots.',
+      'INTERDEPENDENT\'s town hall — bringing independent filmmaking to ' +
+      'the PA Wilds. Filmmakers, industry pros, and the community on ' +
+      'what\'s being built and how to take part. Streams right here; ' +
+      'request to attend in person on Plots.',
   },
 ];
 function eventForSlot(ptDate, slotIdx){
@@ -4691,10 +4692,10 @@ customElements.whenDefined('mux-video').then(function(){
      promo retires itself the moment its event has passed. -->
 <div id="promoTicker" aria-hidden="false">
   <a class="promo-banner promo-banner-plots"
-     href="https://plots.events/event/interdependentwriterstownhall"
+     href="https://www.plots.events/interdependent"
      target="_blank" rel="noopener" tabindex="-1">
     <img class="pb-badge" src="plots-logo.png" alt="" draggable="false">
-    <span class="pb-title">Writers Town Hall</span>
+    <span class="pb-title">Town Hall</span>
     <span class="pb-copy" id="promoPlotsWhen">Live in person + on this channel</span>
     <span class="pb-url">request to attend on plots</span>
   </a>
@@ -4798,17 +4799,17 @@ customElements.whenDefined('mux-video').then(function(){
   <!-- ── Promo banner — one cycling band ───────────────────────────
        Sits right above the schedule. A single full-width band that
        slides — the channel's lower-third motion: the current CTA rides
-       up and off while the next rises in from below — between Writers
-       Town Hall and Screenplay Submissions every 10s, starting on the
+       up and off while the next rises in from below — between Town
+       Hall and Screenplay Submissions every 10s, starting on the
        live dated event. One slot (not two stacked) keeps the schedule's
        vertical room. Both anchors stay in the DOM so the date-fill
        (#plotsBandWhen) still lands. The cycle script drives the slide. -->
   <div class="guide-promo-cycle" id="guidePromoCycle">
     <a class="guide-promo guide-promo-plots active"
-       href="https://plots.events/event/interdependentwriterstownhall"
+       href="https://www.plots.events/interdependent"
        target="_blank" rel="noopener">
       <img class="promo-badge" src="plots-logo.png" alt="" draggable="false">
-      <span class="promo-title">Writers Town Hall</span>
+      <span class="promo-title">Town Hall</span>
       <span class="promo-copy" id="plotsBandWhen">Live event</span>
       <span class="promo-url">request to attend on plots</span>
     </a>
@@ -5020,7 +5021,7 @@ customElements.whenDefined('mux-video').then(function(){
 <script>
 /* Cycling guide banner — cross-fade the single promo slot between its
    two CTA bands every 5s, ALWAYS starting on the live dated event
-   (Writers Town Hall) each time the guide opens. One slot is more
+   (Town Hall) each time the guide opens. One slot is more
    eye-catching and frees the vertical space two stacked bands used to
    take from the schedule. Independent of the lower-third video ticker
    (which alternates every 3 min). The interval only runs while the
@@ -5043,7 +5044,7 @@ customElements.whenDefined('mux-video').then(function(){
   function init(){
     bands.forEach(function(b, k){
       place(b, k === 0 ? '0' : '100%');
-      b.classList.toggle('active', k === 0);   // start on Writers Town Hall
+      b.classList.toggle('active', k === 0);   // start on Town Hall
     });
     i = 0;
   }
