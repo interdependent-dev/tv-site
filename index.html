@@ -2139,7 +2139,206 @@ body.promo-on .logo.show{
   .guide-row-label{font-size:10px;letter-spacing:.14em}
   .guide-row-label .label-dow{font-size:10px}
   .guide-row-label .label-date{font-size:8px;margin-top:1px}
+  .channel-label .label-callsign{font-size:14px}
+  .channel-label .label-name{font-size:10px}
+  .channel-label .label-tag{font-size:8px}
 }
+
+/* ══ Two-channel guide additions ═══════════════════════════════════
+   The guide is a two-CHANNEL EPG: one ROW per channel (S1 STUDIO,
+   TC THE CARRIER) with a channel-identity column on the left, each
+   channel's programming across the shared time axis. */
+
+/* Header-corner label above the channel column. */
+.guide-corner .corner-label{
+  font-size:clamp(8px,.9vw,10px);letter-spacing:.24em;
+  font-weight:700;text-transform:uppercase;color:rgba(255,255,255,.5);
+}
+/* Channel-identity cell — reuses the sticky .guide-row-label base;
+   stacks callsign · name · tagline instead of DOW · date. */
+.guide-row-label.channel-label{justify-content:center;gap:2px}
+.channel-label .label-callsign{
+  font-family:"Eurostile Wide","Eurostile",sans-serif;
+  font-weight:700;font-size:clamp(13px,1.5vw,17px);
+  letter-spacing:.14em;line-height:1;
+}
+.channel-label .label-name{
+  font-size:clamp(10px,1.1vw,12px);font-weight:700;
+  letter-spacing:.12em;margin-top:3px;
+}
+.channel-label .label-tag{
+  font-size:clamp(8px,.9vw,10px);font-weight:400;letter-spacing:.05em;
+  opacity:.6;margin-top:3px;text-transform:none;line-height:1.25;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  overflow:hidden;
+}
+.guide-row-label.channel-label.today .label-tag{opacity:.8}
+
+/* TC · THE CARRIER — one wide promo cell across the time axis. Deep-
+   red brand plate; "premiering soon" launch card (or "now showing"
+   once the Carrier loop's playback id is set). */
+.guide-cell-carrier{
+  cursor:pointer;align-items:flex-start;justify-content:center;
+  background:
+    radial-gradient(120% 180% at 0% 50%, rgba(255,0,0,.20), transparent 60%),
+    linear-gradient(90deg, rgba(94,0,0,.55), rgba(20,6,8,.85) 65%);
+  box-shadow:inset 0 0 0 1px rgba(255,90,90,.35);
+  transition:filter .18s ease;
+}
+.guide-cell-carrier:hover{filter:brightness(1.22)}
+/* The promo copy sticks just past the channel-label column so it stays
+   in view no matter where the day's time-axis is scrolled (the guide
+   opens scrolled to "now"). Same idiom as the MORNING/AFTERNOON
+   section labels. */
+.carrier-inner{
+  position:sticky;
+  left:calc(clamp(118px,13vw,168px) + 4px);
+  max-width:min(560px,72vw);
+}
+.carrier-tag{
+  display:inline-block;font-size:clamp(8px,.95vw,10px);font-weight:700;
+  letter-spacing:.3em;text-transform:uppercase;color:#ff8a8a;margin-bottom:6px;
+}
+.carrier-tag.on{color:#fff;background:#f00;padding:3px 8px 2px}
+.carrier-title{
+  font-family:"Eurostile Wide","Eurostile",sans-serif;
+  font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  font-size:clamp(15px,1.9vw,22px);line-height:1;
+}
+.carrier-copy{
+  font-size:clamp(10px,1.1vw,12px);opacity:.82;line-height:1.4;
+  margin-top:6px;max-width:56ch;
+}
+.carrier-cta{
+  font-size:clamp(9px,1vw,11px);font-weight:700;letter-spacing:.16em;
+  text-transform:uppercase;color:#ff5a5a;margin-top:8px;
+}
+.guide-cell-carrier:hover .carrier-cta{color:#fff}
+
+/* Carrier / orientation brand plate — used in the hero art panel and
+   listing card art where there's no Mux still (no asset yet). */
+.guide-hero-art.carrier-art,
+.listing-art.carrier-art{
+  background:
+    radial-gradient(130% 150% at 12% 108%, rgba(255,0,0,.42), transparent 58%),
+    radial-gradient(120% 130% at 88% -12%, rgba(120,0,0,.5), transparent 60%),
+    #120608;
+}
+
+/* ── START HERE orientation tile ──────────────────────────────────*/
+.guide-starthere{
+  appearance:none;cursor:pointer;text-align:left;width:100%;
+  display:flex;align-items:center;gap:clamp(12px,2vw,20px);
+  margin-top:clamp(10px,1.8vh,16px);
+  padding:clamp(12px,1.8vh,18px) clamp(14px,2vw,22px);
+  background:
+    radial-gradient(120% 200% at 0% 50%, rgba(255,0,0,.16), transparent 55%),
+    rgba(10,10,14,.85);
+  border:1px solid rgba(255,255,255,.5);
+  color:#fff;font-family:"Eurostile",sans-serif;
+  transition:border-color .18s ease, filter .18s ease;
+}
+.guide-starthere .sh-play{
+  flex:0 0 auto;
+  width:clamp(40px,4.2vw,54px);height:clamp(40px,4.2vw,54px);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  border:2px solid #ff0000;color:#ff3b3b;
+  transition:background .18s ease, color .18s ease;
+}
+.guide-starthere .sh-play svg{width:42%;height:42%;display:block;margin-left:2px}
+.guide-starthere .sh-text{min-width:0}
+.guide-starthere .sh-kicker{
+  display:block;
+  font-family:"Eurostile Wide","Eurostile",sans-serif;
+  font-weight:700;font-size:clamp(9px,1vw,11px);
+  letter-spacing:.3em;text-transform:uppercase;color:#ff3b3b;
+}
+.guide-starthere .sh-title{
+  display:block;margin-top:3px;
+  font-family:"Eurostile Wide","Eurostile",sans-serif;
+  font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+  font-size:clamp(15px,2vw,22px);line-height:1.05;
+}
+.guide-starthere .sh-sub{
+  display:block;margin-top:4px;
+  font-size:clamp(10px,1.1vw,12px);letter-spacing:.08em;opacity:.72;
+}
+/* Ready ⇒ the film is loaded; the tile invites the click. */
+.guide-starthere.ready:hover{border-color:#ff0000;filter:brightness(1.06)}
+.guide-starthere.ready:hover .sh-play{background:#ff0000;color:#fff}
+/* Coming-soon ⇒ dim, non-interactive, honest (no fake footage). */
+.guide-starthere.coming-soon{cursor:default;border-color:rgba(255,255,255,.28)}
+.guide-starthere.coming-soon .sh-play{border-color:rgba(255,255,255,.4);color:rgba(255,255,255,.5)}
+.guide-starthere.coming-soon .sh-kicker{color:rgba(255,255,255,.5)}
+.guide-starthere.coming-soon .sh-sub{opacity:.55}
+
+/* ── Mobile list — channel section headers + Carrier card ─────────*/
+.list-channel{
+  display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;
+  padding:20px 2px 6px;border-bottom:2px solid rgba(255,255,255,.5);margin-top:6px;
+}
+.list-channel:first-child{margin-top:0}
+.list-channel .lc-callsign{
+  font-family:"Eurostile Wide","Eurostile",sans-serif;
+  font-weight:700;font-size:15px;letter-spacing:.14em;color:#ff3b3b;
+}
+.list-channel .lc-name{
+  font-weight:700;font-size:13px;letter-spacing:.16em;text-transform:uppercase;
+}
+.list-channel .lc-tag{
+  flex-basis:100%;font-size:10px;letter-spacing:.05em;opacity:.6;margin-top:2px;
+}
+.list-row-carrier{
+  cursor:pointer;flex-direction:column;align-items:flex-start;
+  background:
+    radial-gradient(80% 180% at 6% 120%, rgba(255,0,0,.24), transparent 55%),
+    rgba(18,6,8,.9);
+  box-shadow:inset 0 0 0 1px rgba(255,90,90,.32);
+  padding:14px 12px;margin:8px 0;border-bottom:none;
+}
+.list-row-carrier .lr-main{width:100%}
+.list-row-carrier .lr-title{
+  font-family:"Eurostile Wide","Eurostile",sans-serif;letter-spacing:.08em;font-size:15px;
+}
+.lr-carrier-tag{
+  font-size:9px;font-weight:700;letter-spacing:.28em;text-transform:uppercase;
+  color:#ff8a8a;margin-bottom:5px;
+}
+.lr-carrier-tag.on{color:#fff;background:#f00;display:inline-block;padding:2px 7px 1px}
+.lr-carrier-copy{font-size:11px;opacity:.8;line-height:1.4;margin-top:5px;white-space:normal}
+.lr-carrier-cta{
+  font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+  color:#ff5a5a;margin-top:8px;
+}
+
+/* ── Video modal — START HERE / Carrier play surface ──────────────*/
+.video-modal-backdrop{
+  position:fixed;inset:0;z-index:50;height:100vh;height:100dvh;
+  background:rgba(0,0,0,.92);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  display:flex;align-items:center;justify-content:center;
+  padding:clamp(14px,4vw,48px);
+}
+.video-modal-backdrop[hidden]{display:none}
+.video-modal-card{position:relative;width:min(1100px,100%);display:flex;flex-direction:column;gap:10px}
+.video-modal-close{
+  position:absolute;top:0;right:0;z-index:2;appearance:none;cursor:pointer;
+  width:40px;height:40px;border-radius:50%;
+  border:1px solid rgba(255,255,255,.55);background:rgba(0,0,0,.6);
+  color:#fff;font-size:20px;line-height:1;
+}
+.video-modal-close:hover{background:#c00000;border-color:#ff5a5a}
+.video-modal-title{
+  font-family:"Eurostile Wide","Eurostile",sans-serif;font-weight:700;
+  letter-spacing:.1em;text-transform:uppercase;font-size:clamp(13px,1.6vw,18px);
+  padding-right:52px;
+}
+.video-modal-stage{
+  width:100%;aspect-ratio:16/9;background:#000;
+  border:1px solid rgba(255,255,255,.35);overflow:hidden;
+}
+.video-modal-stage mux-video,
+.video-modal-stage video{width:100%;height:100%;display:block;object-fit:contain;background:#000}
 </style>
 </head>
 <body>
@@ -2304,6 +2503,20 @@ body.promo-on .logo.show{
 </div>
 
 <script>
+// ═════════════════════════════════════════════════════════════════════
+// CONTENT CONTRACT — the two Mux playback IDs Chris still owes.
+//
+// Drop in Mux playback IDs when ready (both optional; empty = graceful
+// fallback — the UI degrades to a "coming soon" / "premiering soon"
+// state and NEVER fakes it with unrelated footage). Setting either one
+// is the ONLY change needed to light up its feature.
+//
+// These two constants + the CHANNELS array below are the whole content
+// contract — the shape that ports verbatim to the React (tv) monorepo.
+// ═════════════════════════════════════════════════════════════════════
+const ORIENTATION_PB = '';  // intro/orientation "what is INTERDEPENDENT" video → powers the START HERE tile
+const CARRIER_PB     = '';  // The Carrier channel video → replaces the "premiering soon" promo
+
 // ─────────────────────────────────────────────────────────────────────
 // INTERDEPENDENT TV — linear channel runtime
 // ─────────────────────────────────────────────────────────────────────
@@ -2498,6 +2711,52 @@ const SHOWS = [
 // non-slot-specific values (e.g., the description-strip fallback before
 // a slot is computed), point at the first show.
 const SHOW = SHOWS[0];
+
+// ── Channels ────────────────────────────────────────────────────────
+// The portable channel model. The GUIDE renders one row per channel;
+// the live full-bleed player is always the STUDIO channel (its `shows`
+// rotation drives the existing deterministic scheduler, untouched).
+//
+//   `id`       — stable key
+//   `callSign` — the TV dial mark worn in the guide's channel column
+//   `name`     — display name
+//   `tagline`  — one-line channel descriptor
+//   `kind`     — 'live' (runs the scheduler) | 'promo' (a launch card)
+//   `shows`    — (live channels) the rotation the scheduler walks
+//   `playbackId` — (promo channels) Mux id; empty ⇒ show the promo,
+//                  set ⇒ the channel plays/loops that asset instead
+//
+// This array is the content contract that ports to the React monorepo:
+// add a channel here and the guide grows a row; no engine changes.
+const CHANNELS = [
+  {
+    id:       'studio',
+    callSign: 'S1',
+    name:     'Studio',
+    tagline:  'The live channel — standing lineup, on air daily',
+    kind:     'live',
+    shows:    SHOWS,          // the existing rotation; scheduler owns it
+  },
+  {
+    id:         'carrier',
+    callSign:   'TC',
+    name:       'The Carrier',
+    tagline:    'Premiering soon — in open submission now',
+    kind:       'promo',
+    playbackId: CARRIER_PB,   // set ⇒ plays this loop; empty ⇒ promo below
+    promoTitle: 'THE CARRIER',
+    promoTag:   'PREMIERING SOON',
+    logline:    'An unproduced screenplay in open submission — the first ' +
+                'feature the studio is racing to make.',
+    note:       'The Carrier × Plots — this season’s featured script.',
+    ctaLabel:   'Read the screenplay',
+    ctaUrl:     'https://interdependent.studio/submissions',
+    roles:      ['scriptographer'],
+  },
+];
+// Direct handles the guide builders reach for by role.
+const CH_STUDIO  = CHANNELS.find(function(c){ return c.id === 'studio';  });
+const CH_CARRIER = CHANNELS.find(function(c){ return c.id === 'carrier'; });
 
 // ── 15-minute slot pattern ──────────────────────────────────────────
 // Slot spans are FROZEN here from the hardcoded durations. The
@@ -3129,11 +3388,6 @@ customElements.whenDefined('mux-video').then(function(){
   //  mobile + landscape media queries override. Keeps the schedule
   //  layout declaratively responsive instead of computed in JS.)
 
-  // One printed week of schedule — the TV Guide booklet rhythm.
-  // Today is row 0 (highlighted), then six future days. The lineup
-  // repeats daily, so a 30-day scroll was 29 copies of the same
-  // page; a week says "this is the standing schedule" honestly.
-  const ROW_COUNT = 7;
 
   // Time-of-day sections grouping the 15-hour broadcast day.
   // With 15-min columns: MORNING covers cols 0..23 (6:00–11:45 A),
@@ -3143,9 +3397,6 @@ customElements.whenDefined('mux-video').then(function(){
   const SECTION_END_COLS = new Set([23, 47]);
 
   function buildGuideGrid(){
-    const now = new Date();
-    const nowCol = nowSlotCol(now);
-
     guideGrid.innerHTML = '';
 
     // ── Section row (sticky-top, z:4) ──────────────────────────────
@@ -3181,6 +3432,7 @@ customElements.whenDefined('mux-video').then(function(){
     headRow.className = 'guide-row guide-row-head';
     const corner = document.createElement('div');
     corner.className = 'guide-corner';
+    corner.innerHTML = '<span class="corner-label">CHANNEL</span>';
     headRow.appendChild(corner);
     const ptToday = ptParts(Date.now());
     for (let c = 0; c < SLOTS_PER_DAY; c++) {
@@ -3211,114 +3463,144 @@ customElements.whenDefined('mux-video').then(function(){
     headRow.appendChild(endHeader);
     guideGrid.appendChild(headRow);
 
-    // ── Day rows ──────────────────────────────────────────────────
-    // Each row: sticky-left day label + 48 program cells. Today is
-    // row 0. Every row shows DAY + DATE so a viewer scrolling 30 days
-    // always knows the calendar date — not just the abbreviation.
-    for (let r = 0; r < ROW_COUNT; r++) {
-      const rowDate = new Date(now);
-      rowDate.setDate(now.getDate() + r);
-      const isToday = r === 0;
+    // ── Channel rows ──────────────────────────────────────────────
+    // The guide reads as a two-channel EPG for TODAY: one ROW per
+    // CHANNEL down the left (S1 · STUDIO, TC · THE CARRIER), each
+    // channel's programming across the shared time axis. The Studio
+    // row is the standing deterministic lineup (engine unchanged);
+    // the Carrier row is the launch promo (or its Mux loop once
+    // CARRIER_PB is set).
+    const rowPt = ptDatePlus(0);            // today, PT
 
-      const row = document.createElement('div');
-      row.className = 'guide-row';
+    // ---- S1 · STUDIO — the live rotation (today) ------------------
+    // Cells keep data-row="0" + data-col/data-span so every existing
+    // behavior — the now-cell highlight, live progress strip, NOW
+    // line, hover-to-preview, click-to-open-listing — works unchanged.
+    const studioRow = document.createElement('div');
+    studioRow.className = 'guide-row';
+    studioRow.appendChild(channelLabelCell(CH_STUDIO, true));
 
-      const label = document.createElement('div');
-      label.className = 'guide-row-label' + (isToday ? ' today' : '');
-      const dowRow = document.createElement('div');
-      dowRow.className = 'label-dow';
-      dowRow.textContent = DAYS_LONG[rowDate.getDay()];
-      const dateRow = document.createElement('div');
-      dateRow.className = 'label-date';
-      dateRow.textContent = MONTHS[rowDate.getMonth()] + ' ' + rowDate.getDate();
-      label.appendChild(dowRow);
-      label.appendChild(dateRow);
-      row.appendChild(label);
-
-      // Walk the row in PROGRAMS, not slots — each cell spans its
-      // program's quarter-hours (TOS 1 · SUBMISSIONS 1 · ASC 2),
-      // and a date-anchored event takes one wide branded cell
-      // across its whole window (the Pendry feature-cell idiom).
-      const rowPt = ptDatePlus(r);
-      let c = 0;
-      while (c < SLOTS_PER_DAY) {
-        const prog = programForSlotIndex(c, rowPt);
-        const span = Math.min(prog.slots, SLOTS_PER_DAY - c);
-        const cell = document.createElement('div');
-        cell.className = 'guide-cell' +
-          (isToday ? ' today-cell' : '') +
-          (SECTION_END_COLS.has(c + span - 1) ? ' section-end' : '');
-        cell.style.flex = '0 0 calc(' + span + ' * var(--hour-w))';
-        cell.dataset.row = String(r);
-        cell.dataset.col = String(c);
-        cell.dataset.span = String(span);
-        if (!isToday) cell.style.opacity = '.65';
-        if (prog.kind === 'event') {
-          cell.className += ' guide-cell-event';
-          cell.dataset.event = prog.event.id;
-          cell.innerHTML =
-            '<img class="event-badge" src="' + prog.event.badge +
-              '" alt="" draggable="false">' +
-            '<div class="event-text">' +
-              '<div class="title">' + prog.event.title + '</div>' +
-              '<div class="meta">LIVE · IN PERSON + ON AIR · ' +
-                'REQUEST TO ATTEND ON PLOTS</div>' +
-            '</div>';
-        } else {
-          cell.innerHTML =
-            '<div class="title">' + prog.show.titleLine + '</div>' +
-            '<div class="meta">'  + prog.show.metaLine  + '</div>' +
-            roleBadgeHtml(prog.show.roles, true);
-          // Static tail — the honest gap between where the show
-          // actually ends inside its program and the next boundary.
-          // Hatched, dashed-off, labeled when there's room (ASC's
-          // 12½-minute tail), so "ON AIR" never overstates itself.
-          // Cell content (title/meta/badge) is padded clear of the
-          // tail so nothing ever sits on the OFF AIR hatch.
-          const progSec = span * CHANNEL.slotSec;
-          const gapSec  = progSec - prog.show.durationSec;
-          if (gapSec > 30) {
-            const gapFrac = gapSec / progSec;
-            const tail = document.createElement('div');
-            tail.className = 'cell-tail';
-            tail.style.width = (gapFrac * 100) + '%';
-            if (gapSec >= 300) tail.innerHTML = '<span>off air</span>';
-            cell.appendChild(tail);
-            // Pad in slot-width units, NOT percent — percentage
-            // padding resolves against the PARENT row's width
-            // (thousands of px), which exploded the cells.
-            cell.style.paddingRight =
-              'calc(' + (gapFrac * span) + ' * var(--hour-w) + 6px)';
-          }
+    // Walk the row in PROGRAMS, not slots — each cell spans its
+    // program's quarter-hours (TOS 1 · SUBMISSIONS 1 · ASC 2), and a
+    // date-anchored event takes one wide branded cell across its
+    // whole window (the Pendry feature-cell idiom).
+    let c = 0;
+    while (c < SLOTS_PER_DAY) {
+      const prog = programForSlotIndex(c, rowPt);
+      const span = Math.min(prog.slots, SLOTS_PER_DAY - c);
+      const cell = document.createElement('div');
+      cell.className = 'guide-cell today-cell' +
+        (SECTION_END_COLS.has(c + span - 1) ? ' section-end' : '');
+      cell.style.flex = '0 0 calc(' + span + ' * var(--hour-w))';
+      cell.dataset.row = '0';
+      cell.dataset.channel = 'studio';
+      cell.dataset.col = String(c);
+      cell.dataset.span = String(span);
+      if (prog.kind === 'event') {
+        cell.className += ' guide-cell-event';
+        cell.dataset.event = prog.event.id;
+        cell.innerHTML =
+          '<img class="event-badge" src="' + prog.event.badge +
+            '" alt="" draggable="false">' +
+          '<div class="event-text">' +
+            '<div class="title">' + prog.event.title + '</div>' +
+            '<div class="meta">LIVE · IN PERSON + ON AIR · ' +
+              'REQUEST TO ATTEND ON PLOTS</div>' +
+          '</div>';
+      } else {
+        cell.innerHTML =
+          '<div class="title">' + prog.show.titleLine + '</div>' +
+          '<div class="meta">'  + prog.show.metaLine  + '</div>' +
+          roleBadgeHtml(prog.show.roles, true);
+        // Static tail — the honest gap between where the show
+        // actually ends inside its program and the next boundary.
+        // Hatched, dashed-off, labeled when there's room (ASC's
+        // 12½-minute tail), so "ON AIR" never overstates itself.
+        // Cell content (title/meta/badge) is padded clear of the
+        // tail so nothing ever sits on the OFF AIR hatch.
+        const progSec = span * CHANNEL.slotSec;
+        const gapSec  = progSec - prog.show.durationSec;
+        if (gapSec > 30) {
+          const gapFrac = gapSec / progSec;
+          const tail = document.createElement('div');
+          tail.className = 'cell-tail';
+          tail.style.width = (gapFrac * 100) + '%';
+          if (gapSec >= 300) tail.innerHTML = '<span>off air</span>';
+          cell.appendChild(tail);
+          // Pad in slot-width units, NOT percent — percentage
+          // padding resolves against the PARENT row's width
+          // (thousands of px), which exploded the cells.
+          cell.style.paddingRight =
+            'calc(' + (gapFrac * span) + ' * var(--hour-w) + 6px)';
         }
-        row.appendChild(cell);
-        c += span;
       }
-      // Trailing END-OF-DAY cell — matches the header marker above.
-      // Visually closes each day so the table doesn't just stop
-      // mid-air at 8:45p. data-row carries the row index so hover
-      // can render the right day in the description strip.
-      const endCell = document.createElement('div');
-      endCell.className = 'guide-cell guide-end-cell';
-      endCell.dataset.row = String(r);
-      if (!isToday) endCell.style.opacity = '.65';
-      // Resume time in the VIEWER's clock — "6:00 AM" is only true
-      // in PT; an ET viewer's channel comes back at 9:00 A, a
-      // Paris viewer's at 15:00.
-      const resumeLocal = fmtSlot(new Date(ptToUtc(
-        ptToday.year, ptToday.month, ptToday.day + 1,
-        CHANNEL.startHour, 0, 0)));
-      endCell.innerHTML =
-        '<div class="title">Off air</div>' +
-        '<div class="meta">Resumes ' + resumeLocal + '</div>';
-      row.appendChild(endCell);
-
-      guideGrid.appendChild(row);
+      studioRow.appendChild(cell);
+      c += span;
     }
-    // (The vertical red "now" line is gone. The today row's
+    // Trailing END-OF-DAY cell — matches the header marker above.
+    // Visually closes the day so the row doesn't stop mid-air at 8:45p.
+    const endCell = document.createElement('div');
+    endCell.className = 'guide-cell guide-end-cell';
+    endCell.dataset.row = '0';
+    endCell.dataset.channel = 'studio';
+    // Resume time in the VIEWER's clock — "6:00 AM" is only true in PT;
+    // an ET viewer's channel comes back at 9:00 A, a Paris viewer's at 15:00.
+    const resumeLocal = fmtSlot(new Date(ptToUtc(
+      ptToday.year, ptToday.month, ptToday.day + 1,
+      CHANNEL.startHour, 0, 0)));
+    endCell.innerHTML =
+      '<div class="title">Off air</div>' +
+      '<div class="meta">Resumes ' + resumeLocal + '</div>';
+    studioRow.appendChild(endCell);
+    guideGrid.appendChild(studioRow);
+
+    // ---- TC · THE CARRIER — premiering soon (or its loop) ---------
+    const carrierRow = document.createElement('div');
+    carrierRow.className = 'guide-row';
+    carrierRow.appendChild(channelLabelCell(CH_CARRIER, false));
+    carrierRow.appendChild(buildCarrierCell());
+    guideGrid.appendChild(carrierRow);
+    // (The vertical red "now" line is gone. The Studio row's
     // red-bordered .guide-cell.now does all the now-marker work
     // we need — the TV-Guide-booklet idiom highlights the current
     // cell, no ticking creep line.)
+  }
+
+  // The sticky channel-identity cell at the left of each guide row —
+  // callsign + name + tagline. `live` gives it the red "on air" wash.
+  function channelLabelCell(ch, live){
+    const el = document.createElement('div');
+    el.className = 'guide-row-label channel-label' + (live ? ' today' : '');
+    el.dataset.channel = ch.id;
+    el.innerHTML =
+      '<div class="label-callsign">' + ch.callSign + '</div>' +
+      '<div class="label-name">' + ch.name.toUpperCase() + '</div>' +
+      '<div class="label-tag">' + ch.tagline + '</div>';
+    return el;
+  }
+
+  // The Carrier channel's one wide cell — spans the full time axis
+  // (flex:1 stretches it to match the Studio row's width). Empty
+  // CARRIER_PB ⇒ the "premiering soon" promo + submissions CTA; a set
+  // CARRIER_PB ⇒ a "now showing" card that plays the loop on click.
+  function buildCarrierCell(){
+    const ch = CH_CARRIER;
+    const playing = !!ch.playbackId;
+    const cell = document.createElement('div');
+    cell.className = 'guide-cell guide-cell-carrier' + (playing ? ' playing' : '');
+    cell.dataset.channel = 'carrier';
+    cell.style.flex = '1 0 auto';
+    cell.style.minWidth = '0';
+    cell.innerHTML =
+      '<div class="carrier-inner">' +
+        '<div class="carrier-tag' + (playing ? ' on' : '') + '">' +
+          (playing ? 'NOW SHOWING' : ch.promoTag) + '</div>' +
+        '<div class="carrier-title">' + ch.promoTitle + '</div>' +
+        '<div class="carrier-copy">' + ch.logline + '</div>' +
+        '<div class="carrier-cta">' +
+          (playing ? 'Play the Carrier' : ch.ctaLabel) + ' →</div>' +
+      '</div>';
+    return cell;
   }
 
   // ── Mobile lineup builder ────────────────────────────────────────
@@ -3326,122 +3608,144 @@ customElements.whenDefined('mux-video').then(function(){
   // Rows carry the same data-row/col/span/event datasets, so the
   // listing-details delegate works on both surfaces unchanged.
   const guideList = document.getElementById('guideList');
-  const LIST_FULL_DAYS = 1;   // today in full; every later day condenses
+  // Phones don't get the 2-D grid (a single channel axis has nothing to
+  // scan sideways through) — the native idiom is a labeled section per
+  // CHANNEL. Section 1: S1 · STUDIO, today's chronological lineup (the
+  // rotation repeats daily, so today IS the standing schedule). Section
+  // 2: TC · THE CARRIER, the premiering-soon card.
   function buildGuideList(){
     if (!guideList) return;
     guideList.innerHTML = '';
     const now = new Date();
-    for (let r = 0; r < ROW_COUNT; r++) {
-      const rowDate = new Date(now);
-      rowDate.setDate(now.getDate() + r);
-      const rowPt = ptDatePlus(r);
+    const rowPt = ptDatePlus(0);
 
-      const head = document.createElement('div');
-      head.className = 'list-day' + (r === 0 ? ' today' : '');
-      head.textContent =
-        (r === 0 ? 'TODAY — ' : '') +
-        DAYS_LONG[rowDate.getDay()] + ' ' +
-        MONTHS[rowDate.getMonth()] + ' ' + rowDate.getDate();
-      guideList.appendChild(head);
+    // ── S1 · STUDIO ────────────────────────────────────────────────
+    const studioHead = document.createElement('div');
+    studioHead.className = 'list-channel';
+    studioHead.innerHTML =
+      '<span class="lc-callsign">S1</span>' +
+      '<span class="lc-name">STUDIO</span>' +
+      '<span class="lc-tag">' + CH_STUDIO.tagline + '</span>';
+    guideList.appendChild(studioHead);
 
-      // Later days: the rotation repeats, so don't make thumbs
-      // scroll through five copies of the same lineup — compress to
-      // a one-line note, but keep any special event as a real row.
-      const compressed = r >= LIST_FULL_DAYS;
-      if (compressed) {
-        const dayStart = ptToUtc(rowPt.year, rowPt.month, rowPt.day,
-                                 CHANNEL.startHour, 0, 0);
-        const dayEnd   = ptToUtc(rowPt.year, rowPt.month, rowPt.day,
-                                 CHANNEL.endHour, 0, 0);
-        const note = document.createElement('div');
-        note.className = 'list-summary';
-        note.textContent = 'Standing lineup · ' +
-          SHOWS.map(function(s){ return s.title; }).join(' · ') +
-          ' hourly · ' + fmtSlot(new Date(dayStart)) + ' – ' +
-          fmtSlot(new Date(dayEnd));
-        guideList.appendChild(note);
-      }
+    const head = document.createElement('div');
+    head.className = 'list-day today';
+    head.textContent = 'TODAY — ' + DAYS_LONG[now.getDay()] + ' ' +
+      MONTHS[now.getMonth()] + ' ' + now.getDate();
+    guideList.appendChild(head);
 
-      // Today's already-aired programs collapse behind a slim
-      // toggle: the guide opens on identity and NOW, never on a
-      // scroll-back through spent listings. (After sign-off the
-      // whole day is spent; before sign-on nothing is.)
-      let spentBefore = -1;
-      if (r === 0) {
-        const liveCol = nowSlotCol(Date.now());
-        if (liveCol >= 0) spentBefore = liveCol;
-        else if (ptParts(Date.now()).hour >= CHANNEL.endHour)
-          spentBefore = SLOTS_PER_DAY;
-      }
-      let spentCount = 0;
-      let earlierToggle = null;
+    // Today's already-aired programs collapse behind a slim toggle: the
+    // guide opens on identity and NOW, never on a scroll-back through
+    // spent listings. (After sign-off the whole day is spent; before
+    // sign-on nothing is.)
+    let spentBefore = -1;
+    const liveCol = nowSlotCol(Date.now());
+    if (liveCol >= 0) spentBefore = liveCol;
+    else if (ptParts(Date.now()).hour >= CHANNEL.endHour)
+      spentBefore = SLOTS_PER_DAY;
+    let spentCount = 0;
+    let earlierToggle = null;
 
-      let c = 0;
-      while (c < SLOTS_PER_DAY) {
-        const prog = programForSlotIndex(c, rowPt);
-        const span = Math.min(prog.slots, SLOTS_PER_DAY - c);
-        if (compressed && prog.kind !== 'event') { c += span; continue; }
-        const s = slotForCol(c);
-        const startTS = ptToUtc(rowPt.year, rowPt.month, rowPt.day,
-                                s.hour, s.minute, 0);
-        const row = document.createElement('div');
-        row.className = 'list-row';
-        row.dataset.row = String(r);
-        row.dataset.col = String(c);
-        row.dataset.span = String(span);
-        if (spentBefore >= 0 && c + span <= spentBefore &&
-            prog.kind !== 'event') {
-          row.className += ' spent';
-          spentCount++;
-          if (!earlierToggle) {
-            earlierToggle = document.createElement('div');
-            earlierToggle.className = 'list-earlier';
-            earlierToggle.addEventListener('click', function(){
-              guideList.classList.toggle('show-spent');
-              earlierToggle.textContent =
-                (guideList.classList.contains('show-spent') ? '▾' : '▸') +
-                ' earlier today — ' + spentCount + ' aired';
-            });
-            guideList.appendChild(earlierToggle);
-          }
+    let c = 0;
+    while (c < SLOTS_PER_DAY) {
+      const prog = programForSlotIndex(c, rowPt);
+      const span = Math.min(prog.slots, SLOTS_PER_DAY - c);
+      const s = slotForCol(c);
+      const startTS = ptToUtc(rowPt.year, rowPt.month, rowPt.day,
+                              s.hour, s.minute, 0);
+      const row = document.createElement('div');
+      row.className = 'list-row';
+      row.dataset.row = '0';
+      row.dataset.channel = 'studio';
+      row.dataset.col = String(c);
+      row.dataset.span = String(span);
+      if (spentBefore >= 0 && c + span <= spentBefore &&
+          prog.kind !== 'event') {
+        row.className += ' spent';
+        spentCount++;
+        if (!earlierToggle) {
+          earlierToggle = document.createElement('div');
+          earlierToggle.className = 'list-earlier';
+          earlierToggle.addEventListener('click', function(){
+            guideList.classList.toggle('show-spent');
+            earlierToggle.textContent =
+              (guideList.classList.contains('show-spent') ? '▾' : '▸') +
+              ' earlier today — ' + spentCount + ' aired';
+          });
+          guideList.appendChild(earlierToggle);
         }
-        if (prog.kind === 'event') {
-          row.className += ' list-row-event';
-          row.dataset.event = prog.event.id;
-          row.innerHTML =
-            '<div class="lr-time">' + fmtSlot(new Date(startTS)) + '</div>' +
-            '<div class="lr-main">' +
-              '<div class="lr-title">' + prog.event.title + '</div>' +
-              '<div class="lr-meta">live · in person + on air</div>' +
-              roleBadgeHtml(prog.event.roles) +
-            '</div>' +
-            '<img class="lr-art lr-art-badge" src="' + prog.event.badge +
-              '" alt="" loading="lazy" draggable="false">';
-        } else {
-          const occ = Math.floor(prog.startSlot / PATTERN.total) +
-                      ptEpochDay(rowPt);
-          const arts = prog.show.artTimes || [{ t: 60 }];
-          const variant = arts[((occ % arts.length) + arts.length) % arts.length];
-          row.innerHTML =
-            '<div class="lr-time">' + fmtSlot(new Date(startTS)) + '</div>' +
-            '<div class="lr-main">' +
-              '<div class="lr-title">' + prog.show.titleLine + '</div>' +
-              '<div class="lr-meta">' + prog.show.metaLine + '</div>' +
-              roleBadgeHtml(prog.show.roles) +
-            '</div>' +
-            '<img class="lr-art' + (variant.pop ? ' pop' : '') +
-              '" src="' + muxArtUrl(prog.show, variant) +
-              '" alt="" loading="lazy" draggable="false">';
-        }
-        guideList.appendChild(row);
-        c += span;
       }
-      if (earlierToggle) {
-        earlierToggle.textContent =
-          (guideList.classList.contains('show-spent') ? '▾' : '▸') +
-          ' earlier today — ' + spentCount + ' aired';
+      if (prog.kind === 'event') {
+        row.className += ' list-row-event';
+        row.dataset.event = prog.event.id;
+        row.innerHTML =
+          '<div class="lr-time">' + fmtSlot(new Date(startTS)) + '</div>' +
+          '<div class="lr-main">' +
+            '<div class="lr-title">' + prog.event.title + '</div>' +
+            '<div class="lr-meta">live · in person + on air</div>' +
+            roleBadgeHtml(prog.event.roles) +
+          '</div>' +
+          '<img class="lr-art lr-art-badge" src="' + prog.event.badge +
+            '" alt="" loading="lazy" draggable="false">';
+      } else {
+        const occ = Math.floor(prog.startSlot / PATTERN.total) +
+                    ptEpochDay(rowPt);
+        const arts = prog.show.artTimes || [{ t: 60 }];
+        const variant = arts[((occ % arts.length) + arts.length) % arts.length];
+        row.innerHTML =
+          '<div class="lr-time">' + fmtSlot(new Date(startTS)) + '</div>' +
+          '<div class="lr-main">' +
+            '<div class="lr-title">' + prog.show.titleLine + '</div>' +
+            '<div class="lr-meta">' + prog.show.metaLine + '</div>' +
+            roleBadgeHtml(prog.show.roles) +
+          '</div>' +
+          '<img class="lr-art' + (variant.pop ? ' pop' : '') +
+            '" src="' + muxArtUrl(prog.show, variant) +
+            '" alt="" loading="lazy" draggable="false">';
       }
+      guideList.appendChild(row);
+      c += span;
     }
+    if (earlierToggle) {
+      earlierToggle.textContent =
+        (guideList.classList.contains('show-spent') ? '▾' : '▸') +
+        ' earlier today — ' + spentCount + ' aired';
+    }
+    // The rotation repeats daily — say so, so the single day doesn't
+    // read as "that's all there ever is".
+    const dayStart = ptToUtc(rowPt.year, rowPt.month, rowPt.day,
+                             CHANNEL.startHour, 0, 0);
+    const dayEnd   = ptToUtc(rowPt.year, rowPt.month, rowPt.day,
+                             CHANNEL.endHour, 0, 0);
+    const note = document.createElement('div');
+    note.className = 'list-summary';
+    note.textContent = 'Standing lineup, repeats daily · ' +
+      fmtSlot(new Date(dayStart)) + ' – ' + fmtSlot(new Date(dayEnd));
+    guideList.appendChild(note);
+
+    // ── TC · THE CARRIER ───────────────────────────────────────────
+    const carrierHead = document.createElement('div');
+    carrierHead.className = 'list-channel';
+    carrierHead.innerHTML =
+      '<span class="lc-callsign">TC</span>' +
+      '<span class="lc-name">THE CARRIER</span>' +
+      '<span class="lc-tag">' + CH_CARRIER.tagline + '</span>';
+    guideList.appendChild(carrierHead);
+
+    const playing = !!CH_CARRIER.playbackId;
+    const carrierCard = document.createElement('div');
+    carrierCard.className = 'list-row list-row-carrier' + (playing ? ' playing' : '');
+    carrierCard.dataset.channel = 'carrier';
+    carrierCard.innerHTML =
+      '<div class="lr-main">' +
+        '<div class="lr-carrier-tag' + (playing ? ' on' : '') + '">' +
+          (playing ? 'NOW SHOWING' : CH_CARRIER.promoTag) + '</div>' +
+        '<div class="lr-title">' + CH_CARRIER.promoTitle + '</div>' +
+        '<div class="lr-carrier-copy">' + CH_CARRIER.logline + '</div>' +
+        '<div class="lr-carrier-cta">' +
+          (playing ? 'Play the Carrier' : CH_CARRIER.ctaLabel) + ' →</div>' +
+      '</div>';
+    guideList.appendChild(carrierCard);
   }
 
   // Tracks the slot index the grid was built for. When the live
@@ -3659,6 +3963,28 @@ customElements.whenDefined('mux-video').then(function(){
   }
 
   function renderGuideDesc(){
+    // The Carrier art-plate class leaks unless every non-Carrier render
+    // clears it; do so up front, then the Carrier branch re-adds it.
+    heroArtPanel.classList.remove('carrier-art');
+    if (hoveredSlot && hoveredSlot.carrier) {
+      // Previewing the Carrier channel — a branded plate, not a still
+      // (there's no Carrier asset yet).
+      const ch = CH_CARRIER;
+      const playing = !!ch.playbackId;
+      heroChipLbl.textContent = playing ? 'NOW SHOWING' : 'PREMIERING SOON';
+      heroChip.className = 'desc-state' + (playing ? ' on' : '');
+      heroArtPanel.classList.remove('event-art');
+      heroArtPanel.classList.add('carrier-art');
+      heroArtImg.classList.remove('pop');
+      heroArtImg.classList.toggle('dim', !playing);
+      heroArtImg.removeAttribute('src');
+      heroArtKey = 'carrier';
+      guideDescTitle.textContent = ch.promoTitle;
+      guideDescBody.textContent  = ch.logline + ' ' + ch.note;
+      guideDescTag.textContent   =
+        'TC · THE CARRIER · ' + ch.ctaLabel.toUpperCase();
+      return;
+    }
     if (hoveredSlot) {
       const now0 = new Date();
       const rowDate = new Date(now0);
@@ -3838,6 +4164,12 @@ customElements.whenDefined('mux-video').then(function(){
   guideGrid.addEventListener('mouseover', function(e){
     const cell = e.target.closest('.guide-cell');
     if (!cell || !guideGrid.contains(cell)) return;
+    // The Carrier cell isn't a schedule slot — preview the channel.
+    if (cell.classList.contains('guide-cell-carrier')) {
+      hoveredSlot = { carrier: true };
+      renderGuideDesc();
+      return;
+    }
     const isOffAir = cell.classList.contains('guide-end-cell');
     hoveredSlot = {
       row: parseInt(cell.dataset.row, 10),
@@ -3918,6 +4250,43 @@ customElements.whenDefined('mux-video').then(function(){
     b.addEventListener('click', function(){ closeListing(); closeGuide(); });
     listingActions.appendChild(b);
   }
+  // The Carrier channel's listing — no schedule slot, no Mux still yet.
+  // Empty CARRIER_PB ⇒ premiering-soon + "Read the screenplay"; a set
+  // CARRIER_PB ⇒ a WATCH button that plays the loop in the modal.
+  function openCarrierListing(){
+    const ch = CH_CARRIER;
+    const playing = !!ch.playbackId;
+    listingActions.innerHTML = '';
+    listingArt.style.display = '';
+    listingArt.classList.remove('event-art', 'loading');
+    listingArt.classList.add('carrier-art');
+    listingArtImg.classList.remove('pop', 'loaded');
+    listingArtImg.removeAttribute('src');   // branded plate, no still
+    listingChipLbl.textContent = playing ? 'NOW SHOWING' : 'PREMIERING SOON';
+    listingChip.className = 'desc-state' + (playing ? ' on' : '');
+    listingTitle.textContent = ch.promoTitle;
+    listingWhen.textContent =
+      'TC · THE CARRIER · ' + (playing ? 'NOW SHOWING' : 'PREMIERING SOON');
+    listingDesc.textContent = ch.logline + ' ' + ch.note;
+    setListingRoles(ch.roles);
+    if (playing) {
+      const b = document.createElement('button');
+      b.className = 'listing-cta listing-watch';
+      b.type = 'button';
+      b.textContent = 'Play the Carrier';
+      b.addEventListener('click', function(){
+        closeListing();
+        openVideoModal(ch.playbackId, ch.promoTitle);
+      });
+      listingActions.appendChild(b);
+    }
+    const a = document.createElement('a');
+    a.className = 'listing-cta';
+    a.href = ch.ctaUrl; a.target = '_blank'; a.rel = 'noopener';
+    a.textContent = ch.ctaLabel + ' →';
+    listingActions.appendChild(a);
+    listingEl.hidden = false;
+  }
   function openListingFromCell(cell){
     const row = parseInt(cell.dataset.row, 10);
     const rowDate = new Date();
@@ -3926,7 +4295,7 @@ customElements.whenDefined('mux-video').then(function(){
     const date = MONTHS[rowDate.getMonth()] + ' ' + rowDate.getDate();
     const rowPt = ptDatePlus(row);
     listingActions.innerHTML = '';
-    listingArt.classList.remove('event-art');
+    listingArt.classList.remove('event-art', 'carrier-art');
     listingArtImg.classList.remove('pop');
 
     if (cell.classList.contains('guide-end-cell')) {
@@ -4002,14 +4371,17 @@ customElements.whenDefined('mux-video').then(function(){
   guideGrid.addEventListener('click', function(e){
     const cell = e.target.closest('.guide-cell');
     if (!cell || !guideGrid.contains(cell)) return;
+    if (cell.dataset.channel === 'carrier') { openCarrierListing(); return; }
     openListingFromCell(cell);
   });
   // The mobile lineup rows carry the same datasets — same overlay.
   // EXCEPT event rows: the spotlight goes straight to the event's
-  // Plots page (the point of the spotlight is the RSVP).
+  // Plots page (the point of the spotlight is the RSVP); and the
+  // Carrier card opens the Carrier's own listing.
   guideList.addEventListener('click', function(e){
     const row = e.target.closest('.list-row');
     if (!row || !guideList.contains(row)) return;
+    if (row.dataset.channel === 'carrier') { openCarrierListing(); return; }
     if (row.dataset.event) {
       const ev = EVENTS.find(function(x){ return x.id === row.dataset.event; });
       if (ev) window.open(ev.url, '_blank', 'noopener');
@@ -4022,6 +4394,63 @@ customElements.whenDefined('mux-video').then(function(){
   listingEl.addEventListener('click', function(e){
     if (e.target === listingEl) closeListing();
   });
+
+  // ── Video modal — powers the START HERE orientation tile and the
+  //    Carrier "play the loop" button. A standalone <mux-video> (its
+  //    own element, independent of the live channel player) that only
+  //    ever loads a source when one of the content-contract playback
+  //    IDs is set. muxHlsSrc() is defined later in this closure; these
+  //    handlers run at click time, well after the module evaluates. ──
+  const videoModalEl    = document.getElementById('videoModal');
+  const videoModalVideo = document.getElementById('videoModalVideo');
+  const videoModalTitle = document.getElementById('videoModalTitle');
+  function openVideoModal(pbId, title){
+    if (!pbId || !videoModalEl || !videoModalVideo) return;
+    if (title && videoModalTitle) videoModalTitle.textContent = title;
+    videoModalVideo.src = muxHlsSrc(pbId);
+    videoModalVideo.muted = false;
+    try { videoModalVideo.currentTime = 0; } catch (_) {}
+    videoModalEl.hidden = false;
+    const p = videoModalVideo.play && videoModalVideo.play();
+    if (p && p.catch) p.catch(function(){});
+  }
+  function closeVideoModal(){
+    if (!videoModalEl) return;
+    try { videoModalVideo.pause(); } catch (_) {}
+    videoModalVideo.removeAttribute('src');
+    videoModalEl.hidden = true;
+  }
+  if (videoModalEl) {
+    const vc = document.getElementById('videoModalClose');
+    if (vc) vc.addEventListener('click', closeVideoModal);
+    videoModalEl.addEventListener('click', function(e){
+      if (e.target === videoModalEl) closeVideoModal();
+    });
+  }
+
+  // ── START HERE orientation tile ─────────────────────────────────
+  // Gated entirely by ORIENTATION_PB. Set ⇒ clickable, plays the
+  // orientation film in the video modal. Empty ⇒ a tasteful
+  // "coming soon" state that does nothing on click (never faked).
+  const startHereEl = document.getElementById('guideStartHere');
+  function refreshStartHere(){
+    if (!startHereEl) return;
+    const ready = !!ORIENTATION_PB;
+    startHereEl.classList.toggle('ready', ready);
+    startHereEl.classList.toggle('coming-soon', !ready);
+    startHereEl.setAttribute('aria-disabled', ready ? 'false' : 'true');
+    const sub = document.getElementById('startHereSub');
+    if (sub) sub.textContent = ready
+      ? 'Watch the orientation — what INTERDEPENDENT is'
+      : 'Orientation film — coming soon';
+  }
+  if (startHereEl) {
+    startHereEl.addEventListener('click', function(){
+      if (!ORIENTATION_PB) return;   // coming soon: never fake it
+      openVideoModal(ORIENTATION_PB, 'What is INTERDEPENDENT?');
+    });
+  }
+  refreshStartHere();
 
   function closeGuide(){
     guideEl.classList.remove('on');
@@ -4758,6 +5187,27 @@ customElements.whenDefined('mux-video').then(function(){
       <div class="time" id="guideTime">—:—</div>
     </div>
   </div>
+  <!-- ── START HERE — orientation entry point ─────────────────────
+       The first thing a poster visitor meets ("what is this?"). A
+       branded card that plays the orientation film. Behavior is
+       gated by the ORIENTATION_PB content-contract constant: set ⇒
+       clickable, plays the film in the video modal; empty ⇒ a
+       tasteful "coming soon" state (JS toggles .ready / .coming-soon
+       and the sub-label). Removable/updatable via that one const. -->
+  <button class="guide-starthere coming-soon" id="guideStartHere"
+          type="button" aria-disabled="true"
+          aria-label="Watch the orientation video — what is INTERDEPENDENT">
+    <span class="sh-play" aria-hidden="true">
+      <svg viewBox="0 0 14 14"><path fill="none" stroke="currentColor"
+        stroke-width="2" stroke-linejoin="miter" stroke-linecap="butt"
+        vector-effect="non-scaling-stroke" d="M2 1 L13 7 L2 13 Z"/></svg>
+    </span>
+    <span class="sh-text">
+      <span class="sh-kicker">Start here</span>
+      <span class="sh-title">What is INTERDEPENDENT?</span>
+      <span class="sh-sub" id="startHereSub">Orientation film — coming soon</span>
+    </span>
+  </button>
   <!-- ── SEASON strip ──────────────────────────────────────────────
        The 12-event timeline as a swipeable rail — the whole studio
        cycle in one band. Cells are built from season.js (the single
@@ -4838,7 +5288,7 @@ customElements.whenDefined('mux-video').then(function(){
        "Press channel ▲▼ to page", Prevue's scroll prompts). -->
   <div class="guide-hint" aria-hidden="true">
     <span>◀ ▶ scan the day</span>
-    <span>▲ ▼ browse the week</span>
+    <span>S1 studio · TC the carrier</span>
     <span>select a listing for details</span>
   </div>
 
@@ -4872,6 +5322,26 @@ customElements.whenDefined('mux-video').then(function(){
       <div class="listing-roles" id="listingRoles"></div>
       <div class="listing-desc" id="listingDesc">—</div>
       <div class="listing-actions" id="listingActions"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Video modal ───────────────────────────────────────────────────
+     The play surface for the START HERE orientation film and the
+     Carrier "play the loop" button. A standalone <mux-video> (its own
+     element, independent of the live channel player). Stays empty —
+     never loads a source — until one of the content-contract playback
+     IDs (ORIENTATION_PB / CARRIER_PB) is set; JS assigns .src on open
+     and clears it on close. Native controls; close on × or backdrop. -->
+<div id="videoModal" class="video-modal-backdrop" hidden>
+  <div class="video-modal-card" role="dialog" aria-modal="true"
+       aria-label="Video">
+    <button class="video-modal-close" id="videoModalClose" type="button"
+            aria-label="Close video">×</button>
+    <div class="video-modal-title" id="videoModalTitle">—</div>
+    <div class="video-modal-stage">
+      <mux-video id="videoModalVideo" playsinline preload="none"
+                 crossorigin="anonymous" controls></mux-video>
     </div>
   </div>
 </div>
