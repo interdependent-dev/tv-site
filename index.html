@@ -1328,6 +1328,16 @@ body.no-fs .logo.show{pointer-events:none}
   box-shadow:inset 0 0 0 2px #ff0000, 0 0 14px rgba(255,0,0,.35);
 }
 .guide-cell.now .title{color:#fff}
+/* Live takeover cell — brighter, solid ON AIR fill; the "● LIVE" meta
+   pulses so the S1 row reads unmistakably live. */
+.guide-cell.now.now-live{
+  background:linear-gradient(90deg, rgba(255,0,0,.6), rgba(255,0,0,.28));
+  box-shadow:inset 0 0 0 2px #ff2b2b, 0 0 18px rgba(255,0,0,.5);
+}
+.guide-cell.now-live .meta{
+  color:#fff;font-weight:700;letter-spacing:.1em;
+  animation:chip-pulse 1.6s ease-in-out infinite;
+}
 .guide-cell.static-slot{
   background:rgba(255,255,255,.02);
   opacity:.45;
@@ -2173,6 +2183,17 @@ body.promo-on .logo.show{
   overflow:hidden;
 }
 .guide-row-label.channel-label.today .label-tag{opacity:.8}
+/* Live channel identity — the S1 label glows ON AIR red while a live
+   takeover is running; its tag becomes a pulsing "● ON AIR". */
+.channel-label.on-air{
+  background:linear-gradient(180deg, rgba(255,0,0,.28), rgba(255,0,0,.1));
+  box-shadow:inset 0 0 0 1px rgba(255,43,43,.7);
+}
+.channel-label.on-air .label-callsign{color:#fff}
+.channel-label.on-air .label-tag{
+  opacity:1;color:#ff5a5a;font-weight:700;letter-spacing:.14em;
+  animation:chip-pulse 1.6s ease-in-out infinite;
+}
 
 /* TC · THE CARRIER — one wide promo cell across the time axis. Deep-
    red brand plate; "premiering soon" launch card (or "now showing"
@@ -2618,7 +2639,7 @@ const CARRIER_PB     = 'bdFIvfHecWffhP0000PWS4e2P5zxsHaVFKzOLojApY0002Q';  // Th
 // optional on-screen heads-up. A missing or malformed control file is
 // ignored, so the takeover never breaks just because live.json 404s.
 const LIVE = {
-  active:     true,
+  active:     false,
   playbackId: 'WfZi9g02OoV0192velOUTZ02LPYbrlzuvNxpWmeaqlqqgk',
   title:      'Fireside Chat with EP Daniel Schott',
   titleLine:  'FIRESIDE CHAT WITH EP DANIEL SCHOTT—Live',
@@ -3737,12 +3758,18 @@ customElements.whenDefined('mux-video').then(function(){
   // callsign + name + tagline. `live` gives it the red "on air" wash.
   function channelLabelCell(ch, live){
     const el = document.createElement('div');
-    el.className = 'guide-row-label channel-label' + (live ? ' today' : '');
+    // The Studio channel wears an ON AIR wash while a live takeover is
+    // running, and its tagline flips to the broadcast title — so the
+    // channel row itself reads as live, not business-as-usual.
+    const onAir = live && ch.id === 'studio' && liveActive();
+    el.className = 'guide-row-label channel-label' +
+      (live ? ' today' : '') + (onAir ? ' on-air' : '');
     el.dataset.channel = ch.id;
     el.innerHTML =
       '<div class="label-callsign">' + ch.callSign + '</div>' +
       '<div class="label-name">' + ch.name.toUpperCase() + '</div>' +
-      '<div class="label-tag">' + ch.tagline + '</div>';
+      '<div class="label-tag">' +
+        (onAir ? '● ON AIR' : ch.tagline) + '</div>';
     return el;
   }
 
@@ -3955,11 +3982,34 @@ customElements.whenDefined('mux-video').then(function(){
     const prev = guideGrid.querySelector('.guide-cell.now');
     if (prev) prev.classList.remove('now');
     const nowLine = guideGrid.querySelector('.guide-now-line');
-    // During a LIVE takeover the standing rotation is pre-empted, so it
-    // must NOT carry a red "now" marker (that would flag a scheduled
-    // show as on-air while the live feed is what's really airing). The
-    // featured card below carries the live state instead.
-    if (col >= 0 && !liveActive()) {
+    // During a LIVE takeover the standing rotation is pre-empted. Rather
+    // than flag a scheduled show as on-air, the S1 row's CURRENT cell is
+    // overwritten to read the live program itself — so the Studio channel
+    // programming shows the live broadcast as what's playing right now.
+    if (col >= 0 && liveActive()) {
+      const todayCells = guideGrid.querySelectorAll(
+        '.guide-cell[data-row="0"][data-col]');
+      let nowCell = null;
+      todayCells.forEach(function(c){
+        const s = Number(c.dataset.col);
+        const n = Number(c.dataset.span) || 1;
+        c.classList.remove('past');            // nothing is "spent" while live
+        if (col >= s && col < s + n) nowCell = c;
+      });
+      if (nowCell) {
+        nowCell.classList.add('now', 'now-live');
+        // Drop the scheduled show's static-tail / progress chrome and
+        // relabel the cell as the live program (once — guarded so the
+        // 1 s tick doesn't rewrite it every second).
+        if (nowCell.dataset.live !== '1') {
+          nowCell.dataset.live = '1';
+          nowCell.innerHTML =
+            '<div class="title">' + liveCfg().title + '</div>' +
+            '<div class="meta">● LIVE — ON AIR NOW</div>';
+        }
+      }
+      if (nowLine) nowLine.remove();            // the ON AIR cell is the marker
+    } else if (col >= 0 && !liveActive()) {
       const todayCells = guideGrid.querySelectorAll(
         '.guide-cell[data-row="0"][data-col]');
       let nowCell = null;
