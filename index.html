@@ -2584,6 +2584,30 @@ body.promo-on .logo.show{
 const ORIENTATION_PB = '';  // intro/orientation "what is INTERDEPENDENT" video → powers the START HERE tile
 const CARRIER_PB     = 'bdFIvfHecWffhP0000PWS4e2P5zxsHaVFKzOLojApY0002Q';  // The Carrier channel video (Todd Restler intro + Mark Burley at the Director Event) → replaces the "premiering soon" promo
 
+// ═════════════════════════════════════════════════════════════════════
+// LIVE TAKEOVER — a Mux *live stream* pre-empts the entire schedule.
+//
+// When `LIVE.active` is true the full-bleed Studio player abandons the
+// deterministic VOD rotation and plays this live stream AT THE EDGE —
+// every viewer joins what's happening right now, never the top of the
+// broadcast — on air the instant the page loads, regardless of the
+// 6 AM–9 PM window. The guide's featured card reads "LIVE NOW ·
+// <title>" and the standing schedule shows as pre-empted (no false
+// "now" marker on a rotation slot). Flip `active` back to false (or let
+// the broadcast end) to return to the standing rotation. This one
+// object is the whole go-live switch — `playbackId` is the ONLY field
+// that ever needs changing to point at a different feed.
+// ═════════════════════════════════════════════════════════════════════
+const LIVE = {
+  active:     true,
+  playbackId: 'WfZi9g02OoV0192velOUTZ02LPYbrlzuvNxpWmeaqlqqgk',
+  title:      'Fireside Chat with EP Daniel Schott',
+  titleLine:  'FIRESIDE CHAT WITH EP DANIEL SCHOTT—Live',
+  blurb:      'A live fireside chat with Executive Producer Daniel Schott — ' +
+              'streaming right now on INTERDEPENDENT.',
+};
+function liveActive(){ return !!(LIVE.active && LIVE.playbackId); }
+
 // ─────────────────────────────────────────────────────────────────────
 // INTERDEPENDENT TV — linear channel runtime
 // ─────────────────────────────────────────────────────────────────────
@@ -2965,6 +2989,22 @@ function showForSlotIndex(idx) {
 // so every viewer worldwide is on-air during the same UTC moments.
 function getSlotInfo(now) {
   now = now || Date.now();
+
+  // LIVE TAKEOVER pre-empts all schedule math — the channel is a live
+  // stream, on air now, with no slot/seek semantics. These are the safe
+  // fields every consumer reads; `isLive` lets the player and guide
+  // branch to the live path (program is null, so schedule-derived code
+  // paths must guard on isLive rather than dereference it).
+  if (liveActive()) {
+    return {
+      offAir: false, isLive: true, isEvent: false, event: null,
+      program: null, inShow: true, show: null, showSec: Infinity,
+      slotStart: now, slotIdx: -1,
+      nextSlotStart: now + 3600000, showEnd: now + 3600000,
+      tInSlot: 0, tInShow: 0, tInStatic: 0,
+    };
+  }
+
   const pt = ptParts(now);
 
   // Off-air outside CHANNEL.startHour ≤ PT-hour < CHANNEL.endHour
@@ -3337,6 +3377,23 @@ customElements.whenDefined('mux-video').then(function(){
 
   function applyState(){
     const info = getSlotInfo();
+
+    if (info.isLive) {
+      // The live stream owns the player: make sure the live source is
+      // loaded, keep it playing, hold the movie surface, and never
+      // schedule a schedule-driven transition. The broadcast ends via a
+      // redeploy (flag flip) + reload, not a client-side boundary; the
+      // light re-check keeps playback resilient if a tab was backgrounded.
+      if (currentPbId !== LIVE.playbackId) {
+        applyShowAndOrientation();
+      } else if (userActivated && mv.paused) {
+        const p = mv.play();
+        if (p && p.catch) p.catch(function(){});
+      }
+      showSurface('movie');
+      scheduleNext(30000);
+      return;
+    }
 
     if (info.offAir) {
       try { mv.pause(); } catch (_) {}
@@ -3843,7 +3900,11 @@ customElements.whenDefined('mux-video').then(function(){
     const prev = guideGrid.querySelector('.guide-cell.now');
     if (prev) prev.classList.remove('now');
     const nowLine = guideGrid.querySelector('.guide-now-line');
-    if (col >= 0) {
+    // During a LIVE takeover the standing rotation is pre-empted, so it
+    // must NOT carry a red "now" marker (that would flag a scheduled
+    // show as on-air while the live feed is what's really airing). The
+    // featured card below carries the live state instead.
+    if (col >= 0 && !liveActive()) {
       const todayCells = guideGrid.querySelectorAll(
         '.guide-cell[data-row="0"][data-col]');
       let nowCell = null;
@@ -3907,8 +3968,9 @@ customElements.whenDefined('mux-video').then(function(){
     }
 
     // Mobile lineup mirrors the same live state: dim spent rows,
-    // flag the live one, drive its progress strip.
-    if (guideList) {
+    // flag the live one, drive its progress strip. Skipped during a
+    // LIVE takeover — the standing rotation is pre-empted (see above).
+    if (guideList && !liveActive()) {
       const liveInfo = col >= 0 ? getSlotInfo() : null;
       guideList.querySelectorAll('.list-row[data-row="0"]').forEach(function(rw){
         const s = Number(rw.dataset.col);
@@ -4126,6 +4188,16 @@ customElements.whenDefined('mux-video').then(function(){
 
     // No hover — show the live channel state (the previous default).
     const live = getSlotInfo();
+    if (live.isLive) {
+      // A Mux live stream is pre-empting the standing schedule — the
+      // featured card is the guide's "what's on now" surface, so it
+      // carries the ON AIR / LIVE NOW state and the broadcast title.
+      setHero('live', null);
+      guideDescTitle.textContent = LIVE.titleLine;
+      guideDescBody.textContent  = LIVE.blurb;
+      guideDescTag.textContent   = 'ON AIR · LIVE NOW';
+      return;
+    }
     if (live.offAir) {
       const t = new Date(live.nextOnAir);
       // Feature tomorrow's opener (dimmed) — the next thing a
@@ -4671,7 +4743,11 @@ customElements.whenDefined('mux-video').then(function(){
     // playback ID; otherwise it's a no-op.
     applyShowAndOrientation();
     const info = getSlotInfo();
-    if (!info.offAir && info.inShow) {
+    if (info.isLive) {
+      // Live: join the edge at play time so we start on what's live now,
+      // not wherever the preload buffer happened to open.
+      joinLiveEdge();
+    } else if (!info.offAir && info.inShow) {
       try { mv.currentTime = info.tInShow; } catch (_) {}
     }
     const p = mv.play();
@@ -4729,7 +4805,7 @@ customElements.whenDefined('mux-video').then(function(){
     //     brings the feed up at the live wall-clock position when
     //     intro.ended fires.
     const startInfo = getSlotInfo();
-    if (!startInfo.offAir && startInfo.inShow) {
+    if (startInfo.isLive || (!startInfo.offAir && startInfo.inShow)) {
       startMovieAtLive();
     }
 
@@ -4804,6 +4880,20 @@ customElements.whenDefined('mux-video').then(function(){
     return 'https://stream.mux.com/' + id +
            '.m3u8?rendition_order=desc&max_resolution_tier=1080p';
   };
+  // Snap to the LIVE EDGE — join what's on now, not the top of the DVR
+  // window. Only nudges forward when we're meaningfully behind (>4s) and
+  // lands ~2s back for a stall margin, so it's a no-op once at the edge
+  // (safe to call repeatedly from preload-ready AND play time).
+  function joinLiveEdge(){
+    try {
+      if (mv.seekable && mv.seekable.length) {
+        const edge = mv.seekable.end(mv.seekable.length - 1);
+        if (isFinite(edge) && edge - mv.currentTime > 4) {
+          mv.currentTime = Math.max(0, edge - 2);
+        }
+      }
+    } catch (_) {}
+  }
   // Resolve the playback ID for a (show, orientation) pair.
   function pbIdFor(show, isPortrait){
     return isPortrait ? show.verticalPbId : show.horizontalPbId;
@@ -4821,6 +4911,42 @@ customElements.whenDefined('mux-video').then(function(){
   // applyState() at slot transitions, so both code paths funnel
   // through the same canplay → seek → resume routine.
   function applyShowAndOrientation(){
+    // ── LIVE TAKEOVER ────────────────────────────────────────────────
+    // One live stream, orientation-independent (no vertical/horizontal
+    // variants), so rotation is a no-op. Load the live manifest and
+    // JOIN AT THE EDGE — a live HLS manifest only exposes its recent
+    // sliding window, so there is no "beginning" to start from; the
+    // explicit seekable-end nudge below guarantees the viewer lands on
+    // what's happening now even if the preload buffer opened behind it.
+    if (liveActive()) {
+      const want = LIVE.playbackId;
+      if (currentPbId === want) return;   // already live / rotation → no-op
+      const prevMuted  = mv.muted;
+      const prevVolume = mv.volume;
+      if (pendingCanplay) {
+        mv.removeEventListener('canplay', pendingCanplay);
+        pendingCanplay = null;
+      }
+      currentPbId = want;
+      mv.setAttribute('metadata-video-title', 'live_fireside_schott');
+      // stream-type=live tells the delivery stack to target the edge.
+      mv.setAttribute('stream-type', 'live');
+      mv.src = muxHlsSrc(want);
+      pendingCanplay = function onLiveReady(){
+        mv.removeEventListener('canplay', pendingCanplay);
+        pendingCanplay = null;
+        mv.muted  = prevMuted;
+        mv.volume = prevVolume;
+        joinLiveEdge();
+        if (userActivated) {
+          const p = mv.play();
+          if (p && p.catch) p.catch(function(){});
+        }
+      };
+      mv.addEventListener('canplay', pendingCanplay);
+      return;
+    }
+
     const info = getSlotInfo();
     // During an event window nothing from SHOWS is scheduled — keep
     // the opener preloaded so the post-event slot starts instantly.
