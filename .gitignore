@@ -9,3 +9,6 @@ current_POC_stream.md
 
 # Original mediamtx archive — install.sh fetches this; not source
 mediamtx.zip
+
+# Local wrangler (Cloudflare Pages) cache
+.wrangler/

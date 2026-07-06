@@ -1,0 +1,10 @@
+{
+  "active": true,
+  "playbackId": "WfZi9g02OoV0192velOUTZ02LPYbrlzuvNxpWmeaqlqqgk",
+  "title": "Fireside Chat with EP Daniel Schott",
+  "titleLine": "FIRESIDE CHAT WITH EP DANIEL SCHOTT\u2014Live",
+  "blurb": "A live fireside chat with Executive Producer Daniel Schott \u2014 streaming right now on INTERDEPENDENT.",
+  "message": null,
+  "endsAt": null,
+  "_help": "CONTROL FILE for the interdependent.tv live takeover. Set active:false to END the live and return the channel to the standing schedule (every viewer reverts within ~15s, no site redeploy). Change playbackId to REPOINT to a different Mux live stream. Deploy just this file with: wrangler pages deploy . --project-name=interdependent-tv --branch=main"
+}

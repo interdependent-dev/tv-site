@@ -2355,6 +2355,16 @@ body.promo-on .logo.show{
 .list-channel .lc-tag{
   flex-basis:100%;font-size:10px;letter-spacing:.05em;opacity:.6;margin-top:2px;
 }
+/* Live channel header — red ON AIR pill + broadcast title, pulsing dot. */
+.list-channel.live{border-bottom-color:rgba(255,59,59,.85)}
+.list-channel .lc-tag.lc-live{
+  display:flex;align-items:center;gap:7px;opacity:1;
+  font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#ff5a5a;
+}
+.list-channel .lc-tag.lc-live .chip-dot{
+  width:7px;height:7px;border-radius:50%;background:#ff3b3b;flex:none;
+  animation:chip-pulse 1.6s ease-in-out infinite;
+}
 .list-row-carrier{
   cursor:pointer;flex-direction:column;align-items:flex-start;
   background:
@@ -2598,6 +2608,15 @@ const CARRIER_PB     = 'bdFIvfHecWffhP0000PWS4e2P5zxsHaVFKzOLojApY0002Q';  // Th
 // object is the whole go-live switch — `playbackId` is the ONLY field
 // that ever needs changing to point at a different feed.
 // ═════════════════════════════════════════════════════════════════════
+// This constant is the BOOT DEFAULT so the page is live the instant it
+// loads (no fetch flash). At runtime it is overlaid by an operator
+// control file (LIVE.control, polled) — so the takeover can be ended, or
+// repointed, WITHOUT editing/redeploying this HTML: just publish a new
+// live.json. That is the "someone gives a heads-up / we're wrapping up"
+// switch — set {"active":false} there and every viewer returns to the
+// standing schedule within one poll (~15 s). `message`/`endsAt` drive an
+// optional on-screen heads-up. A missing or malformed control file is
+// ignored, so the takeover never breaks just because live.json 404s.
 const LIVE = {
   active:     true,
   playbackId: 'WfZi9g02OoV0192velOUTZ02LPYbrlzuvNxpWmeaqlqqgk',
@@ -2605,8 +2624,32 @@ const LIVE = {
   titleLine:  'FIRESIDE CHAT WITH EP DANIEL SCHOTT—Live',
   blurb:      'A live fireside chat with Executive Producer Daniel Schott — ' +
               'streaming right now on INTERDEPENDENT.',
+  control:    'live.json',   // operator control file, polled at pollMs
+  pollMs:     15000,         // how often to re-check the control file
 };
-function liveActive(){ return !!(LIVE.active && LIVE.playbackId); }
+// Runtime overlay. `override` is the last good control-file payload (wins
+// over the LIVE constant); `endedLocally` is the safety-net latch (the
+// feed fired `ended`). `liveCfg()` returns the effective config so every
+// consumer reads one source of truth.
+const LIVE_RUNTIME = { override: null, endedLocally: false, endedPbId: null };
+function liveCfg(){
+  const o = LIVE_RUNTIME.override;
+  return (o && typeof o === 'object') ? o : LIVE;
+}
+function liveActive(){
+  if (LIVE_RUNTIME.endedLocally) return false;
+  const c = liveCfg();
+  return !!(c && c.active && c.playbackId);
+}
+function livePlaybackId(){ return liveCfg().playbackId; }
+function liveTitleLine(){
+  const c = liveCfg();
+  return c.titleLine || (c.title ? c.title.toUpperCase() + '—Live' : 'LIVE');
+}
+function liveBlurb(){
+  const c = liveCfg();
+  return c.blurb || c.title || 'Streaming live now on INTERDEPENDENT.';
+}
 
 // ─────────────────────────────────────────────────────────────────────
 // INTERDEPENDENT TV — linear channel runtime
@@ -3384,7 +3427,7 @@ customElements.whenDefined('mux-video').then(function(){
       // schedule a schedule-driven transition. The broadcast ends via a
       // redeploy (flag flip) + reload, not a client-side boundary; the
       // light re-check keeps playback resilient if a tab was backgrounded.
-      if (currentPbId !== LIVE.playbackId) {
+      if (currentPbId !== livePlaybackId()) {
         applyShowAndOrientation();
       } else if (userActivated && mv.paused) {
         const p = mv.play();
@@ -3745,11 +3788,23 @@ customElements.whenDefined('mux-video').then(function(){
 
     // ── S1 · STUDIO ────────────────────────────────────────────────
     const studioHead = document.createElement('div');
-    studioHead.className = 'list-channel';
-    studioHead.innerHTML =
-      '<span class="lc-callsign">S1</span>' +
-      '<span class="lc-name">STUDIO</span>' +
-      '<span class="lc-tag">' + CH_STUDIO.tagline + '</span>';
+    if (liveActive()) {
+      // The channel row itself wears the live state — a red ON AIR pill
+      // + the broadcast title — so the lineup reads as pre-empted, not
+      // business-as-usual.
+      studioHead.className = 'list-channel live';
+      studioHead.innerHTML =
+        '<span class="lc-callsign">S1</span>' +
+        '<span class="lc-name">STUDIO</span>' +
+        '<span class="lc-tag lc-live"><span class="chip-dot"></span>ON AIR — ' +
+          liveCfg().title + '</span>';
+    } else {
+      studioHead.className = 'list-channel';
+      studioHead.innerHTML =
+        '<span class="lc-callsign">S1</span>' +
+        '<span class="lc-name">STUDIO</span>' +
+        '<span class="lc-tag">' + CH_STUDIO.tagline + '</span>';
+    }
     guideList.appendChild(studioHead);
 
     const head = document.createElement('div');
@@ -4193,8 +4248,8 @@ customElements.whenDefined('mux-video').then(function(){
       // featured card is the guide's "what's on now" surface, so it
       // carries the ON AIR / LIVE NOW state and the broadcast title.
       setHero('live', null);
-      guideDescTitle.textContent = LIVE.titleLine;
-      guideDescBody.textContent  = LIVE.blurb;
+      guideDescTitle.textContent = liveTitleLine();
+      guideDescBody.textContent  = liveBlurb();
       guideDescTag.textContent   = 'ON AIR · LIVE NOW';
       return;
     }
@@ -4919,7 +4974,7 @@ customElements.whenDefined('mux-video').then(function(){
     // explicit seekable-end nudge below guarantees the viewer lands on
     // what's happening now even if the preload buffer opened behind it.
     if (liveActive()) {
-      const want = LIVE.playbackId;
+      const want = livePlaybackId();
       if (currentPbId === want) return;   // already live / rotation → no-op
       const prevMuted  = mv.muted;
       const prevVolume = mv.volume;
@@ -5239,6 +5294,58 @@ customElements.whenDefined('mux-video').then(function(){
   // appears briefly under the cursor before fading out. The watermark
   // is the only chrome that participates in idle-fade now.
   pingControls();
+
+  // ── LIVE control-file poll + safety net ──────────────────────────
+  // The takeover ends (or repoints to a new feed) the moment live.json
+  // changes — no HTML redeploy. A revert flips liveActive() to false, so
+  // applyShowAndOrientation() swaps off the live source and applyState()
+  // brings the standing schedule back at its live wall-clock position
+  // (or the OFF AIR / static surface if we're outside broadcast hours).
+  function applyLiveTransition(prevActive){
+    const nowActive = liveActive();
+    if (prevActive !== nowActive ||
+        (nowActive && currentPbId !== livePlaybackId())) {
+      applyShowAndOrientation();          // swap source (live ↔ scheduled)
+      if (finished) applyState();         // restore the correct surface
+      if (guideEl && guideEl.classList.contains('on')) {
+        lastBuiltSlot = -2;               // force a guide rebuild
+        updateGuideClockAndNow();
+      }
+    }
+  }
+  function pollLiveControl(){
+    fetch(LIVE.control + '?t=' + Date.now(), { cache: 'no-store' })
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(j){
+        if (!j || typeof j !== 'object') return;   // missing/garbage → ignore
+        const prevActive = liveActive();
+        LIVE_RUNTIME.override = j;
+        // A control that says active — especially a NEW playbackId —
+        // re-arms the takeover after a local auto-end.
+        if (j.active && j.playbackId &&
+            j.playbackId !== LIVE_RUNTIME.endedPbId) {
+          LIVE_RUNTIME.endedLocally = false;
+        }
+        applyLiveTransition(prevActive);
+      })
+      .catch(function(){ /* network hiccup — keep the current state */ });
+  }
+  if (LIVE.control) {
+    pollLiveControl();                              // pick up any override now
+    setInterval(pollLiveControl, LIVE.pollMs || 15000);
+  }
+  // Safety net: if the live element fires `ended` (manifest ENDLIST — the
+  // clean end of a broadcast) latch the takeover off so a dead feed can't
+  // stick. Recorded streams may roll into VOD instead of firing `ended`;
+  // for those the control file is the reliable stop.
+  mv.addEventListener('ended', function(){
+    if (!liveActive()) return;
+    LIVE_RUNTIME.endedLocally = true;
+    LIVE_RUNTIME.endedPbId = livePlaybackId();
+    currentPbId = null;                              // force a swap off live
+    applyShowAndOrientation();
+    if (finished) applyState();
+  });
 
   introVideo.addEventListener('ended', finish);
   introVideo.addEventListener('error', finish);
