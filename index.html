@@ -2641,10 +2641,10 @@ const CARRIER_PB     = 'bdFIvfHecWffhP0000PWS4e2P5zxsHaVFKzOLojApY0002Q';  // Th
 const LIVE = {
   active:     false,
   playbackId: 'WfZi9g02OoV0192velOUTZ02LPYbrlzuvNxpWmeaqlqqgk',
-  title:      'Fireside Chat with EP Daniel Schott',
-  titleLine:  'FIRESIDE CHAT WITH EP DANIEL SCHOTT—Live',
-  blurb:      'A live fireside chat with Executive Producer Daniel Schott — ' +
-              'streaming right now on INTERDEPENDENT.',
+  title:      'EP Primer with Daniel E. Schott',
+  titleLine:  'EP PRIMER WITH DANIEL E. SCHOTT—Live',
+  blurb:      'A live EP Primer with Daniel E. Schott, a first-time ' +
+              'Executive Producer — streaming right now on INTERDEPENDENT.',
   control:    'live.json',   // operator control file, polled at pollMs
   pollMs:     15000,         // how often to re-check the control file
 };
@@ -2946,7 +2946,7 @@ const EVENTS = [
     titleLine: 'INTERDEPENDENT TOWN HALL—Live Event',
     badge:     'plots-logo.png',
     roles:     ['scriptographer'],
-    url:       'https://www.plots.events/s0e4',
+    url:       'https://plots.events/event/s0e4',
     description:
       'INTERDEPENDENT\'s town hall — bringing independent filmmaking to ' +
       'the PA Wilds. Filmmakers, industry pros, and the community on ' +
@@ -4362,7 +4362,7 @@ customElements.whenDefined('mux-video').then(function(){
   }
 
   let guideTick = 0;
-  function openGuide(){
+  function openGuide(fromPop){
     // Reset the build-cache so opening always rebuilds with the
     // current slot widened (the slot may have changed since the
     // last open).
@@ -4396,6 +4396,15 @@ customElements.whenDefined('mux-video').then(function(){
 
     clearInterval(guideTick);
     guideTick = setInterval(updateGuideClockAndNow, 1000);
+
+    // Reflect the open guide in the URL (/guide) with no reload, so it
+    // reads as a shareable, back-navigable route layered OVER the live
+    // channel — the video keeps playing behind it, exactly as the old
+    // overlay did. `fromPop` means we were driven BY the URL (popstate
+    // or a deep-link), so we must not push history back at it.
+    if (!fromPop && curPath() !== '/guide') {
+      history.pushState({ guide: true }, '', '/guide');
+    }
   }
 
   // Hover-to-preview: any schedule cell, on hover, swaps the
@@ -4696,7 +4705,8 @@ customElements.whenDefined('mux-video').then(function(){
   }
   refreshStartHere();
 
-  function closeGuide(){
+  function closeGuide(fromPop){
+    const wasOn = guideEl.classList.contains('on');
     guideEl.classList.remove('on');
     clearInterval(guideTick); guideTick = 0;
     // Drop focus from any GUIDE chrome (back button, GUIDE pill,
@@ -4707,30 +4717,35 @@ customElements.whenDefined('mux-video').then(function(){
     if (ae && ae !== document.body && typeof ae.blur === 'function') {
       ae.blur();
     }
+
+    // Leaving the /guide route returns to the live channel (/) — the
+    // "regularly scheduled programming." Prefer stepping BACK so a
+    // guide opened from our own channel doesn't grow the history
+    // stack; but when we were deep-linked straight to /guide (e.g.
+    // arriving from the timeline, so history.state is null), rewrite
+    // the URL to / in place. `fromPop` = the URL already changed, so
+    // don't touch history again.
+    if (!fromPop && wasOn && curPath() === '/guide') {
+      if (history.state && history.state.guide) history.back();
+      else history.replaceState({ guide: false }, '', '/');
+    }
   }
   // Fill the live-event bands (guide + lower-third) with the event's
   // window in the VIEWER's clock (a Paris viewer reads 23:00–02:00,
   // not 2–5 PM), and stamp expiries so promos retire themselves.
   (function(){
-    if (!EVENTS.length) return;
-    const ev = EVENTS[0];
-    const p = ev.ptDate.split('-').map(Number);
-    const startTs = ptToUtc(p[0], p[1], p[2], ev.startHour, 0, 0);
-    const endTs   = ptToUtc(p[0], p[1], p[2], ev.endHour,   0, 0);
-    const d = new Date(startTs);
-    const whenCopy = 'Live in person + on this channel — ' +
-      DAYS_SHORT[d.getDay()] + ' ' + MONTHS[d.getMonth()] + ' ' + d.getDate() +
-      ' · ' + fmtSlot(d) + ' – ' + fmtSlot(new Date(endTs));
-    ['plotsBandWhen', 'promoPlotsWhen'].forEach(function(id){
-      const el = document.getElementById(id);
-      if (el) el.textContent = whenCopy;
-    });
+    // The plots promo now points at the Red Carpet Movie Night (Sat
+    // Aug 1, PA Wilds) — superseding the June 19 Town Hall. Its copy is
+    // authored in the markup; the ticker banner auto-retires the day
+    // after the event so it can't go stale.
     const plotsBanner = document.querySelector('.promo-banner-plots');
-    if (plotsBanner) plotsBanner.dataset.expires = String(endTs);
-    // The open call closes June 19 (end of day PT).
+    if (plotsBanner) plotsBanner.dataset.expires =
+      String(ptToUtc(2026, 8, 2, 0, 0, 0));
+    // Screenplay submissions reopen for consideration Sept 22; the
+    // ticker banner shows through that date, then auto-retires Sept 23.
     const subsBanner = document.querySelector('.promo-banner-subs');
     if (subsBanner) subsBanner.dataset.expires =
-      String(ptToUtc(2026, 6, 20, 0, 0, 0));
+      String(ptToUtc(2026, 9, 23, 0, 0, 0));
   })();
 
   // ── Broadcast promo ticker ──────────────────────────────────────
@@ -4769,7 +4784,34 @@ customElements.whenDefined('mux-video').then(function(){
     }, 1000);
   })();
 
-  guideBtn.addEventListener('click', openGuide);
+  guideBtn.addEventListener('click', function(){ openGuide(); });
+
+  // ── Guide as a route (/guide) ────────────────────────────────────
+  // The guide is a URL STATE layered over the live channel, not a
+  // separate page — so it looks and transitions identically to the
+  // old overlay while gaining a shareable address and honoring the
+  // browser's back/forward. The path helper tolerates a trailing
+  // slash and is case-insensitive.
+  function curPath(){
+    return location.pathname.replace(/\/+$/, '').toLowerCase() || '/';
+  }
+  // Back/forward — or any in-app link that changes the path — drives
+  // the overlay to MATCH the URL: open at /guide, closed elsewhere.
+  // Passing fromPop=true stops openGuide/closeGuide re-touching
+  // history (which would double the entry or fight the pop).
+  window.addEventListener('popstate', function(){
+    const atGuide = curPath() === '/guide';
+    const isOpen  = guideEl.classList.contains('on');
+    if (atGuide && !isOpen) openGuide(true);
+    else if (!atGuide && isOpen) closeGuide(true);
+  });
+  // Deep link / hard nav: a fresh load of /guide (served by the
+  // _redirects rewrite → index.html) opens the guide over the live
+  // channel, so the content is present behind it — this is the path
+  // back from the full timeline. No push (the URL is already /guide);
+  // history.state stays null so the exit button resolves to a plain /.
+  if (curPath() === '/guide') openGuide(true);
+
   // Netflix-style back-to-TV button sits between the masthead IV
   // mark and the day/date/time cluster, arrow pointing at the
   // brand. Clicking it closes the guide and returns the viewer to
@@ -5033,7 +5075,7 @@ customElements.whenDefined('mux-video').then(function(){
         pendingCanplay = null;
       }
       currentPbId = want;
-      mv.setAttribute('metadata-video-title', 'live_fireside_schott');
+      mv.setAttribute('metadata-video-title', 'live_ep_primer_schott');
       // stream-type=live tells the delivery stack to target the edge.
       mv.setAttribute('stream-type', 'live');
       mv.src = muxHlsSrc(want);
@@ -5471,18 +5513,18 @@ customElements.whenDefined('mux-video').then(function(){
      promo retires itself the moment its event has passed. -->
 <div id="promoTicker" aria-hidden="false">
   <a class="promo-banner promo-banner-plots"
-     href="https://www.plots.events/s0e4"
+     href="https://plots.events/event/s0e4"
      target="_blank" rel="noopener" tabindex="-1">
     <img class="pb-badge" src="plots-logo.png" alt="" draggable="false">
-    <span class="pb-title">Town Hall</span>
-    <span class="pb-copy" id="promoPlotsWhen">Live in person + on this channel</span>
-    <span class="pb-url">request to attend on plots</span>
+    <span class="pb-title">Red Carpet Movie Night</span>
+    <span class="pb-copy" id="promoPlotsWhen">In person · Sat Aug 1 · PA Wilds</span>
+    <span class="pb-url">RSVP on plots</span>
   </a>
   <a class="promo-banner promo-banner-subs"
      href="https://interdependent.studio/submissions"
      target="_blank" rel="noopener" tabindex="-1">
     <span class="pb-title">Screenplay Submissions</span>
-    <span class="pb-copy">Open call — scripts in by June 19</span>
+    <span class="pb-copy">Reopens for consideration — Sept 22</span>
     <span class="pb-url">interdependent.studio/submissions</span>
   </a>
   <!-- Season banner — copy + expiry maintained by season.js init at
@@ -5617,17 +5659,17 @@ customElements.whenDefined('mux-video').then(function(){
        (#plotsBandWhen) still lands. The cycle script drives the slide. -->
   <div class="guide-promo-cycle" id="guidePromoCycle">
     <a class="guide-promo guide-promo-plots active"
-       href="https://www.plots.events/s0e4"
+       href="https://plots.events/event/s0e4"
        target="_blank" rel="noopener">
       <img class="promo-badge" src="plots-logo.png" alt="" draggable="false">
-      <span class="promo-title">Town Hall</span>
-      <span class="promo-copy" id="plotsBandWhen">Live event</span>
-      <span class="promo-url">request to attend on plots</span>
+      <span class="promo-title">Red Carpet Movie Night</span>
+      <span class="promo-copy" id="plotsBandWhen">In person · Sat Aug 1 · PA Wilds</span>
+      <span class="promo-url">RSVP on plots</span>
     </a>
     <a class="guide-promo" href="https://interdependent.studio/submissions"
        target="_blank" rel="noopener">
       <span class="promo-title">Screenplay Submissions</span>
-      <span class="promo-copy">Open call — scripts in by June 19</span>
+      <span class="promo-copy">Reopens for consideration — Sept 22</span>
       <span class="promo-url">interdependent.studio/submissions</span>
     </a>
   </div>
@@ -5852,7 +5894,7 @@ customElements.whenDefined('mux-video').then(function(){
 <script>
 /* Cycling guide banner — cross-fade the single promo slot between its
    two CTA bands every 5s, ALWAYS starting on the live dated event
-   (Town Hall) each time the guide opens. One slot is more
+   (Red Carpet Movie Night) each time the guide opens. One slot is more
    eye-catching and frees the vertical space two stacked bands used to
    take from the schedule. Independent of the lower-third video ticker
    (which alternates every 3 min). The interval only runs while the
@@ -5875,7 +5917,7 @@ customElements.whenDefined('mux-video').then(function(){
   function init(){
     bands.forEach(function(b, k){
       place(b, k === 0 ? '0' : '100%');
-      b.classList.toggle('active', k === 0);   // start on Town Hall
+      b.classList.toggle('active', k === 0);   // start on Red Carpet Movie Night
     });
     i = 0;
   }

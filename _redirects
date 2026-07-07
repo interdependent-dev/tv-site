@@ -1,0 +1,26 @@
+# Cloudflare Pages redirects — interdependent.tv
+#
+# /guide is NOT a separate page. It is the live channel (index.html)
+# with the TV-guide overlay open on top, so the content plays behind
+# it. The overlay pushes/pops the /guide URL client-side; this file
+# handles the HARD navigations (typing the URL, a shared link, or the
+# "TV Guide" link back from /timeline) by serving index.html WITHOUT
+# changing the address bar. index.html reads location.pathname on load
+# and opens the guide.
+#
+# Deploy this file by deploying the whole project:
+#   wrangler pages deploy . --project-name=interdependent-tv --branch=main
+
+# Normalize the trailing-slash form first (a bare /guide keeps the
+# page at the same path depth as /, so its root-relative assets —
+# season.js, fonts/, live.json — resolve correctly; /guide/ would
+# break them).
+/guide/   /guide         301
+
+# Serve the channel at /guide, address bar unchanged (200 = rewrite).
+# NB: the destination is / — NOT /index.html. Cloudflare Pages
+# auto-canonicalizes /index.html with a 308 back to /, which would
+# defeat the rewrite (/guide -> /index.html -> 308 -> /, guide never
+# opens). / is already canonical, so the rewrite sticks and the address
+# bar stays /guide.
+/guide    /              200

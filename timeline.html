@@ -46,6 +46,11 @@ header{
   display:flex;align-items:center;gap:8px;transition:border-color .15s;white-space:nowrap
 }
 .live-link:hover{border-color:#777}
+/* Back-to-guide caret — the full timeline is a drill-down FROM the
+   guide, so its primary nav steps back UP into the guide (not out to
+   the bare channel). The guide's own exit button is what returns the
+   viewer to the live programming. */
+.guide-caret{font-size:15px;line-height:1;margin-right:-3px;color:#ff5a5a}
 .live-dot{width:7px;height:7px;border-radius:50%;background:#FF0000;animation:blink 1.6s ease-in-out infinite}
 @keyframes blink{50%{opacity:.35}}
 
@@ -142,7 +147,7 @@ h1 .s1,.hero-tagline .s1{color:#FF0000;white-space:nowrap}
     </svg>
     <span>Interdependent.TV</span>
   </a>
-  <a class="live-link" href="/"><span class="live-dot" aria-hidden="true"></span>Watch TV</a>
+  <a class="live-link" href="/guide" aria-label="Back to the TV guide"><span class="guide-caret" aria-hidden="true">‹</span>TV Guide</a>
 </header>
 
 <main>
@@ -168,6 +173,7 @@ h1 .s1,.hero-tagline .s1{color:#FF0000;white-space:nowrap}
     <div class="ctas">
       <a class="cta cta-red" href="https://interdependent.studio/submissions">Submit Your Script</a>
       <a class="cta cta-ghost" href="/watch?s=screenplay-submissions">Watch the Open Call</a>
+      <a class="cta cta-ghost" href="/guide">TV Guide</a>
       <a class="cta cta-ghost" href="/">Watch TV</a>
     </div>
   </div>
