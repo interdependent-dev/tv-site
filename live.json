@@ -1,13 +1,12 @@
 {
   "active": true,
-  "playbackId": "xFzxvcdbIJopkgGaseoxuQpN5LWGe9pA47kepshhxuk",
-  "recorded": true,
-  "anchorMs": 1783466184539,
-  "title": "EP Primer with Daniel E. Schott",
-  "titleLine": "EP PRIMER WITH DANIEL E. SCHOTT—Live",
-  "blurb": "An EP Primer with Daniel E. Schott, a first-time Executive Producer — playing right now on INTERDEPENDENT.",
+  "playbackId": "Urexw02cnbNf01fzF8XqQpM63jHEMCra15z0001MGKr71yc",
+  "recorded": false,
+  "title": "Live Takeover",
+  "titleLine": "LIVE TAKEOVER—Live",
+  "blurb": "A live takeover — streaming right now on INTERDEPENDENT.",
   "message": "",
   "endsAt": null,
-  "warning": false,
-  "_help": "CONTROL FILE for interdependent.tv. active:true takes over the channel within ~15s. warning:true runs the WARNING takeover overlay (full-screen card at start + every 10 min; ticker crawl at the 5-min mark). recorded:true + anchorMs = simulated-live VOD. active:false returns to the standing schedule. Deploy: wrangler pages deploy . --project-name=interdependent-tv --branch=main"
+  "warning": true,
+  "_help": "GO-LIVE state: channel takeover + WARNING regime (snow+IV-logo bookend, full-screen card at start + every 10 min, ticker crawl at the 5-min mark; plots/subs/season banners yield only while a warning element is up). To END and return to the Dan Schott takeover: cp live.dan-schott.json live.json && wrangler pages deploy . --project-name=interdependent-tv --branch=main"
 }
