@@ -6070,6 +6070,32 @@ customElements.whenDefined('mux-video').then(function(){
    of the track) for a seamless, gapless loop. */
 @keyframes wc-scroll{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
 @media (prefers-reduced-motion:reduce){ #warnCrawl .wc-track{ animation-duration:90s; } }
+
+/* Snow + IV-logo BOOKEND — the site's own cold-start / off-air identity,
+   played as the takeover opens (before the card) and as it closes out
+   (after the stream ends). Opacity-only so it fades OUT to reveal the
+   channel again. Snow + radial vignette + centred IV mark fading in. */
+#warnStatic{
+  position:fixed; inset:0; z-index:24; background:#000;
+  opacity:0; transition:opacity .6s ease; pointer-events:none;
+}
+#warnStatic.on{ opacity:1; }
+#warnStatic canvas{ position:absolute; inset:0; width:100%; height:100%; image-rendering:pixelated; }
+#warnStatic .wl-vignette{
+  position:absolute; inset:0; z-index:1; pointer-events:none;
+  background:radial-gradient(ellipse at center,transparent 30%,rgba(0,0,0,.7) 100%);
+}
+#warnStatic .wl-logo{
+  position:absolute; inset:0; z-index:2; pointer-events:none;
+  display:flex; align-items:center; justify-content:center;
+}
+#warnStatic .wl-logo svg{
+  width:min(45vw,420px); height:auto; opacity:0;
+  filter:drop-shadow(0 0 30px rgba(255,255,255,.15));
+}
+/* Fade replays each time the bookend shows (open AND close). */
+#warnStatic.on .wl-logo svg{ animation:wl-fade-in 1.6s ease-in forwards; }
+@keyframes wl-fade-in{ to{ opacity:.6; } }
 </style>
 
 <div id="warnCard" role="alert" aria-hidden="true">
@@ -6082,39 +6108,81 @@ customElements.whenDefined('mux-video').then(function(){
   </div>
 </div>
 
+<div id="warnStatic" aria-hidden="true">
+  <canvas class="wl-noise" aria-hidden="true"></canvas>
+  <div class="wl-vignette"></div>
+  <div class="wl-logo"><!-- IV mark cloned from the site's own cold-start logo at runtime --></div>
+</div>
+
 <script>
 // ── WARNING takeover engine ────────────────────────────────────────
 // Deliberately independent of the channel runtime: it only reads the
-// operator control file and drives its own two overlays, so it cannot
-// destabilise the (sacred) takeover/schedule engine above.
+// operator control file and drives its own overlays, so it cannot
+// destabilise the (sacred) takeover/schedule engine above. The takeover
+// is BOOKENDED by the site's own snow + IV-logo identity: a static burst
+// leads IN (before the WARNING card) and closes OUT (after the stream
+// ends), matching the cold-start / off-air interlude.
 (function(){
-  var CONTROL    = 'live.json';
-  var POLL_MS    = 15000;   // match the channel's control poll
-  var PERIOD     = 600;     // 10 min between WARNING cards (wall-clock)
-  var CARD_DWELL = 18;      // full-screen card seconds
-  var CRAWL_AT   = 300;     // 5-min mark → crawl enters
-  var CRAWL_DWELL= 45;      // crawl seconds on screen
+  var CONTROL     = 'live.json';
+  var POLL_MS     = 15000;   // match the channel's control poll
+  var PERIOD      = 600;     // 10 min between WARNING cards (wall-clock)
+  var CARD_DWELL  = 18;      // full-screen card seconds
+  var CRAWL_AT    = 300;     // 5-min mark → crawl enters
+  var CRAWL_DWELL = 45;      // crawl seconds on screen
+  var STATIC_SECS = 3;       // snow + IV-logo bookend (open / close)
 
   var card  = document.getElementById('warnCard');
   var crawl = document.getElementById('warnCrawl');
+  var stat  = document.getElementById('warnStatic');
   var guide = document.getElementById('guide');
-  if (!card || !crawl) return;
+  if (!card || !crawl || !stat) return;
 
-  var warnOn     = false;   // last known control.warning
-  var latchUntil = 0;       // epoch-sec until which the "at the start" card holds
+  // Clone the site's own IV mark into the bookend so the logo fade reads
+  // identical to the cold-start / interlude.
+  var srcLogo = document.querySelector('#intro .intro-logo svg, #static .static-logo svg');
+  var logoBox = stat.querySelector('.wl-logo');
+  if (srcLogo && logoBox && !logoBox.querySelector('svg')) logoBox.appendChild(srcLogo.cloneNode(true));
 
-  // Poll the SAME control file the channel uses. Missing/garbage file or
-  // a network hiccup leaves the last known state untouched.
+  // Same V1 snow renderer the channel uses (half-res, *60 greyscale).
+  var noise = (function(cnv){
+    var ctx = cnv.getContext('2d'), alive = false, timer = 0;
+    function resize(){ cnv.width = Math.max(1, innerWidth >> 1); cnv.height = Math.max(1, innerHeight >> 1); }
+    function tick(){
+      if (!alive) return;
+      var w = cnv.width, h = cnv.height, d = ctx.createImageData(w, h), p = d.data, i = p.length;
+      while (i) { i -= 4; var v = (Math.random() * 60) | 0; p[i] = p[i+1] = p[i+2] = v; p[i+3] = 255; }
+      ctx.putImageData(d, 0, 0); timer = setTimeout(tick, 66);
+    }
+    resize(); window.addEventListener('resize', resize);
+    return { start: function(){ if (!alive) { alive = true; tick(); } },
+             stop:  function(){ alive = false; clearTimeout(timer); timer = 0; } };
+  })(stat.querySelector('.wl-noise'));
+
+  var warnOn      = false;   // last known control.warning
+  var latchUntil  = 0;       // epoch-sec the "at the start" card holds until
+  var staticUntil = 0;       // epoch-sec the snow/logo bookend holds until
+
+  function bookend(){         // snow + IV logo; replays the fade each time
+    staticUntil = Math.floor(Date.now()/1000) + STATIC_SECS;
+    stat.classList.remove('on'); void stat.offsetWidth;   // restart the fade-in
+    stat.classList.add('on');
+    noise.start();
+  }
+
   function poll(){
     fetch(CONTROL + '?t=' + Date.now(), { cache:'no-store' })
       .then(function(r){ return r.ok ? r.json() : null; })
       .then(function(j){
         if (!j || typeof j !== 'object') return;
-        var next = (j.warning === true) ||
-                   (j.warning && j.warning.active === true);
-        // false→true (incl. first load into an active takeover): lead with
-        // the WARNING card immediately, wherever we are in the 10-min phase.
-        if (next && !warnOn) latchUntil = Math.floor(Date.now()/1000) + CARD_DWELL;
+        var next = (j.warning === true) || (j.warning && j.warning.active === true);
+        if (next && !warnOn) {
+          // START: snow + IV-logo bookend, THEN the WARNING card.
+          bookend();
+          latchUntil = Math.floor(Date.now()/1000) + STATIC_SECS + CARD_DWELL;
+        } else if (!next && warnOn) {
+          // END: bookend out, then the channel (Dan Schott) resumes.
+          bookend();
+        }
         warnOn = next;
       })
       .catch(function(){ /* keep current state */ });
@@ -6125,20 +6193,24 @@ customElements.whenDefined('mux-video').then(function(){
   setInterval(function(){
     var nowSec    = Math.floor(Date.now()/1000);
     var guideOpen = guide && guide.classList.contains('on');
+    var staticOn  = nowSec < staticUntil;
     var phase     = nowSec % PERIOD;
-    var cardOn    = warnOn && (phase < CARD_DWELL || nowSec < latchUntil);
-    var crawlOn   = warnOn && !cardOn &&
+    var cardOn    = !staticOn && warnOn && (phase < CARD_DWELL || nowSec < latchUntil);
+    var crawlOn   = !staticOn && warnOn && !cardOn &&
                     phase >= CRAWL_AT && phase < (CRAWL_AT + CRAWL_DWELL);
 
     // The guide is a deliberate menu on top — don't fight it.
     if (guideOpen) { cardOn = false; crawlOn = false; }
 
+    // Bookend finished → fade the snow out and stop the renderer.
+    if (!staticOn && stat.classList.contains('on')) { stat.classList.remove('on'); noise.stop(); }
+
     card.classList.toggle('on', cardOn);
     card.setAttribute('aria-hidden', cardOn ? 'false' : 'true');
     crawl.classList.toggle('on', crawlOn);
 
-    // Promo banners yield the bottom strip while either element is up.
-    document.body.classList.toggle('warn-blocking', cardOn || crawlOn);
+    // Promo banners yield the bottom strip while any warning element is up.
+    document.body.classList.toggle('warn-blocking', staticOn || cardOn || crawlOn);
   }, 1000);
 })();
 </script>
