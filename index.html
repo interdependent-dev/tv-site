@@ -4950,23 +4950,28 @@ customElements.whenDefined('mux-video').then(function(){
     const ip = introVideo.play();
     if (ip && ip.catch) ip.catch(finish); // codec/network → skip to finish
 
-    // (3) Movie audio gate opens. Held silent at volume:0 until
-    //     intro.ended, then ramped to 0.65 in finish(). Setting
-    //     muted=false inside the gesture preserves "unmuted with
-    //     volume control" for subsequent state changes.
-    mv.muted = false;
+    // (3) Movie audio gate — iOS-safe PRIME. iOS blocks a media element's
+    //     first AUDIBLE play outside a user gesture and ignores .volume, so
+    //     the old "muted=false + volume:0, play later" path left the live
+    //     feed SILENT on iPhone (the intro <video> was audible because it
+    //     plays synchronously in the tap; the mux-video's first play was
+    //     deferred to finish(), outside the gesture). Instead prime here: a
+    //     MUTED play() inside this gesture grabs the audio permission (the
+    //     same trick the auto-play toggle uses); finish() then unmutes with
+    //     no policy re-check. Held muted (not volume:0) so it also stays
+    //     silent behind the intro on iOS, where volume can't be set.
+    mv.muted = true;
     mv.volume = 0;
+    try { const mp = mv.play(); if (mp && mp.catch) mp.catch(function(){}); } catch (_) {}
 
-    // (4) Seek + play movie silently at the live wall-clock offset
-    //     — but ONLY when activating mid-stream (channel is already
-    //     on-air at this moment). For the off-air → on-air auto-
-    //     activate path (kicked off ~INTRO_LEAD_MS before slot
-    //     start), we hold the feed off entirely so the sequence
-    //     reads as OFF-AIR → ANIMATION → ACTUAL LIVE FEED. finish()
-    //     brings the feed up at the live wall-clock position when
-    //     intro.ended fires.
+    // (4) Sync the movie to the live wall-clock offset. For the LIVE
+    //     TAKEOVER (liveActive) we ALWAYS bring the feed up here so its
+    //     audio is authorised inside the gesture — regardless of what the
+    //     standing schedule (off-hours) reports. For the scheduled off-air →
+    //     on-air path the feed is still held until finish() so the sequence
+    //     reads OFF-AIR → ANIMATION → ACTUAL LIVE FEED.
     const startInfo = getSlotInfo();
-    if (startInfo.isLive || (!startInfo.offAir && startInfo.inShow)) {
+    if (liveActive() || startInfo.isLive || (!startInfo.offAir && startInfo.inShow)) {
       startMovieAtLive();
     }
 
@@ -4986,8 +4991,12 @@ customElements.whenDefined('mux-video').then(function(){
     if (!userActivated) return; // shouldn't be reachable; defensive
     finished = true;
 
-    // Movie volume ramps to listening level. 0.65 = slightly above
-    // average; user adjusts via device controls from there.
+    // UNMUTE the movie and ramp to listening level. The feed was primed
+    // MUTED inside the activate() gesture, so unmuting now is allowed on
+    // iOS with no autoplay-policy re-check (volume is a no-op on iOS, but
+    // muted=false is what actually gates the sound there). 0.65 = slightly
+    // above average; user adjusts via device controls from there.
+    mv.muted  = false;
     mv.volume = 0.65;
 
     // Re-sync the feed to the live wall-clock position with the
