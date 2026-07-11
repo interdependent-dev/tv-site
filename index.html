@@ -6031,7 +6031,7 @@ customElements.whenDefined('mux-video').then(function(){
      ══════════════════════════════════════════════════════════════════ -->
 <style>
 #warnCard{
-  position:fixed; inset:0; z-index:24;
+  position:fixed; inset:0; z-index:23;
   display:flex; align-items:center; justify-content:center;
   background:#000;
   opacity:0; visibility:hidden;
@@ -6044,7 +6044,7 @@ customElements.whenDefined('mux-video').then(function(){
   width:auto; height:auto; object-fit:contain; display:block;
 }
 #warnCrawl{
-  position:fixed; left:0; right:0; bottom:0; z-index:24;
+  position:fixed; left:0; right:0; bottom:0; z-index:23;
   height:clamp(38px,6.2vh,64px);
   background:#000; overflow:hidden;
   display:flex; align-items:center;
@@ -6076,7 +6076,7 @@ customElements.whenDefined('mux-video').then(function(){
    (after the stream ends). Opacity-only so it fades OUT to reveal the
    channel again. Snow + radial vignette + centred IV mark fading in. */
 #warnStatic{
-  position:fixed; inset:0; z-index:24; background:#000;
+  position:fixed; inset:0; z-index:23; background:#000;
   opacity:0; transition:opacity .6s ease; pointer-events:none;
 }
 #warnStatic.on{ opacity:1; }
@@ -6096,6 +6096,17 @@ customElements.whenDefined('mux-video').then(function(){
 /* Fade replays each time the bookend shows (open AND close). */
 #warnStatic.on .wl-logo svg{ animation:wl-fade-in 1.6s ease-in forwards; }
 @keyframes wl-fade-in{ to{ opacity:.6; } }
+
+/* Keep the viewer's controls reachable while a WARNING element is up: the
+   fullscreen/logo button (.logo) and the GUIDE pill (#guide-button) float
+   ABOVE the card (z:24) so viewers can still go fullscreen or open the
+   guide. Scoped to body.warn-blocking so the normal channel layering (the
+   "bug bows to the banner" promo behaviour) is untouched. Still below the
+   guide overlay (z:25), so opening the guide covers them cleanly. */
+body.warn-blocking .logo,
+body.warn-blocking .logo.show,
+body.warn-blocking #guide-button,
+body.warn-blocking #guide-button.show{ z-index:24; }
 </style>
 
 <div id="warnCard" role="alert" aria-hidden="true">
@@ -6163,6 +6174,7 @@ customElements.whenDefined('mux-video').then(function(){
   var latchUntil  = 0;       // epoch-sec the lead-in card holds until
   var staticUntil = 0;       // epoch-sec the snow/logo bookend holds until
   var lastRestart = 0;       // last control.warningRestartAt we bookended on
+  var feedEnded   = false;   // live takeover feed hit 'ended' → closed out
 
   function bookend(){         // snow + IV logo; replays the fade each time
     staticUntil = Math.floor(Date.now()/1000) + STATIC_SECS;
@@ -6185,14 +6197,18 @@ customElements.whenDefined('mux-video').then(function(){
         holdOn = (j.warningHold === true) || !!(j.warning && j.warning.hold === true);
         if (next && !warnOn) {
           // START (incl. fresh load into an active takeover): snow → card.
-          leadIn(); lastRestart = restartAt;
+          leadIn(); lastRestart = restartAt; feedEnded = false;
         } else if (next && warnOn && restartAt && restartAt !== lastRestart) {
-          // Operator bumped warningRestartAt → replay the snow, then card.
-          leadIn(); lastRestart = restartAt;
+          // Operator bumped warningRestartAt → replay the snow lead-in.
+          // Held: snow → held card. Cyclic (switching to the live stream):
+          // snow → the stream (the card returns on the 10-min cadence).
+          if (holdOn) leadIn(); else bookend();
+          lastRestart = restartAt; feedEnded = false;
         } else if (!next && warnOn) {
           // END: bookend out, then the channel (Dan Schott) resumes.
           bookend();
         }
+        if (!next) feedEnded = false;
         warnOn = next;
       })
       .catch(function(){ /* keep current state */ });
@@ -6200,20 +6216,32 @@ customElements.whenDefined('mux-video').then(function(){
   poll();
   setInterval(poll, POLL_MS);
 
+  // Close-out when the LIVE takeover feed ENDS. The channel's mux-video
+  // fires 'ended' on a clean broadcast end; act only while the warning
+  // regime is live so a scheduled show ending never triggers it. Plays the
+  // snow + IV-logo close, then latches the warning off locally (the
+  // operator's live.json swap makes the return to Dan Schott permanent for
+  // everyone).
+  var mvEl = document.querySelector('mux-video');
+  if (mvEl) mvEl.addEventListener('ended', function(){
+    if (warnOn && !feedEnded) { feedEnded = true; bookend(); }
+  });
+
   setInterval(function(){
     var nowSec    = Math.floor(Date.now()/1000);
     var guideOpen = guide && guide.classList.contains('on');
     var staticOn  = nowSec < staticUntil;
     var phase     = nowSec % PERIOD;
+    var live      = warnOn && !feedEnded;   // regime armed AND feed not ended
     var cardOn, crawlOn;
     if (holdOn) {
       // HELD: after the snow lead-in, the WARNING card stays up until the
       // operator clears warningHold (or ends the takeover). No crawl.
-      cardOn  = !staticOn && warnOn;
+      cardOn  = !staticOn && live;
       crawlOn = false;
     } else {
-      cardOn  = !staticOn && warnOn && (phase < CARD_DWELL || nowSec < latchUntil);
-      crawlOn = !staticOn && warnOn && !cardOn &&
+      cardOn  = !staticOn && live && (phase < CARD_DWELL || nowSec < latchUntil);
+      crawlOn = !staticOn && live && !cardOn &&
                 phase >= CRAWL_AT && phase < (CRAWL_AT + CRAWL_DWELL);
     }
 
