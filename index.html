@@ -4773,9 +4773,15 @@ customElements.whenDefined('mux-video').then(function(){
       const pick   = active.length
         ? active[cycle % active.length] : null;
       const guideOpen = guideEl.classList.contains('on');
+      // The WARNING takeover (full-screen card / bottom crawl) is the
+      // master: while either is on-screen the promo banners yield so the
+      // bottom strip is never double-booked. ~60s per 10-min cycle, so
+      // the plots + submissions + season banners still run the rest of
+      // the time on their normal 180s cadence.
+      const warnBlocking = document.body.classList.contains('warn-blocking');
       let anyShown = false;
       banners.forEach(function(b){
-        const showThis = onAir && !guideOpen && b === pick;
+        const showThis = onAir && !guideOpen && !warnBlocking && b === pick;
         b.classList.toggle('show', showThis);
         anyShown = anyShown || showThis;
       });
@@ -5996,6 +6002,144 @@ customElements.whenDefined('mux-video').then(function(){
   // Click the veil / the margin around the page (not the page itself) to dismiss.
   stage.addEventListener('click', function(e){ if (e.target === stage) closeDoc(); });
   document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeDoc(); });
+})();
+</script>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     WARNING TAKEOVER OVERLAY  (operator-toggled, wall-clock synced)
+     ------------------------------------------------------------------
+     Two elements sit above the channel (z:24 — over the promo ticker
+     at z:22, under the TV guide at z:25):
+
+       #warnCard  — the full-screen WARNING image (warning.png) on black.
+                    Shows AT THE START of the takeover, then again at the
+                    top of every 10-minute wall-clock window.
+       #warnCrawl — a black strip / white ticker crawl of the warning
+                    copy. Shows at the 5-minute mark, i.e. midway between
+                    two WARNING cards.
+
+     Control: polled from the same live.json operator file —
+       "warning": true   → the takeover regime runs (card + crawl cycle)
+       "warning": false  → everything clears within one poll (~15s)
+     no site redeploy needed. Wall-clock phased (Date.now), so every
+     viewer worldwide hits the card and the crawl at the same moments.
+
+     While either element is on-screen, <body> gets .warn-blocking so the
+     plots / submissions / season promo banners yield the bottom strip
+     (they resume on their 180s cadence the rest of the cycle). Net cost
+     to the promos is ~60s of every 600s, so they still air normally.
+     ══════════════════════════════════════════════════════════════════ -->
+<style>
+#warnCard{
+  position:fixed; inset:0; z-index:24;
+  display:flex; align-items:center; justify-content:center;
+  background:#000;
+  opacity:0; visibility:hidden;
+  transition:opacity .35s ease;
+  pointer-events:none;
+}
+#warnCard.on{ opacity:1; visibility:visible; }
+#warnCard img{
+  max-width:100%; max-height:100%;
+  width:auto; height:auto; object-fit:contain; display:block;
+}
+#warnCrawl{
+  position:fixed; left:0; right:0; bottom:0; z-index:24;
+  height:clamp(38px,6.2vh,64px);
+  background:#000; overflow:hidden;
+  display:flex; align-items:center;
+  opacity:0; visibility:hidden;
+  transition:opacity .3s ease;
+  pointer-events:none;
+  border-top:1px solid rgba(255,255,255,.14);
+}
+#warnCrawl.on{ opacity:1; visibility:visible; }
+#warnCrawl .wc-track{
+  display:inline-flex; flex:0 0 auto;
+  white-space:nowrap; will-change:transform;
+  animation:wc-scroll 42s linear infinite;
+}
+#warnCrawl .wc-seg{
+  flex:0 0 auto;
+  color:#fff; font-family:"Eurostile","Eurostile Wide",sans-serif;
+  font-weight:700; letter-spacing:.02em;
+  font-size:clamp(13px,2.4vh,22px);
+  text-transform:uppercase; padding:0 2.5vw;
+}
+/* Two identical segments; translate by exactly one segment width (50%
+   of the track) for a seamless, gapless loop. */
+@keyframes wc-scroll{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
+@media (prefers-reduced-motion:reduce){ #warnCrawl .wc-track{ animation-duration:90s; } }
+</style>
+
+<div id="warnCard" role="alert" aria-hidden="true">
+  <img src="warning.png" alt="WARNING — The following content is not being promoted or condoned. This live takeover of INTERDEPENDENT.TV is solely the responsibility of Macie Meredith and Veronica Chan. Their behavior is their own.">
+</div>
+<div id="warnCrawl" aria-hidden="true">
+  <div class="wc-track">
+    <span class="wc-seg">WARNING — THE FOLLOWING CONTENT IS NOT BEING PROMOTED OR CONDONED. THIS LIVE TAKEOVER OF INTERDEPENDENT.TV IS SOLELY THE RESPONSIBILITY OF MACIE MEREDITH AND VERONICA CHAN. THEIR BEHAVIOR IS THEIR OWN. &nbsp;•&nbsp;&nbsp;</span>
+    <span class="wc-seg" aria-hidden="true">WARNING — THE FOLLOWING CONTENT IS NOT BEING PROMOTED OR CONDONED. THIS LIVE TAKEOVER OF INTERDEPENDENT.TV IS SOLELY THE RESPONSIBILITY OF MACIE MEREDITH AND VERONICA CHAN. THEIR BEHAVIOR IS THEIR OWN. &nbsp;•&nbsp;&nbsp;</span>
+  </div>
+</div>
+
+<script>
+// ── WARNING takeover engine ────────────────────────────────────────
+// Deliberately independent of the channel runtime: it only reads the
+// operator control file and drives its own two overlays, so it cannot
+// destabilise the (sacred) takeover/schedule engine above.
+(function(){
+  var CONTROL    = 'live.json';
+  var POLL_MS    = 15000;   // match the channel's control poll
+  var PERIOD     = 600;     // 10 min between WARNING cards (wall-clock)
+  var CARD_DWELL = 18;      // full-screen card seconds
+  var CRAWL_AT   = 300;     // 5-min mark → crawl enters
+  var CRAWL_DWELL= 45;      // crawl seconds on screen
+
+  var card  = document.getElementById('warnCard');
+  var crawl = document.getElementById('warnCrawl');
+  var guide = document.getElementById('guide');
+  if (!card || !crawl) return;
+
+  var warnOn     = false;   // last known control.warning
+  var latchUntil = 0;       // epoch-sec until which the "at the start" card holds
+
+  // Poll the SAME control file the channel uses. Missing/garbage file or
+  // a network hiccup leaves the last known state untouched.
+  function poll(){
+    fetch(CONTROL + '?t=' + Date.now(), { cache:'no-store' })
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(j){
+        if (!j || typeof j !== 'object') return;
+        var next = (j.warning === true) ||
+                   (j.warning && j.warning.active === true);
+        // false→true (incl. first load into an active takeover): lead with
+        // the WARNING card immediately, wherever we are in the 10-min phase.
+        if (next && !warnOn) latchUntil = Math.floor(Date.now()/1000) + CARD_DWELL;
+        warnOn = next;
+      })
+      .catch(function(){ /* keep current state */ });
+  }
+  poll();
+  setInterval(poll, POLL_MS);
+
+  setInterval(function(){
+    var nowSec    = Math.floor(Date.now()/1000);
+    var guideOpen = guide && guide.classList.contains('on');
+    var phase     = nowSec % PERIOD;
+    var cardOn    = warnOn && (phase < CARD_DWELL || nowSec < latchUntil);
+    var crawlOn   = warnOn && !cardOn &&
+                    phase >= CRAWL_AT && phase < (CRAWL_AT + CRAWL_DWELL);
+
+    // The guide is a deliberate menu on top — don't fight it.
+    if (guideOpen) { cardOn = false; crawlOn = false; }
+
+    card.classList.toggle('on', cardOn);
+    card.setAttribute('aria-hidden', cardOn ? 'false' : 'true');
+    crawl.classList.toggle('on', crawlOn);
+
+    // Promo banners yield the bottom strip while either element is up.
+    document.body.classList.toggle('warn-blocking', cardOn || crawlOn);
+  }, 1000);
 })();
 </script>
 

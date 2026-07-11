@@ -1,0 +1,12 @@
+{
+  "active": true,
+  "playbackId": "PASTE_TAKEOVER_PLAYBACK_ID",
+  "recorded": false,
+  "title": "Live Takeover",
+  "titleLine": "LIVE TAKEOVER—Live",
+  "blurb": "A live takeover — streaming right now on INTERDEPENDENT.",
+  "message": "",
+  "endsAt": null,
+  "warning": true,
+  "_help": "GO-LIVE: takeover + WARNING regime. playbackId = the ACTIVE Mux live stream's PLAYBACK ID (Mux dashboard -> the live stream -> Playback IDs; NOT the Stream ID or Stream Key). warning:true drives the WARNING card + ticker crawl. To END and return to Dan Schott: deploy live.dan-schott.json as live.json. Deploy: cp live.takeover.json live.json && wrangler pages deploy . --project-name=interdependent-tv --branch=main"
+}
