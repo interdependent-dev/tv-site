@@ -4921,6 +4921,14 @@ customElements.whenDefined('mux-video').then(function(){
     if (userActivated) return;
     userActivated = true;
 
+    // iOS: declare the page audio as media "playback" so INLINE video audio
+    // ignores the hardware silent/ring switch. iPhone Safari/Chrome play
+    // inline (no page-fullscreen API), and inline audio otherwise honours
+    // that switch — the #1 cause of "video plays but no sound on iPhone".
+    // Set inside the first user gesture; feature-detected (Safari 16.4+),
+    // a harmless no-op elsewhere.
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (_) {}
+
     // The cold-start ticker is done now; we're past the badge.
     if (typeof stopColdStartTicker === 'function') stopColdStartTicker();
 
