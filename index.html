@@ -4773,9 +4773,15 @@ customElements.whenDefined('mux-video').then(function(){
       const pick   = active.length
         ? active[cycle % active.length] : null;
       const guideOpen = guideEl.classList.contains('on');
+      // The WARNING takeover (full-screen card / bottom crawl) is the
+      // master: while either is on-screen the promo banners yield so the
+      // bottom strip is never double-booked. ~60s per 10-min cycle, so
+      // the plots + submissions + season banners still run the rest of
+      // the time on their normal 180s cadence.
+      const warnBlocking = document.body.classList.contains('warn-blocking');
       let anyShown = false;
       banners.forEach(function(b){
-        const showThis = onAir && !guideOpen && b === pick;
+        const showThis = onAir && !guideOpen && !warnBlocking && b === pick;
         b.classList.toggle('show', showThis);
         anyShown = anyShown || showThis;
       });
@@ -5996,6 +6002,262 @@ customElements.whenDefined('mux-video').then(function(){
   // Click the veil / the margin around the page (not the page itself) to dismiss.
   stage.addEventListener('click', function(e){ if (e.target === stage) closeDoc(); });
   document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeDoc(); });
+})();
+</script>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     WARNING TAKEOVER OVERLAY  (operator-toggled, wall-clock synced)
+     ------------------------------------------------------------------
+     Two elements sit above the channel (z:24 — over the promo ticker
+     at z:22, under the TV guide at z:25):
+
+       #warnCard  — the full-screen WARNING image (warning.png) on black.
+                    Shows AT THE START of the takeover, then again at the
+                    top of every 10-minute wall-clock window.
+       #warnCrawl — a black strip / white ticker crawl of the warning
+                    copy. Shows at the 5-minute mark, i.e. midway between
+                    two WARNING cards.
+
+     Control: polled from the same live.json operator file —
+       "warning": true   → the takeover regime runs (card + crawl cycle)
+       "warning": false  → everything clears within one poll (~15s)
+     no site redeploy needed. Wall-clock phased (Date.now), so every
+     viewer worldwide hits the card and the crawl at the same moments.
+
+     While either element is on-screen, <body> gets .warn-blocking so the
+     plots / submissions / season promo banners yield the bottom strip
+     (they resume on their 180s cadence the rest of the cycle). Net cost
+     to the promos is ~60s of every 600s, so they still air normally.
+     ══════════════════════════════════════════════════════════════════ -->
+<style>
+#warnCard{
+  position:fixed; inset:0; z-index:23;
+  display:flex; align-items:center; justify-content:center;
+  background:#000;
+  opacity:0; visibility:hidden;
+  transition:opacity .35s ease;
+  pointer-events:none;
+}
+#warnCard.on{ opacity:1; visibility:visible; }
+#warnCard img{
+  max-width:100%; max-height:100%;
+  width:auto; height:auto; object-fit:contain; display:block;
+}
+#warnCrawl{
+  position:fixed; left:0; right:0; bottom:0; z-index:23;
+  height:clamp(38px,6.2vh,64px);
+  background:#000; overflow:hidden;
+  display:flex; align-items:center;
+  opacity:0; visibility:hidden;
+  transition:opacity .3s ease;
+  pointer-events:none;
+  border-top:1px solid rgba(255,255,255,.14);
+}
+#warnCrawl.on{ opacity:1; visibility:visible; }
+#warnCrawl .wc-track{
+  display:inline-flex; flex:0 0 auto;
+  white-space:nowrap; will-change:transform;
+  animation:wc-scroll 42s linear infinite;
+}
+#warnCrawl .wc-seg{
+  flex:0 0 auto;
+  color:#fff; font-family:"Eurostile","Eurostile Wide",sans-serif;
+  font-weight:700; letter-spacing:.02em;
+  font-size:clamp(13px,2.4vh,22px);
+  text-transform:uppercase; padding:0 2.5vw;
+}
+/* Two identical segments; translate by exactly one segment width (50%
+   of the track) for a seamless, gapless loop. */
+@keyframes wc-scroll{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
+@media (prefers-reduced-motion:reduce){ #warnCrawl .wc-track{ animation-duration:90s; } }
+
+/* Snow + IV-logo BOOKEND — the site's own cold-start / off-air identity,
+   played as the takeover opens (before the card) and as it closes out
+   (after the stream ends). Opacity-only so it fades OUT to reveal the
+   channel again. Snow + radial vignette + centred IV mark fading in. */
+#warnStatic{
+  position:fixed; inset:0; z-index:23; background:#000;
+  opacity:0; transition:opacity .6s ease; pointer-events:none;
+}
+#warnStatic.on{ opacity:1; }
+#warnStatic canvas{ position:absolute; inset:0; width:100%; height:100%; image-rendering:pixelated; }
+#warnStatic .wl-vignette{
+  position:absolute; inset:0; z-index:1; pointer-events:none;
+  background:radial-gradient(ellipse at center,transparent 30%,rgba(0,0,0,.7) 100%);
+}
+#warnStatic .wl-logo{
+  position:absolute; inset:0; z-index:2; pointer-events:none;
+  display:flex; align-items:center; justify-content:center;
+}
+#warnStatic .wl-logo svg{
+  width:min(45vw,420px); height:auto; opacity:0;
+  filter:drop-shadow(0 0 30px rgba(255,255,255,.15));
+}
+/* Fade replays each time the bookend shows (open AND close). */
+#warnStatic.on .wl-logo svg{ animation:wl-fade-in 1.6s ease-in forwards; }
+@keyframes wl-fade-in{ to{ opacity:.6; } }
+
+/* Keep the viewer's controls reachable while a WARNING element is up: the
+   fullscreen/logo button (.logo) and the GUIDE pill (#guide-button) float
+   ABOVE the card (z:24) so viewers can still go fullscreen or open the
+   guide. Scoped to body.warn-blocking so the normal channel layering (the
+   "bug bows to the banner" promo behaviour) is untouched. Still below the
+   guide overlay (z:25), so opening the guide covers them cleanly. */
+body.warn-blocking .logo,
+body.warn-blocking .logo.show,
+body.warn-blocking #guide-button,
+body.warn-blocking #guide-button.show{ z-index:24; }
+</style>
+
+<div id="warnCard" role="alert" aria-hidden="true">
+  <img src="warning-2.png" alt="WARNING — The following content is not being promoted or condoned. This live takeover of INTERDEPENDENT.TV is solely the responsibility of Macie Meredith and Veronica Chan. Their behavior is their own.">
+</div>
+<div id="warnCrawl" aria-hidden="true">
+  <div class="wc-track">
+    <span class="wc-seg">WARNING — THE FOLLOWING CONTENT IS NOT BEING PROMOTED OR CONDONED. THIS LIVE TAKEOVER OF INTERDEPENDENT.TV IS SOLELY THE RESPONSIBILITY OF MACIE MEREDITH AND VERONICA CHAN. THEIR BEHAVIOR IS THEIR OWN. &nbsp;•&nbsp;&nbsp;</span>
+    <span class="wc-seg" aria-hidden="true">WARNING — THE FOLLOWING CONTENT IS NOT BEING PROMOTED OR CONDONED. THIS LIVE TAKEOVER OF INTERDEPENDENT.TV IS SOLELY THE RESPONSIBILITY OF MACIE MEREDITH AND VERONICA CHAN. THEIR BEHAVIOR IS THEIR OWN. &nbsp;•&nbsp;&nbsp;</span>
+  </div>
+</div>
+
+<div id="warnStatic" aria-hidden="true">
+  <canvas class="wl-noise" aria-hidden="true"></canvas>
+  <div class="wl-vignette"></div>
+  <div class="wl-logo"><!-- IV mark cloned from the site's own cold-start logo at runtime --></div>
+</div>
+
+<script>
+// ── WARNING takeover engine ────────────────────────────────────────
+// Deliberately independent of the channel runtime: it only reads the
+// operator control file and drives its own overlays, so it cannot
+// destabilise the (sacred) takeover/schedule engine above. The takeover
+// is BOOKENDED by the site's own snow + IV-logo identity: a static burst
+// leads IN (before the WARNING card) and closes OUT (after the stream
+// ends), matching the cold-start / off-air interlude.
+(function(){
+  var CONTROL     = 'live.json';
+  var POLL_MS     = 15000;   // match the channel's control poll
+  var PERIOD      = 600;     // 10 min between WARNING cards (wall-clock)
+  var CARD_DWELL  = 18;      // full-screen card seconds
+  var CRAWL_AT    = 300;     // 5-min mark → crawl enters
+  var CRAWL_DWELL = 45;      // crawl seconds on screen
+  var STATIC_SECS = 3;       // snow + IV-logo bookend (open / close)
+
+  var card  = document.getElementById('warnCard');
+  var crawl = document.getElementById('warnCrawl');
+  var stat  = document.getElementById('warnStatic');
+  var guide = document.getElementById('guide');
+  if (!card || !crawl || !stat) return;
+
+  // Clone the site's own IV mark into the bookend so the logo fade reads
+  // identical to the cold-start / interlude.
+  var srcLogo = document.querySelector('#intro .intro-logo svg, #static .static-logo svg');
+  var logoBox = stat.querySelector('.wl-logo');
+  if (srcLogo && logoBox && !logoBox.querySelector('svg')) logoBox.appendChild(srcLogo.cloneNode(true));
+
+  // Same V1 snow renderer the channel uses (half-res, *60 greyscale).
+  var noise = (function(cnv){
+    var ctx = cnv.getContext('2d'), alive = false, timer = 0;
+    function resize(){ cnv.width = Math.max(1, innerWidth >> 1); cnv.height = Math.max(1, innerHeight >> 1); }
+    function tick(){
+      if (!alive) return;
+      var w = cnv.width, h = cnv.height, d = ctx.createImageData(w, h), p = d.data, i = p.length;
+      while (i) { i -= 4; var v = (Math.random() * 60) | 0; p[i] = p[i+1] = p[i+2] = v; p[i+3] = 255; }
+      ctx.putImageData(d, 0, 0); timer = setTimeout(tick, 66);
+    }
+    resize(); window.addEventListener('resize', resize);
+    return { start: function(){ if (!alive) { alive = true; tick(); } },
+             stop:  function(){ alive = false; clearTimeout(timer); timer = 0; } };
+  })(stat.querySelector('.wl-noise'));
+
+  var warnOn      = false;   // last known control.warning
+  var holdOn      = false;   // control.warningHold — hold the card up
+  var latchUntil  = 0;       // epoch-sec the lead-in card holds until
+  var staticUntil = 0;       // epoch-sec the snow/logo bookend holds until
+  var lastRestart = 0;       // last control.warningRestartAt we bookended on
+  var feedEnded   = false;   // live takeover feed hit 'ended' → closed out
+
+  function bookend(){         // snow + IV logo; replays the fade each time
+    staticUntil = Math.floor(Date.now()/1000) + STATIC_SECS;
+    stat.classList.remove('on'); void stat.offsetWidth;   // restart the fade-in
+    stat.classList.add('on');
+    noise.start();
+  }
+  function leadIn(){          // snow bookend → then the WARNING card
+    bookend();
+    latchUntil = Math.floor(Date.now()/1000) + STATIC_SECS + CARD_DWELL;
+  }
+
+  function poll(){
+    fetch(CONTROL + '?t=' + Date.now(), { cache:'no-store' })
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(j){
+        if (!j || typeof j !== 'object') return;
+        var next      = (j.warning === true) || (j.warning && j.warning.active === true);
+        var restartAt = Number(j.warningRestartAt) || (j.warning && Number(j.warning.restartAt)) || 0;
+        holdOn = (j.warningHold === true) || !!(j.warning && j.warning.hold === true);
+        if (next && !warnOn) {
+          // START (incl. fresh load into an active takeover): snow → card.
+          leadIn(); lastRestart = restartAt; feedEnded = false;
+        } else if (next && warnOn && restartAt && restartAt !== lastRestart) {
+          // Operator bumped warningRestartAt → replay the snow lead-in.
+          // Held: snow → held card. Cyclic (switching to the live stream):
+          // snow → the stream (the card returns on the 10-min cadence).
+          if (holdOn) leadIn(); else bookend();
+          lastRestart = restartAt; feedEnded = false;
+        } else if (!next && warnOn) {
+          // END: bookend out, then the channel (Dan Schott) resumes.
+          bookend();
+        }
+        if (!next) feedEnded = false;
+        warnOn = next;
+      })
+      .catch(function(){ /* keep current state */ });
+  }
+  poll();
+  setInterval(poll, POLL_MS);
+
+  // Close-out when the LIVE takeover feed ENDS. The channel's mux-video
+  // fires 'ended' on a clean broadcast end; act only while the warning
+  // regime is live so a scheduled show ending never triggers it. Plays the
+  // snow + IV-logo close, then latches the warning off locally (the
+  // operator's live.json swap makes the return to Dan Schott permanent for
+  // everyone).
+  var mvEl = document.querySelector('mux-video');
+  if (mvEl) mvEl.addEventListener('ended', function(){
+    if (warnOn && !feedEnded) { feedEnded = true; bookend(); }
+  });
+
+  setInterval(function(){
+    var nowSec    = Math.floor(Date.now()/1000);
+    var guideOpen = guide && guide.classList.contains('on');
+    var staticOn  = nowSec < staticUntil;
+    var phase     = nowSec % PERIOD;
+    var live      = warnOn && !feedEnded;   // regime armed AND feed not ended
+    var cardOn, crawlOn;
+    if (holdOn) {
+      // HELD: after the snow lead-in, the WARNING card stays up until the
+      // operator clears warningHold (or ends the takeover). No crawl.
+      cardOn  = !staticOn && live;
+      crawlOn = false;
+    } else {
+      cardOn  = !staticOn && live && (phase < CARD_DWELL || nowSec < latchUntil);
+      crawlOn = !staticOn && live && !cardOn &&
+                phase >= CRAWL_AT && phase < (CRAWL_AT + CRAWL_DWELL);
+    }
+
+    // The guide is a deliberate menu on top — don't fight it.
+    if (guideOpen) { cardOn = false; crawlOn = false; }
+
+    // Bookend finished → fade the snow out and stop the renderer.
+    if (!staticOn && stat.classList.contains('on')) { stat.classList.remove('on'); noise.stop(); }
+
+    card.classList.toggle('on', cardOn);
+    card.setAttribute('aria-hidden', cardOn ? 'false' : 'true');
+    crawl.classList.toggle('on', crawlOn);
+
+    // Promo banners yield the bottom strip while any warning element is up.
+    document.body.classList.toggle('warn-blocking', staticOn || cardOn || crawlOn);
+  }, 1000);
 })();
 </script>
 
