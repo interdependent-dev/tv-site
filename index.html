@@ -6099,7 +6099,7 @@ customElements.whenDefined('mux-video').then(function(){
 </style>
 
 <div id="warnCard" role="alert" aria-hidden="true">
-  <img src="warning.png" alt="WARNING — The following content is not being promoted or condoned. This live takeover of INTERDEPENDENT.TV is solely the responsibility of Macie Meredith and Veronica Chan. Their behavior is their own.">
+  <img src="warning-2.png" alt="WARNING — The following content is not being promoted or condoned. This live takeover of INTERDEPENDENT.TV is solely the responsibility of Macie Meredith and Veronica Chan. Their behavior is their own.">
 </div>
 <div id="warnCrawl" aria-hidden="true">
   <div class="wc-track">
@@ -6159,8 +6159,10 @@ customElements.whenDefined('mux-video').then(function(){
   })(stat.querySelector('.wl-noise'));
 
   var warnOn      = false;   // last known control.warning
-  var latchUntil  = 0;       // epoch-sec the "at the start" card holds until
+  var holdOn      = false;   // control.warningHold — hold the card up
+  var latchUntil  = 0;       // epoch-sec the lead-in card holds until
   var staticUntil = 0;       // epoch-sec the snow/logo bookend holds until
+  var lastRestart = 0;       // last control.warningRestartAt we bookended on
 
   function bookend(){         // snow + IV logo; replays the fade each time
     staticUntil = Math.floor(Date.now()/1000) + STATIC_SECS;
@@ -6168,17 +6170,25 @@ customElements.whenDefined('mux-video').then(function(){
     stat.classList.add('on');
     noise.start();
   }
+  function leadIn(){          // snow bookend → then the WARNING card
+    bookend();
+    latchUntil = Math.floor(Date.now()/1000) + STATIC_SECS + CARD_DWELL;
+  }
 
   function poll(){
     fetch(CONTROL + '?t=' + Date.now(), { cache:'no-store' })
       .then(function(r){ return r.ok ? r.json() : null; })
       .then(function(j){
         if (!j || typeof j !== 'object') return;
-        var next = (j.warning === true) || (j.warning && j.warning.active === true);
+        var next      = (j.warning === true) || (j.warning && j.warning.active === true);
+        var restartAt = Number(j.warningRestartAt) || (j.warning && Number(j.warning.restartAt)) || 0;
+        holdOn = (j.warningHold === true) || !!(j.warning && j.warning.hold === true);
         if (next && !warnOn) {
-          // START: snow + IV-logo bookend, THEN the WARNING card.
-          bookend();
-          latchUntil = Math.floor(Date.now()/1000) + STATIC_SECS + CARD_DWELL;
+          // START (incl. fresh load into an active takeover): snow → card.
+          leadIn(); lastRestart = restartAt;
+        } else if (next && warnOn && restartAt && restartAt !== lastRestart) {
+          // Operator bumped warningRestartAt → replay the snow, then card.
+          leadIn(); lastRestart = restartAt;
         } else if (!next && warnOn) {
           // END: bookend out, then the channel (Dan Schott) resumes.
           bookend();
@@ -6195,9 +6205,17 @@ customElements.whenDefined('mux-video').then(function(){
     var guideOpen = guide && guide.classList.contains('on');
     var staticOn  = nowSec < staticUntil;
     var phase     = nowSec % PERIOD;
-    var cardOn    = !staticOn && warnOn && (phase < CARD_DWELL || nowSec < latchUntil);
-    var crawlOn   = !staticOn && warnOn && !cardOn &&
-                    phase >= CRAWL_AT && phase < (CRAWL_AT + CRAWL_DWELL);
+    var cardOn, crawlOn;
+    if (holdOn) {
+      // HELD: after the snow lead-in, the WARNING card stays up until the
+      // operator clears warningHold (or ends the takeover). No crawl.
+      cardOn  = !staticOn && warnOn;
+      crawlOn = false;
+    } else {
+      cardOn  = !staticOn && warnOn && (phase < CARD_DWELL || nowSec < latchUntil);
+      crawlOn = !staticOn && warnOn && !cardOn &&
+                phase >= CRAWL_AT && phase < (CRAWL_AT + CRAWL_DWELL);
+    }
 
     // The guide is a deliberate menu on top — don't fight it.
     if (guideOpen) { cardOn = false; crawlOn = false; }

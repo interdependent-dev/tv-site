@@ -8,5 +8,7 @@
   "message": "",
   "endsAt": null,
   "warning": true,
-  "_help": "GO-LIVE state: channel takeover + WARNING regime (snow+IV-logo bookend, full-screen card at start + every 10 min, ticker crawl at the 5-min mark; plots/subs/season banners yield only while a warning element is up). To END and return to the Dan Schott takeover: cp live.dan-schott.json live.json && wrangler pages deploy . --project-name=interdependent-tv --branch=main"
+  "warningHold": true,
+  "warningRestartAt": 1783738392,
+  "_help": "GO-LIVE state: takeover + WARNING regime. warningHold:true HOLDS the full-screen WARNING card up continuously (snow lead-in on load, and again whenever warningRestartAt changes). Set warningHold:false to resume the cyclic card(10m)+crawl(5m). To END and return to the Dan Schott takeover: cp live.dan-schott.json live.json && npx wrangler pages deploy . --project-name=interdependent-tv --branch=main. Bump warningRestartAt to replay the snow restart. Deploy: npx wrangler pages deploy . --project-name=interdependent-tv --branch=main"
 }
