@@ -4950,17 +4950,16 @@ customElements.whenDefined('mux-video').then(function(){
     const ip = introVideo.play();
     if (ip && ip.catch) ip.catch(finish); // codec/network → skip to finish
 
-    // (3) Movie audio gate — iOS-safe PRIME. iOS blocks a media element's
-    //     first AUDIBLE play outside a user gesture and ignores .volume, so
-    //     the old "muted=false + volume:0, play later" path left the live
-    //     feed SILENT on iPhone (the intro <video> was audible because it
-    //     plays synchronously in the tap; the mux-video's first play was
-    //     deferred to finish(), outside the gesture). Instead prime here: a
-    //     MUTED play() inside this gesture grabs the audio permission (the
-    //     same trick the auto-play toggle uses); finish() then unmutes with
-    //     no policy re-check. Held muted (not volume:0) so it also stays
-    //     silent behind the intro on iOS, where volume can't be set.
-    mv.muted = true;
+    // (3) Movie audio gate — UNMUTE + PLAY inside this gesture. On iOS the
+    //     live feed uses NATIVE HLS, where a media element's audio is only
+    //     authorised if it is unmuted AND audibly playing within a user
+    //     gesture. Deferring the unmute to finish() (outside the tap) leaves
+    //     it permanently silent on iPhone — which is exactly what happened.
+    //     iOS ignores .volume, so we can't hold it quiet there; on desktop
+    //     (hls.js) volume:0 keeps it silent behind the intro and finish()
+    //     ramps it up. Net: a brief intro↔feed audio overlap on iOS, but the
+    //     live feed reliably HAS SOUND, which is the point.
+    mv.muted = false;
     mv.volume = 0;
     try { const mp = mv.play(); if (mp && mp.catch) mp.catch(function(){}); } catch (_) {}
 
@@ -6192,6 +6191,8 @@ body.warn-blocking #guide-button.show{ z-index:24; }
   var staticUntil = 0;       // epoch-sec the snow/logo bookend holds until
   var lastRestart = 0;       // last control.warningRestartAt we bookended on
   var feedEnded   = false;   // live takeover feed hit 'ended' → closed out
+  var didInitial  = false;   // the post-PUSH-PLAY initial WARNING has shown
+  var INITIAL_DWELL = 6;     // seconds the initial (after-play) card holds
 
   function bookend(){         // snow + IV logo; replays the fade each time
     staticUntil = Math.floor(Date.now()/1000) + STATIC_SECS;
@@ -6213,8 +6214,10 @@ body.warn-blocking #guide-button.show{ z-index:24; }
         var restartAt = Number(j.warningRestartAt) || (j.warning && Number(j.warning.restartAt)) || 0;
         holdOn = (j.warningHold === true) || !!(j.warning && j.warning.hold === true);
         if (next && !warnOn) {
-          // START (incl. fresh load into an active takeover): snow → card.
-          leadIn(); lastRestart = restartAt; feedEnded = false;
+          // ARM only — the WARNING must NOT show at cold-start. Its initial
+          // appearance is triggered AFTER the intro finishes (see the tick's
+          // play-gate below), not on page load.
+          lastRestart = restartAt; feedEnded = false;
         } else if (next && warnOn && restartAt && restartAt !== lastRestart) {
           // Operator bumped warningRestartAt → replay the snow lead-in.
           // Held: snow → held card. Cyclic (switching to the live stream):
@@ -6225,7 +6228,7 @@ body.warn-blocking #guide-button.show{ z-index:24; }
           // END: bookend out, then the channel (Dan Schott) resumes.
           bookend();
         }
-        if (!next) feedEnded = false;
+        if (!next) { feedEnded = false; didInitial = false; }
         warnOn = next;
       })
       .catch(function(){ /* keep current state */ });
@@ -6247,6 +6250,26 @@ body.warn-blocking #guide-button.show{ z-index:24; }
   setInterval(function(){
     var nowSec    = Math.floor(Date.now()/1000);
     var guideOpen = guide && guide.classList.contains('on');
+    // PLAY-GATE: nothing shows at cold-start. #intro gets .done when the
+    // intro finishes (the live stream is coming on) and is removed shortly
+    // after — so the WARNING only appears AFTER the viewer hits PUSH PLAY.
+    var introEl   = document.getElementById('intro');
+    var started   = !introEl || introEl.classList.contains('done');
+    if (!started) {
+      card.classList.remove('on'); card.setAttribute('aria-hidden','true');
+      crawl.classList.remove('on');
+      if (stat.classList.contains('on')) { stat.classList.remove('on'); noise.stop(); }
+      document.body.classList.remove('warn-blocking');
+      return;
+    }
+    // First tick after the intro finishes, warning armed → show the initial
+    // WARNING card briefly (INITIAL_DWELL). No snow here — the intro just
+    // animated. The periodic 10-min cycle and the stream-end snow close-out
+    // are unchanged.
+    if (!didInitial && warnOn && !feedEnded) {
+      didInitial = true;
+      latchUntil = nowSec + INITIAL_DWELL;
+    }
     var staticOn  = nowSec < staticUntil;
     var phase     = nowSec % PERIOD;
     var live      = warnOn && !feedEnded;   // regime armed AND feed not ended
